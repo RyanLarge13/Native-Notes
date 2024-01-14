@@ -1,6 +1,6 @@
 import Axios from "axios";
 //const devUrl = "http://localhost:8080";
-const devUrl = "https://notes-server-s05q.onrender.com";
+const devUrl = "https://notesserver-production-9640.up.railway.app";
 
 export const loginUser = (username, email, password) => {
   const res = Axios.post(`${devUrl}/users/login`, {

@@ -142,8 +142,11 @@ export default function App() {
         setUser(data.user);
         setLoading(false);
       })
-      .catch((err) => {
+      .catch(async (err) => {
         console.log(err);
+        setToken(null);
+        setUser(null);
+        await AsyncStorage.removeItem("authToken");
       })
       .finally(() => {
         console.log("Finished data");
