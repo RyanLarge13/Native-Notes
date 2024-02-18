@@ -37,7 +37,8 @@ const NewNote = memo(({ folder, token, setAllData, note }) => {
         notesId: note.noteid,
         title: title,
         htmlNotes: content,
-        locked: note.locked
+        locked: note.locked, 
+        folderId: folder ? folder.folderid : null
       };
       return updateNote(token, updatedNote)
         .then((res) => {
