@@ -1,14 +1,41 @@
-import { useState } from "react";
-import { View, StyleSheet, TextInput, Text, Pressable } from "react-native";
+import { useState, useEffect, useRef } from "react";
+import {
+ View,
+ StyleSheet,
+ Animated,
+ TextInput,
+ Text,
+ Pressable
+} from "react-native";
 import { useNavigate } from "react-router-native";
 import { createNewFolder } from "../utils/api";
-import { v4 as uuidv4 } from "uuid";
+import 'react-native-get-random-values';
+import { v4 as uuidv4 } from 'uuid';
 import Colors from "../components/Colors";
 
 const NewFolder = ({ setAllData, folder, token }) => {
  const [color, setColor] = useState("bg-red-300");
  const [title, setTitle] = useState("");
  const navigate = useNavigate();
+
+ const opacityAni = useRef(new Animated.Value(0)).current;
+ const scaleAni = useRef(new Animated.Value(0)).current;
+
+ useEffect(() => {
+  Animated.parallel([
+   Animated.timing(opacityAni, {
+    toValue: 1.0,
+    duration: 250,
+    useNativeDriver: true
+   }),
+   Animated.spring(scaleAni, {
+    toValue: 1,
+    tension: 150,
+    friction: 10,
+    useNativeDriver: true
+   })
+  ]).start();
+ }, []);
 
  const createFolder = () => {
   try {
@@ -24,7 +51,7 @@ const NewFolder = ({ setAllData, folder, token }) => {
      ...prevUser,
      folders: [...prevUser.folders, newFolder]
     };
-    
+
     return newData;
    });
    navigate("/");
@@ -38,7 +65,7 @@ const NewFolder = ({ setAllData, folder, token }) => {
        }
        return aFold;
       });
-      const newData = {...prevData,folders: newFolders} 
+      const newData = { ...prevData, folders: newFolders };
       return newData;
      });
     })
@@ -53,7 +80,12 @@ const NewFolder = ({ setAllData, folder, token }) => {
  return (
   <>
    <Pressable onPress={() => navigate("/")} style={styles.backdrop}></Pressable>
-   <View style={styles.container}>
+   <Animated.View
+    style={[
+     styles.container,
+     { opacity: opacityAni, scaleX: scaleAni, scaleY: scaleAni }
+    ]}
+   >
     <Text style={[styles.white, styles.heading]}>Create a new folder</Text>
     <TextInput
      style={[styles.white, styles.input, styles.heading]}
@@ -66,7 +98,7 @@ const NewFolder = ({ setAllData, folder, token }) => {
     <Pressable onPress={() => createFolder()} style={styles.btn}>
      <Text>Create &rarr;</Text>
     </Pressable>
-   </View>
+   </Animated.View>
   </>
  );
 };

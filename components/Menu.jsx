@@ -24,7 +24,7 @@ const Menu = ({
  setAllData,
  setUser
 }) => {
- const animation = useRef(new Animated.Value(-100)).current;
+ const animation = useRef(new Animated.Value(-500)).current;
  const animationOpacity = useRef(new Animated.Value(0)).current;
  const navigate = useNavigate();
 
@@ -32,24 +32,28 @@ const Menu = ({
   if (menuOpen) {
    Animated.spring(animation, {
     toValue: 0,
-    duration: 50,
+    tension: 100,
+    friction: 10,
     useNativeDriver: true
    }).start();
    Animated.spring(animationOpacity, {
     toValue: 1,
-    duration: 100,
+    tension: 100,
+    friction: 10, 
     useNativeDriver: true
    }).start();
   }
   if (!menuOpen) {
    Animated.spring(animation, {
-    toValue: -100,
-    duration: 50,
+    toValue: -500,
+    tension: 100,
+    friction: 10,
     useNativeDriver: true
    }).start();
    Animated.spring(animationOpacity, {
     toValue: 0,
-    duration: 100,
+    tension: 100,
+    friction: 10,
     useNativeDriver: true
    }).start();
   }
@@ -76,10 +80,12 @@ const Menu = ({
 
  return (
   <>
-   <Pressable
-    onPress={() => setMenuOpen(false)}
-    style={styles.backdrop}
-   ></Pressable>
+   {menuOpen && (
+    <Pressable
+     onPress={() => setMenuOpen(false)}
+     style={[styles.backdrop]}
+    ></Pressable>
+   )}
    <Animated.ScrollView
     style={[
      styles.container,
@@ -94,7 +100,7 @@ const Menu = ({
     >
      <View>
       <Text style={[styles.white, styles.heading]}>
-       {allData?.user?.username}
+       {allData.user.username}
       </Text>
       <View style={styles.notesBtnContainer}>
        <Pressable
@@ -180,15 +186,15 @@ const styles = StyleSheet.create({
  backdrop: {
   position: "absolute",
   top: 0,
-  right: 0,
   left: 0,
+  right: 0,
   bottom: 0,
   backgroundColor: "rgba(0,0,0,0.4)"
  },
  container: {
   position: "absolute",
-  top: 0,
   left: 0,
+  top: 0,
   bottom: 0,
   width: "90%",
   backgroundColor: "#000"
@@ -255,7 +261,7 @@ const styles = StyleSheet.create({
   borderRadius: 5,
   backgroundColor: "#fcd34d",
   marginTop: 15
- }, 
+ },
  delete: {
   paddingVertical: 10,
   paddingHorizontal: 20,
