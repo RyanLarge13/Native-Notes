@@ -4,6 +4,7 @@ import { StyleSheet, Text, Pressable, View, TextInput } from "react-native";
 import Spinner from "react-native-loading-spinner-overlay";
 import { NativeRouter, Routes, Route } from "react-router-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SQLite from "expo-sqlite";
 import { loginUser, getUserData } from "./utils/api";
 import Icon from "react-native-vector-icons/Feather";
 import Login from "./states/Login";
@@ -87,6 +88,7 @@ export default function App() {
  };
 
  const getAll = () => {
+  setFolder(null);
   setNotes(allData.notes);
   setMainTitle("All Notes");
  };
@@ -136,13 +138,146 @@ export default function App() {
   await AsyncStorage.removeItem("authToken");
  };
 
+ const deleteDatabase = async () => {
+  try {
+   await SQLite.deleteDatabaseAsync("localstore");
+   console.log("Database deleted successfully.");
+  } catch (error) {
+   console.error("Error deleting database:", error);
+  }
+ };
+
+ const fetchFromDb = async () => {
+  //await deleteDatabase();
+  // return;
+  try {
+   const db = await SQLite.openDatabaseAsync("localstore");
+   const dbUser = await db.getFirstAsync(`SELECT * FROM user`);
+   const dbFolders = await db.getAllAsync(`SELECT * FROM folders`);
+   const dbNotes = await db.getAllAsync(`SELECT * FROM notes`);
+   //   console.log(`user: ${JSON.stringify(dbUser, null, 2)}`);
+   // console.log(`folders: ${JSON.stringify(dbFolders, null, 2)}`);
+   // console.log(`notes: ${JSON.stringify(dbNotes, null, 2)}`);
+   //return;
+   const newAllData = { user: dbUser, folders: dbFolders, notes: dbNotes };
+   return newAllData;
+  } catch (err) {
+   console.log("selecting data", err);
+  }
+ };
+
+ const storeDataInDb = async data => {
+  try {
+   const db = await SQLite.openDatabaseAsync("localstore");
+   const serverUser = data.user;
+   const serverFolders = data.folders;
+   const serverNotes = data.notes;
+   await db.execAsync(`
+   CREATE TABLE IF NOT EXISTS user (
+     userId INTEGER PRIMARY KEY NOT NULL, 
+     username TEXT NOT NULL, 
+     email TEXT NOT NULL, 
+     createdAt TEXT NOT NULL
+    );
+   CREATE TABLE IF NOT EXISTS folders (
+     folderid INTEGER PRIMARY KEY NOT NULL, 
+     title TEXT NOT NULL, 
+     color TEXT NOT NULL, 
+     parentFolderId TEXT
+    );
+   CREATE TABLE IF NOT EXISTS notes (
+     title TEXT NOT NULL, 
+     noteid TEXT NOT NULL, 
+     locked BOOLEAN, 
+     htmlText TEXT NOT NULL, 
+     folderId TEXT, 
+     createdAt TIMESTAMP NOT NULL, 
+     updated TIMESTAMP NOT NULL, 
+     trashed BOOLEAN
+    );
+  `);
+   storeUserInDb(db, serverUser);
+   storeFoldersInDb(db, serverFolders);
+   storeNotesInDb(db, serverNotes);
+  } catch (err) {
+   console.log("creating tables", err);
+  }
+ };
+
+ const storeUserInDb = async (db, user) => {
+  try {
+   await db.runAsync(
+    `
+    INSERT INTO user (userId, username, email, createdAt)
+    VALUES (?, ?, ?, ?);
+   `,
+    user.userId,
+    user.username,
+    user.email,
+    user.createdAt
+   );
+  } catch (err) {
+   console.log("inserting user", err);
+  }
+ };
+
+ const storeFoldersInDb = async (db, folders) => {
+  try {
+   for (const folder of folders) {
+    await db.runAsync(
+     `
+    INSERT INTO folders (folderid, title, color, parentFolderId)
+    VALUES (?, ?, ?, ?);
+   `,
+     folder.folderid,
+     folder.title,
+     folder.color,
+     folder.parentFolderId
+    );
+   }
+  } catch (err) {
+   console.log("inserting folders", err);
+  }
+ };
+
+ const storeNotesInDb = async (db, notes) => {
+  try {
+   for (const note of notes) {
+    await db.runAsync(
+     `
+    INSERT INTO notes (noteid, title, locked, htmlText, folderId, createdAt,
+    updated, trashed)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+   `,
+     note.noteid,
+     note.title,
+     note.locked,
+     note.htmlText,
+     note.folderId,
+     note.createdAt,
+     note.updated,
+     note.trashed
+    );
+   }
+  } catch (err) {
+   console.log("inserting notes", err);
+  }
+ };
+
  const getData = async () => {
+  const allDbData = await fetchFromDb();
+  console.log("db user", allDbData.user);
+  //setUser(JSON.stringify(allDbData.user));
+  setAllData(allDbData);
+  setLoading(false);
   getUserData(token)
    .then(response => {
     const data = response.data.data;
     setAllData(data);
     setUser(data.user);
+    console.log("server user", data.user);
     setLoading(false);
+    storeDataInDb(data);
    })
    .catch(err => {
     console.log(err);
@@ -170,7 +305,7 @@ export default function App() {
   const parentFolder = allData.folders.filter(
    fold => fold.folderid === parentId
   )[0];
-  setNote(null)
+  setNote(null);
   setFolder(parentFolder);
  };
 

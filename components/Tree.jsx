@@ -74,6 +74,7 @@ const Tree = ({
     <>
      {topFolders.map(fold => (
       <Animated.View
+      key={fold.folderid}
        style={[styles.folder, { translateX: transXAni, opacity: opacAni }]}
       >
        <Pressable
