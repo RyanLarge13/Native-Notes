@@ -75,9 +75,11 @@ export default function App() {
 
  useEffect(() => {
   if (token) {
-   getData();
+   console.log("token");
+   grabFromDb();
   }
   if (!token) {
+   console.log("no token");
    getToken();
   }
  }, [token]);
@@ -99,12 +101,17 @@ export default function App() {
  };
 
  const getToken = async () => {
+  console.log("getting fag token");
   try {
    const tokenString = await AsyncStorage.getItem("authToken");
    if (!tokenString) {
+    console.log("no stored token string");
     setLoading(false);
    }
-   setToken(tokenString);
+   if (tokenString) {
+    console.log("stored token string");
+    setToken(tokenString);
+   }
   } catch (err) {
    console.log(err);
   }
@@ -148,17 +155,13 @@ export default function App() {
  };
 
  const fetchFromDb = async () => {
-  //await deleteDatabase();
-  // return;
+  // await deleteDatabase();
+  //  return;
   try {
    const db = await SQLite.openDatabaseAsync("localstore");
    const dbUser = await db.getFirstAsync(`SELECT * FROM user`);
    const dbFolders = await db.getAllAsync(`SELECT * FROM folders`);
    const dbNotes = await db.getAllAsync(`SELECT * FROM notes`);
-   //   console.log(`user: ${JSON.stringify(dbUser, null, 2)}`);
-   // console.log(`folders: ${JSON.stringify(dbFolders, null, 2)}`);
-   // console.log(`notes: ${JSON.stringify(dbNotes, null, 2)}`);
-   //return;
    const newAllData = { user: dbUser, folders: dbFolders, notes: dbNotes };
    return newAllData;
   } catch (err) {
@@ -241,6 +244,7 @@ export default function App() {
  };
 
  const storeNotesInDb = async (db, notes) => {
+  // console.log("Notes storing", notes);
   try {
    for (const note of notes) {
     await db.runAsync(
@@ -264,18 +268,28 @@ export default function App() {
   }
  };
 
- const getData = async () => {
-  const allDbData = await fetchFromDb();
-  console.log("db user", allDbData.user);
-  //setUser(JSON.stringify(allDbData.user));
-  setAllData(allDbData);
-  setLoading(false);
+ const grabFromDb = async () => {
+  const storedData = await fetchFromDb();
+  if (storedData.user && storedData.folders && storedData.notes) {
+   try {
+    setAllData(storedData);
+    setUser(storedData.user);
+    setLoading(false);
+    getData();
+   } catch (err) {
+    console.log(err);
+   }
+  } else {
+   console.log("No data");
+  }
+ };
+
+ const getData = () => {
   getUserData(token)
    .then(response => {
     const data = response.data.data;
     setAllData(data);
     setUser(data.user);
-    console.log("server user", data.user);
     setLoading(false);
     storeDataInDb(data);
    })
@@ -370,7 +384,7 @@ export default function App() {
      </Route>
     </Routes>
     <Options setOptions={setOptions} options={options} />
-    {open.show && (
+    {open.show ? (
      <Settings
       item={open.item}
       type={open.type}
@@ -381,8 +395,8 @@ export default function App() {
       selectedFolder={selectedFolder}
       setSelectedFolder={setSelectedFolder}
      />
-    )}
-    {allData && (
+    ) : null}
+    {allData ? (
      <Menu
       menuOpen={menuOpen}
       setMenuOpen={setMenuOpen}
@@ -395,8 +409,8 @@ export default function App() {
       setAllData={setAllData}
       setUser={setUser}
      />
-    )}
-    {pickFolder && (
+    ) : null}
+    {pickFolder ? (
      <>
       <Pressable
        onPress={() => {
@@ -432,12 +446,12 @@ export default function App() {
        </Pressable>
       </View>
      </>
-    )}
-    {user && (
+    ) : null}
+    {user ? (
      <Pressable onPress={() => toggleOptions()} style={styles.addIcon}>
       <Icon name="edit" style={styles.iconColor} />
      </Pressable>
-    )}
+    ) : null}
    </View>
   </NativeRouter>
  );

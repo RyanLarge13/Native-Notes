@@ -76,7 +76,7 @@ const Account = ({
    );
    return setNotesToRender(sortedNotesDesc);
   }
-  setNotesToRender(copyOfNotes);
+  //setNotesToRender(copyOfNotes);
  }, [order, notes, filter]);
 
  return (

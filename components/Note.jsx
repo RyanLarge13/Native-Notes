@@ -12,20 +12,20 @@ const customStyles = {
 
 const Note = memo(({ note, setOpen, setNote, view, index }) => {
  const navigate = useNavigate();
- 
+
  const scaleAni = useRef(new Animated.Value(0)).current;
 
  const htmlToRender = note.htmlText.slice(0, 60) + " ...";
- 
+
  useEffect(() => {
   Animated.spring(scaleAni, {
    toValue: 1,
    tension: 100,
-   delay: 100 * index, 
+   delay: 100 * index,
    friction: 10,
    useNativeDriver: true
-  }).start()
-}, [])
+  }).start();
+ }, []);
 
  const openNote = () => {
   if (note.locked) {
@@ -58,41 +58,43 @@ const Note = memo(({ note, setOpen, setNote, view, index }) => {
  };
 
  return (
-  <Animated.View style={[
-        styles.note,
-        {
-         transform: [{ scaleX: scaleAni }, { scaleY: scaleAni }]
-        },
-        view ? { width: "45%", height: 100 } : { width: "100%", height: 200 }
-       ]} >
-  <Ripple
-   onPress={() => openNote()}
-   onLongPress={() => openSettings()}
-   rippleColor="#fff"
-   rippleOpacity={0.9}
-   style={[styles.note, { width: "100%", height: "100%" }]}
+  <Animated.View
+   style={[
+    styles.note,
+    {
+     transform: [{ scaleX: scaleAni }, { scaleY: scaleAni }]
+    },
+    view ? { width: "45%", height: 100 } : { width: "100%", height: 200 }
+   ]}
   >
-   <Text style={[styles.title, view ? { fontSize: 14 } : { fontSize: 25 }]}>
-    {note.title}
-   </Text>
-   <Text style={styles.date}>
-    {new Date(note.createdAt).toLocaleDateString()}
-   </Text>
-   <View style={styles.html}>
-    {!note.locked && (
-     <RenderHtml
-      contentWidth={200}
-      source={{ html: htmlToRender }}
-      tagsStyles={customStyles}
-     />
-    )}
-   </View>
-   {note.locked && (
-    <View style={styles.locked}>
-     <Icon name="lock" style={styles.red} />
+   <Ripple
+    onPress={() => openNote()}
+    onLongPress={() => openSettings()}
+    rippleColor="#fff"
+    rippleOpacity={0.9}
+    style={[styles.note, { width: "100%", height: "100%" }]}
+   >
+    <Text style={[styles.title, view ? { fontSize: 14 } : { fontSize: 25 }]}>
+     {note.title}
+    </Text>
+    <Text style={styles.date}>
+     {new Date(note.createdAt).toLocaleDateString()}
+    </Text>
+    <View style={styles.html}>
+     {!note.locked ? (
+      <RenderHtml
+       contentWidth={200}
+       source={{ html: htmlToRender }}
+       tagsStyles={customStyles}
+      />
+     ) : null}
     </View>
-   )}
-  </Ripple>
+    {note.locked ? (
+     <View style={styles.locked}>
+      <Icon name="lock" style={styles.red} />
+     </View>
+    ) : null}
+   </Ripple>
   </Animated.View>
  );
 });

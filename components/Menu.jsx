@@ -80,12 +80,12 @@ const Menu = ({
 
  return (
   <>
-   {menuOpen && (
+   {menuOpen ? (
     <Pressable
      onPress={() => setMenuOpen(false)}
      style={[styles.backdrop]}
     ></Pressable>
-   )}
+   ) : null}
    <Animated.ScrollView
     style={[
      styles.container,

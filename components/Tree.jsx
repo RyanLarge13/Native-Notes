@@ -70,11 +70,11 @@ const Tree = ({
 
  return (
   <>
-   {topFolders.length > 0 && (
+   {topFolders.length > 0 ? (
     <>
      {topFolders.map(fold => (
       <Animated.View
-      key={fold.folderid}
+       key={fold.folderid}
        style={[styles.folder, { translateX: transXAni, opacity: opacAni }]}
       >
        <Pressable
@@ -111,7 +111,7 @@ const Tree = ({
          )}
         </View>
         <View style={styles.nestContainer}>
-         {folderStates[fold.folderid] && (
+         {folderStates[fold.folderid] ? (
           <NestedFolder
            moving={moving}
            setPickFolder={setPickFolder}
@@ -122,13 +122,13 @@ const Tree = ({
            level={level + 1}
            open={open}
           />
-         )}
+         ) : null}
         </View>
        </Pressable>
       </Animated.View>
      ))}
     </>
-   )}
+   ) : null}
   </>
  );
 };

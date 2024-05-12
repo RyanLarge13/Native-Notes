@@ -115,7 +115,7 @@ const Header = ({
     <Pressable onPress={() => setMenuOpen(true)}>
      <Icon name="menu" style={styles.white} />
     </Pressable>
-    {folder && (
+    {folder ? (
      <>
       <Pressable style={styles.btn} onPress={() => goBack()}>
        <Text style={styles.back}>&larr;</Text>
@@ -124,7 +124,7 @@ const Header = ({
        <Icon name="home" style={[styles.back, { fontSize: 15 }]} />
       </Pressable>
      </>
-    )}
+    ) : null}
    </View>
    <Animated.View style={{ opacity: animationOpacity }}>
     <TextInput
