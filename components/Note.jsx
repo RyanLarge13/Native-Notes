@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { View, Text, StyleSheet, Animated } from "react-native";
 import Ripple from "react-native-material-ripple";
 import RenderHtml from "react-native-render-html";
@@ -10,7 +10,7 @@ const customStyles = {
  body: { color: "#fff", fontSize: 12 }
 };
 
-const Note = memo(({ note, setOpen, setNote, view, index }) => {
+const Note = ({ note, setOpen, setNote, view, index }) => {
  const navigate = useNavigate();
 
  const scaleAni = useRef(new Animated.Value(0)).current;
@@ -72,7 +72,7 @@ const Note = memo(({ note, setOpen, setNote, view, index }) => {
     onLongPress={() => openSettings()}
     rippleColor="#fff"
     rippleOpacity={0.9}
-    style={[styles.note, { width: "100%", height: "100%" }]}
+    style={[styles.note, { width: "100%", height: "100%", elevation: 0 }]}
    >
     <Text style={[styles.title, view ? { fontSize: 14 } : { fontSize: 25 }]}>
      {note.title}
@@ -97,7 +97,7 @@ const Note = memo(({ note, setOpen, setNote, view, index }) => {
    </Ripple>
   </Animated.View>
  );
-});
+};
 
 const styles = StyleSheet.create({
  note: {

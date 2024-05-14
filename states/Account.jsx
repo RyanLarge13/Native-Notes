@@ -55,29 +55,37 @@ const Account = ({
  }, [handleBackPress]);
 
  useEffect(() => {
-  const copyOfNotes = [...notes];
-  if (order && notes.length > 1) {
+  sortAndFilterNotes();
+ }, [order, notes, filter]);
+
+ const sortAndFilterNotes = () => {
+  let copyOfNotes;
+  if (mainTitle === "Trashed") {
+   copyOfNotes = notes.filter(aNote => aNote.trashed);
+  } else {
+   copyOfNotes = notes.filter(aNote => !aNote.trashed);
+  }
+  if (order) {
    const sortedNotesAsc = copyOfNotes.sort((a, b) =>
     filter === "Title"
      ? a.title.localeCompare(b.title)
      : filter === "Date"
-     ? new Date(a.createdAt) - new Date(b.createdAt)
-     : new Date(a.createdAt) - new Date(b.createdAt)
+     ? +new Date(a.createdAt) - +new Date(b.createdAt)
+     : +new Date(a.updated) - +new Date(b.updated)
    );
    return setNotesToRender(sortedNotesAsc);
   }
-  if (!order && notes.length > 1) {
-   const sortedNotesDesc = copyOfNotes.sort((a, b) =>
+  if (!order) {
+   const sortedNotesAsc = copyOfNotes.sort((a, b) =>
     filter === "Title"
      ? b.title.localeCompare(a.title)
      : filter === "Date"
-     ? new Date(b.createdAt) - new Date(a.createdAt)
-     : new Date(b.createdAt) - new Date(a.createdAt)
+     ? +new Date(b.createdAt) - +new Date(a.createdAt)
+     : +new Date(b.updated) - +new Date(a.updated)
    );
-   return setNotesToRender(sortedNotesDesc);
+   return setNotesToRender(sortedNotesAsc);
   }
-  //setNotesToRender(copyOfNotes);
- }, [order, notes, filter]);
+ };
 
  return (
   <>

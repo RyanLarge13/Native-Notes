@@ -17,7 +17,11 @@ import Menu from "./components/Menu";
 import Tree from "./components/Tree";
 
 export default function App() {
- const [allData, setAllData] = useState(null);
+ const [allData, setAllData] = useState({
+  user: { username: "", email: "", userId: "", createdAt: "" },
+  folders: [],
+  notes: []
+ });
  const [user, setUser] = useState(null);
  const [folders, setFolders] = useState([]);
  const [folder, setFolder] = useState(null);
@@ -34,8 +38,12 @@ export default function App() {
  const [selectedFolder, setSelectedFolder] = useState(null);
 
  useEffect(() => {
+  createTables();
+ }, []);
+
+ useEffect(() => {
   if (systemFolder === "main") {
-   return;
+   findChildNotes();
   }
   if (systemFolder === "locked") {
    getLocked();
@@ -49,29 +57,38 @@ export default function App() {
  }, [systemFolder]);
 
  useEffect(() => {
-  if (allData) {
-   if (!folder) {
-    const topFolders = allData.folders.filter(
-     fold => fold.parentFolderId === null
-    );
-    const topNotes = allData.notes.filter(aNote => aNote.folderId === null);
-    setFolders(topFolders);
-    setNotes(topNotes);
-    setMainTitle("Folders");
-   }
-   if (folder) {
-    const subfolders = allData.folders.filter(
-     fold => fold.parentFolderId === folder.folderid
-    );
-    const nestedNotes = allData.notes.filter(
-     aNote => aNote.folderId === folder.folderid
-    );
-    setFolders(subfolders);
-    setNotes(nestedNotes);
-    setMainTitle(folder.title);
-   }
+  if (allData.folders.length > 0 && allData.notes.length > 0) {
+   findChildNotes();
   }
  }, [folder, allData]);
+
+ const findChildNotes = () => {
+  if (!folder && allData.folders.length > 0 && allData.notes.length > 0) {
+   console.log("no fold but data");
+   const topFolders = allData.folders.filter(
+    fold => fold.parentFolderId === null
+   );
+   const topNotes = allData.notes.filter(aNote => aNote.folderId === null);
+   setNotes(topNotes);
+   setFolders(topFolders);
+   setMainTitle("Folders");
+   return;
+  }
+  if (folder) {
+   console.log("fold");
+   const subfolders = allData.folders.filter(
+    fold => fold.parentFolderId === folder.folderid
+   );
+   const nestedNotes = allData.notes.filter(
+    aNote => aNote.folderId === folder.folderid
+   );
+   setFolders(subfolders);
+   setNotes(nestedNotes);
+   setMainTitle(folder.title);
+   return;
+  }
+  console.log("nada");
+ };
 
  useEffect(() => {
   if (token) {
@@ -101,15 +118,12 @@ export default function App() {
  };
 
  const getToken = async () => {
-  console.log("getting fag token");
   try {
    const tokenString = await AsyncStorage.getItem("authToken");
    if (!tokenString) {
-    console.log("no stored token string");
     setLoading(false);
    }
    if (tokenString) {
-    console.log("stored token string");
     setToken(tokenString);
    }
   } catch (err) {
@@ -135,9 +149,6 @@ export default function App() {
    })
    .catch(err => {
     console.log(err);
-   })
-   .finally(() => {
-    console.log("Finished login");
    });
  };
 
@@ -155,8 +166,6 @@ export default function App() {
  };
 
  const fetchFromDb = async () => {
-  // await deleteDatabase();
-  //  return;
   try {
    const db = await SQLite.openDatabaseAsync("localstore");
    const dbUser = await db.getFirstAsync(`SELECT * FROM user`);
@@ -166,15 +175,15 @@ export default function App() {
    return newAllData;
   } catch (err) {
    console.log("selecting data", err);
+   return { user: null, folders: [], notes: [] };
   }
  };
 
- const storeDataInDb = async data => {
+ const createTables = async () => {
+  // await deleteDatabase();
+  // return;
   try {
    const db = await SQLite.openDatabaseAsync("localstore");
-   const serverUser = data.user;
-   const serverFolders = data.folders;
-   const serverNotes = data.notes;
    await db.execAsync(`
    CREATE TABLE IF NOT EXISTS user (
      userId INTEGER PRIMARY KEY NOT NULL, 
@@ -186,22 +195,40 @@ export default function App() {
      folderid INTEGER PRIMARY KEY NOT NULL, 
      title TEXT NOT NULL, 
      color TEXT NOT NULL, 
-     parentFolderId TEXT
+     parentFolderId INTEGER
     );
    CREATE TABLE IF NOT EXISTS notes (
      title TEXT NOT NULL, 
-     noteid TEXT NOT NULL, 
+     noteid INTEGER NOT NULL, 
      locked BOOLEAN, 
      htmlText TEXT NOT NULL, 
-     folderId TEXT, 
+     folderId INTEGER, 
      createdAt TIMESTAMP NOT NULL, 
      updated TIMESTAMP NOT NULL, 
      trashed BOOLEAN
     );
   `);
-   storeUserInDb(db, serverUser);
-   storeFoldersInDb(db, serverFolders);
-   storeNotesInDb(db, serverNotes);
+  } catch (err) {
+   console.log(err);
+  }
+ };
+
+ const storeDataInDb = async data => {
+  try {
+   const db = await SQLite.openDatabaseAsync("localstore");
+   const userToStore = data.userToStore;
+   const foldersToStore = data.foldersToStore;
+   const notesToStore = data.notesToStore;
+   if (userToStore) {
+    await storeUserInDb(db, userToStore);
+   }
+   if (foldersToStore.length > 0) {
+    await storeFoldersInDb(db, foldersToStore);
+   }
+   if (notesToStore.length > 0) {
+    await storeNotesInDb(db, notesToStore);
+   }
+   return;
   } catch (err) {
    console.log("creating tables", err);
   }
@@ -268,30 +295,64 @@ export default function App() {
   }
  };
 
- const grabFromDb = async () => {
-  const storedData = await fetchFromDb();
-  if (storedData.user && storedData.folders && storedData.notes) {
-   try {
-    setAllData(storedData);
-    setUser(storedData.user);
-    setLoading(false);
-    getData();
-   } catch (err) {
-    console.log(err);
+ const filterData = (serverFolders, serverNotes, serverUser, storedData) => {
+  if (storedData.folders && storedData.notes && storedData.user) {
+   const combinedFolders = [...storedData.folders, ...serverFolders];
+   const combinedNotes = [...storedData.notes, ...serverNotes];
+   const folderMap = new Map();
+   const notesMap = new Map();
+   combinedFolders.forEach(fold => {
+    folderMap.set(fold.folderid, fold);
+   });
+   combinedNotes.forEach(aNote => {
+    notesMap.set(aNote.noteid, aNote);
+   });
+   const foldersToStore = Array.from(folderMap.values);
+   const notesToStore = Array.from(notesMap.values);
+   if (serverUser.userId === storedData.user.userId) {
+    return { foldersToStore, notesToStore, userToStore: null };
+   } else {
+    return { foldersToStore, notesToStore, userToStore: serverUser };
    }
   } else {
-   console.log("No data");
+   return {
+    foldersToStore: serverFolders,
+    notesToStore: serverNotes,
+    userToStore: serverUser
+   };
   }
  };
 
- const getData = () => {
+ const grabFromDb = async () => {
+  const storedData = await fetchFromDb();
+  if (
+   storedData.user &&
+   storedData.folders.length > 0 &&
+   storedData.notes.length > 0
+  ) {
+   setAllData(storedData);
+   setUser(storedData.user);
+   setLoading(false);
+  } else {
+   console.log("No data");
+  }
+  //getData(storedData);
+ };
+
+ const getData = storedData => {
   getUserData(token)
    .then(response => {
     const data = response.data.data;
+    const dataToStore = filterData(
+     data.folders,
+     data.notes,
+     data.user,
+     storedData
+    );
     setAllData(data);
     setUser(data.user);
     setLoading(false);
-    storeDataInDb(data);
+    storeDataInDb(dataToStore);
    })
    .catch(err => {
     console.log(err);
@@ -358,7 +419,7 @@ export default function App() {
          setOpen={setOpen}
          note={note}
          setNote={setNote}
-         allNotes={allData?.notes}
+         allNotes={allData.notes}
          setMenuOpen={setMenuOpen}
         />
        )
@@ -383,7 +444,7 @@ export default function App() {
       />
      </Route>
     </Routes>
-    <Options setOptions={setOptions} options={options} />
+    {!note ? <Options setOptions={setOptions} options={options} /> : null}
     {open.show ? (
      <Settings
       item={open.item}
