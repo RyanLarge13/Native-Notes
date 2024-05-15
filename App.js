@@ -64,7 +64,6 @@ export default function App() {
 
  const findChildNotes = () => {
   if (!folder && allData.folders.length > 0 && allData.notes.length > 0) {
-   console.log("no fold but data");
    const topFolders = allData.folders.filter(
     fold => fold.parentFolderId === null
    );
@@ -75,7 +74,6 @@ export default function App() {
    return;
   }
   if (folder) {
-   console.log("fold");
    const subfolders = allData.folders.filter(
     fold => fold.parentFolderId === folder.folderid
    );
@@ -87,16 +85,13 @@ export default function App() {
    setMainTitle(folder.title);
    return;
   }
-  console.log("nada");
  };
 
  useEffect(() => {
   if (token) {
-   console.log("token");
    grabFromDb();
   }
   if (!token) {
-   console.log("no token");
    getToken();
   }
  }, [token]);
@@ -336,10 +331,14 @@ export default function App() {
   } else {
    console.log("No data");
   }
-  //getData(storedData);
+  getData(storedData);
  };
 
  const getData = storedData => {
+  const notesToRender = storedData.notes.filter(
+   aNote => aNote.folderId == null
+  );
+  setNotes(notesToRender);
   getUserData(token)
    .then(response => {
     const data = response.data.data;
@@ -444,6 +443,11 @@ export default function App() {
       />
      </Route>
     </Routes>
+    {user ? (
+     <Pressable onPress={() => toggleOptions()} style={styles.addIcon}>
+      <Icon name="edit" style={styles.iconColor} />
+     </Pressable>
+    ) : null}
     {!note ? <Options setOptions={setOptions} options={options} /> : null}
     {open.show ? (
      <Settings
@@ -507,11 +511,6 @@ export default function App() {
        </Pressable>
       </View>
      </>
-    ) : null}
-    {user ? (
-     <Pressable onPress={() => toggleOptions()} style={styles.addIcon}>
-      <Icon name="edit" style={styles.iconColor} />
-     </Pressable>
     ) : null}
    </View>
   </NativeRouter>
