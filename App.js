@@ -175,7 +175,7 @@ export default function App() {
  };
 
  const createTables = async () => {
-  // await deleteDatabase();
+  //  await deleteDatabase();
   // return;
   try {
    const db = await SQLite.openDatabaseAsync("localstore");
@@ -223,9 +223,8 @@ export default function App() {
    if (notesToStore.length > 0) {
     await storeNotesInDb(db, notesToStore);
    }
-   return;
   } catch (err) {
-   console.log("creating tables", err);
+   console.log("Storing new user data error: ", err);
   }
  };
 
@@ -266,7 +265,6 @@ export default function App() {
  };
 
  const storeNotesInDb = async (db, notes) => {
-  // console.log("Notes storing", notes);
   try {
    for (const note of notes) {
     await db.runAsync(
@@ -292,18 +290,16 @@ export default function App() {
 
  const filterData = (serverFolders, serverNotes, serverUser, storedData) => {
   if (storedData.folders && storedData.notes && storedData.user) {
-   const combinedFolders = [...storedData.folders, ...serverFolders];
-   const combinedNotes = [...storedData.notes, ...serverNotes];
-   const folderMap = new Map();
-   const notesMap = new Map();
-   combinedFolders.forEach(fold => {
-    folderMap.set(fold.folderid, fold);
-   });
-   combinedNotes.forEach(aNote => {
-    notesMap.set(aNote.noteid, aNote);
-   });
-   const foldersToStore = Array.from(folderMap.values);
-   const notesToStore = Array.from(notesMap.values);
+   const localFoldersIdSet = new Set(
+    storedData.folders.map(fold => fold.folderid)
+   );
+   const localNotesIdSet = new Set(storedData.notes.map(aNote => aNote.noteid));
+   const foldersToStore = serverFolders.filter(
+    fold => !localFoldersIdSet.has(fold.folderid)
+   );
+   const notesToStore = serverNotes.filter(
+    aNote => !localNotesIdSet.has(aNote.noteid)
+   );
    if (serverUser.userId === storedData.user.userId) {
     return { foldersToStore, notesToStore, userToStore: null };
    } else {
@@ -340,9 +336,9 @@ export default function App() {
   );
   setNotes(notesToRender);
   getUserData(token)
-   .then(response => {
+   .then(async response => {
     const data = response.data.data;
-    const dataToStore = filterData(
+    const dataToStore = await filterData(
      data.folders,
      data.notes,
      data.user,
@@ -351,7 +347,7 @@ export default function App() {
     setAllData(data);
     setUser(data.user);
     setLoading(false);
-    storeDataInDb(dataToStore);
+    await storeDataInDb(dataToStore);
    })
    .catch(err => {
     console.log(err);
