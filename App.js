@@ -455,6 +455,7 @@ export default function App() {
       setPickFolder={setPickFolder}
       selectedFolder={selectedFolder}
       setSelectedFolder={setSelectedFolder}
+      SQLite={SQLite}
      />
     ) : null}
     {allData ? (

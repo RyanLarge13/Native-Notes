@@ -27,7 +27,8 @@ const Settings = ({
  setAllData,
  setPickFolder,
  selectedFolder,
- setSelectedFolder
+ setSelectedFolder,
+ SQLite
 }) => {
  const [newTitle, setNewTitle] = useState("");
  const [newColor, setNewColor] = useState(item.color);
@@ -47,7 +48,7 @@ const Settings = ({
    toValue: 1,
    duration: 100,
    useNativeDriver: true
-  }).start()
+  }).start();
  }, []);
 
  const updateAFolder = () => {
@@ -90,10 +91,11 @@ const Settings = ({
    });
  };
 
- const deleteFolder = () => {
+ const deleteFolder = async () => {
   const folderId = item.folderid;
   deleteAFolder(token, folderId)
-   .then(res => {
+   .then(async res => {
+    const db = await SQLite.openDatabaseAsync("localstore");
     const folderIdToDelete = res.data.data[0].folderid;
     setAllData(prevData => {
      const newFolders = prevData.folders.filter(
@@ -105,6 +107,12 @@ const Settings = ({
      };
      return newData;
     });
+    await db.runAsync(
+     `
+      DELETE FROM folders WHERE folderid = $deleteId
+    `,
+     { $deleteId: folderIdToDelete }
+    );
     setOpen({ show: false });
    })
    .catch(err => {
@@ -118,7 +126,8 @@ const Settings = ({
  const deleteNote = () => {
   const noteId = item.noteid;
   deleteANote(token, noteId)
-   .then(res => {
+   .then(async res => {
+    const db = await SQLite.openDatabaseAsync("localstore");
     const noteIdToDelete = res.data.data[0].notesid;
     setAllData(prevData => {
      const newNotes = prevData.notes.filter(
@@ -127,6 +136,12 @@ const Settings = ({
      const newData = { ...prevData, notes: newNotes };
      return newData;
     });
+    await db.runAsync(
+     `
+      DELETE FROM notes WHERE noteid = $deleteId
+    `,
+     { $deleteId: noteIdToDelete }
+    );
     setOpen({ show: false });
    })
    .catch(err => {
@@ -182,15 +197,14 @@ const Settings = ({
 
  return (
   <>
-  <Animated.View style={[styles.backdrop, {opacity: opacityAni}]
-  }>
-   <Pressable
-    onPress={() => {
-     setSelectedFolder(null);
-     setOpen({ show: false });
-    }}
-    style={{ backgroundColor: "transparent", width: "100%", height: "100%" }}
-   ></Pressable>
+   <Animated.View style={[styles.backdrop, { opacity: opacityAni }]}>
+    <Pressable
+     onPress={() => {
+      setSelectedFolder(null);
+      setOpen({ show: false });
+     }}
+     style={{ backgroundColor: "transparent", width: "100%", height: "100%" }}
+    ></Pressable>
    </Animated.View>
    {type === "folder" ? (
     <Animated.View
