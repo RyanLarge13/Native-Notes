@@ -157,7 +157,8 @@ const Settings = ({
    notesId: item.noteid,
    title: newTitle ? newTitle : item.title,
    htmlNotes: item.htmlText,
-   locked: isLocked
+   locked: isLocked,
+   folderId: folder ? folder.folderId : null
   };
   updateNote(token, updatedNote)
    .then(res => {

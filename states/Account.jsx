@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import { ScrollView, StyleSheet, Pressable, View, Text } from "react-native";
-import { BackHandler } from "react-native";
 import { Outlet, useLocation, useNavigate } from "react-router-native";
 import Header from "../components/Header";
 import Sorter from "../components/Sorter";
@@ -29,30 +28,6 @@ const Account = ({
 
  const navigate = useNavigate();
  const location = useLocation();
-
- const handleBackPress = useCallback(() => {
-  if (folder) {
-   if (note) {
-    setNote(null);
-    navigate("/");
-    return true;
-   }
-   goBack();
-   return true;
-  }
-  if (location !== "/") {
-   navigate("/");
-   return true;
-  }
-  return false;
- }, [folder, note]);
-
- useEffect(() => {
-  BackHandler.addEventListener("hardwareBackPress", handleBackPress);
-  return () => {
-   BackHandler.removeEventListener("hardwareBackPress", handleBackPress);
-  };
- }, [handleBackPress]);
 
  useEffect(() => {
   sortAndFilterNotes();
