@@ -14,18 +14,19 @@ import { useNavigate } from "react-router-native";
 // use folder for the folder title on scroll in header
 const Header = ({
  folder,
- setFolder, 
+ setFolder,
  goBack,
  notes,
  setNotes,
  allNotes,
  setMenuOpen,
  view,
- setView
+ setView,
+ layoutOptions, 
+ setLayoutOptions
 }) => {
  const [search, setSearch] = useState(false);
  const [searchText, setSearchText] = useState("");
- const [layoutOptions, setLayoutOptions] = useState(false);
 
  const animationOpacity = useRef(new Animated.Value(0)).current;
  const scaleAni = useRef(new Animated.Value(0)).current;

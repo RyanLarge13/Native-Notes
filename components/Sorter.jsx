@@ -2,14 +2,19 @@ import { useState, useEffect, useRef } from "react";
 import { View, Text, Animated, StyleSheet, Pressable } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome";
 
-const Sorter = ({ filter, setFilter, order, setOrder }) => {
- const [options, setOptions] = useState(false);
-
+const Sorter = ({
+ filter,
+ setFilter,
+ order,
+ setOrder,
+ sortOptions,
+ setSortOptions
+}) => {
  const opacityAni = useRef(new Animated.Value(0)).current;
  const scaleAni = useRef(new Animated.Value(0)).current;
 
  useEffect(() => {
-  if (options) {
+  if (sortOptions) {
    Animated.parallel([
     Animated.timing(opacityAni, {
      toValue: 1,
@@ -38,11 +43,11 @@ const Sorter = ({ filter, setFilter, order, setOrder }) => {
     })
    ]).start();
   }
- }, [options]);
+ }, [sortOptions]);
 
  return (
   <View style={styles.container}>
-   <Pressable onPress={() => setOptions(prev => !prev)} style={styles.flexRow}>
+   <Pressable onPress={() => setSortOptions(prev => !prev)} style={styles.flexRow}>
     <Icon name="sort-amount-desc" style={styles.white} />
     <Text style={styles.name}>{filter}</Text>
    </Pressable>
@@ -61,7 +66,7 @@ const Sorter = ({ filter, setFilter, order, setOrder }) => {
    >
     <Pressable
      onPress={() => {
-      setOptions(false);
+      setSortOptions(false);
       setFilter("Title");
      }}
      style={[styles.typeBtn, filter === "Title" && { backgroundColor: "#222" }]}
@@ -70,7 +75,7 @@ const Sorter = ({ filter, setFilter, order, setOrder }) => {
     </Pressable>
     <Pressable
      onPress={() => {
-      setOptions(false);
+      setSortOptions(false);
       setFilter("Date");
      }}
      style={[styles.typeBtn, filter === "Date" && { backgroundColor: "#222" }]}
@@ -79,7 +84,7 @@ const Sorter = ({ filter, setFilter, order, setOrder }) => {
     </Pressable>
     <Pressable
      onPress={() => {
-      setOptions(false);
+      setSortOptions(false);
       setFilter("Update");
      }}
      style={[

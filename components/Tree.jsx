@@ -11,7 +11,8 @@ const NestedFolder = ({
  childFolders,
  parentId,
  level,
- open
+ open, 
+ setMenuOpen
 }) => {
  return (
   <Tree
@@ -23,6 +24,7 @@ const NestedFolder = ({
    parentId={parentId}
    level={level}
    open={open}
+   setMenuOpen={setMenuOpen}
   />
  );
 };
@@ -35,7 +37,8 @@ const Tree = ({
  folders,
  parentId,
  level,
- open
+ open,
+ setMenuOpen
 }) => {
  const childFolders = folders.filter(fold => fold.parentFolderId !== parentId);
  const topFolders = folders.filter(fold => fold.parentFolderId === parentId);
@@ -81,11 +84,14 @@ const Tree = ({
         key={fold.folderid}
         style={[styles.folder, { marginLeft: 5 * level }]}
         onPress={() => {
-         moving
-          ? open.item.title === fold.title
+         if (moving) {
+           open.item.title === fold.title
             ? null
             : setSelectedFolder(fold)
-          : setFolder(fold);
+            return;
+         } 
+             setFolder(fold);
+             setMenuOpen(false);
         }}
        >
         <View
@@ -121,6 +127,7 @@ const Tree = ({
            parentId={fold.folderid}
            level={level + 1}
            open={open}
+           setMenuOpen={setMenuOpen}
           />
          ) : null}
         </View>

@@ -8,7 +8,6 @@ import {
  View,
  TextInput
 } from "react-native";
-import { BackHandler } from "react-native";
 import Spinner from "react-native-loading-spinner-overlay";
 import { NativeRouter, Routes, Route } from "react-router-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -23,6 +22,7 @@ import Options from "./components/Options";
 import Settings from "./components/Settings";
 import Menu from "./components/Menu";
 import Tree from "./components/Tree";
+import SystemNotif from "./components/SystemNotif";
 
 export default function App() {
  const [allData, setAllData] = useState({
@@ -31,6 +31,7 @@ export default function App() {
   notes: []
  });
  const [user, setUser] = useState(null);
+ const [systemNotifs, setSystemNotifs] = useState([]);
  const [folders, setFolders] = useState([]);
  const [folder, setFolder] = useState(null);
  const [notes, setNotes] = useState([]);
@@ -44,12 +45,14 @@ export default function App() {
  const [systemFolder, setSystemFolder] = useState("main");
  const [pickFolder, setPickFolder] = useState(false);
  const [selectedFolder, setSelectedFolder] = useState(null);
+ const [layoutOptions, setLayoutOptions] = useState(false);
 
  useEffect(() => {
   createTables();
  }, []);
 
  useEffect(() => {
+  setFolders([]);
   if (systemFolder === "main") {
    findChildNotes();
   }
@@ -110,13 +113,12 @@ export default function App() {
  };
 
  const getAll = () => {
-  setFolder(null);
   setNotes(allData.notes);
   setMainTitle("All Notes");
  };
 
  const getTrash = () => {
-  setNotes([]);
+  setNotes(allData.notes.filter(note => note?.trashed));
   setMainTitle("Trash");
  };
 
@@ -381,6 +383,10 @@ export default function App() {
    setOptions(false);
    return true;
   }
+  if (layoutOptions) {
+   setLayoutOptions(false);
+   return true;
+  }
   if (pickFolder) {
    setPickFolder(false);
    setSelectedFolder(null);
@@ -391,12 +397,16 @@ export default function App() {
    return true;
   }
   const parentId = folder ? folder.parentFolderId : null;
-  if (parentId === null && mainTitle !== "Folders") {
+  if (parentId === null && systemFolder !== "main") {
+   setSystemFolder("main");
    setMainTitle("Folders");
    setFolder(null);
    return true;
   }
-  if (parentId) {
+  if (parentId === null && folder === null) {
+   return false;
+  }
+  if (parentId !== null) {
    const parentFolder = allData.folders.filter(
     fold => fold.folderid === parentId
    )[0];
@@ -404,16 +414,10 @@ export default function App() {
    return true;
   }
   if (parentId === null) {
-   return false;
+   setFolder(null);
+   return true;
   }
  };
-
- useEffect(() => {
-  BackHandler.addEventListener("hardwareBackPress", goBack);
-  return () => {
-   BackHandler.removeEventListener("hardwareBackPress", goBack);
-  };
- }, [folder, note, pickFolder, open, menuOpen, options, mainTitle]);
 
  const saveNewLocation = () => {
   setPickFolder(false);
@@ -448,10 +452,17 @@ export default function App() {
          setFolder={setFolder}
          goBack={goBack}
          setOpen={setOpen}
+         pickFolder={pickFolder}
+         open={open}
+         menuOpen={menuOpen}
+         options={options}
          note={note}
          setNote={setNote}
          allNotes={allData.notes}
          setMenuOpen={setMenuOpen}
+         systemFolder={systemFolder}
+         layoutOptions={layoutOptions}
+         setLayoutOptions={setLayoutOptions}
         />
        )
       }
@@ -460,7 +471,6 @@ export default function App() {
        path="newfolder"
        element={
         <NewFolder
-         navigateBack={handleNavBack}
          setAllData={setAllData}
          folder={folder}
          token={token}
@@ -483,9 +493,17 @@ export default function App() {
      </Route>
     </Routes>
     {user ? (
-     <Pressable onPress={() => toggleOptions()} style={styles.addIcon}>
-      <Icon name="edit" style={styles.iconColor} />
-     </Pressable>
+     <>
+      {options && !note ? (
+       <Pressable
+        style={styles.backdrop}
+        onPress={() => setOptions(false)}
+       ></Pressable>
+      ) : null}
+      <Pressable onPress={() => toggleOptions()} style={styles.addIcon}>
+       <Icon name="edit" style={styles.iconColor} />
+      </Pressable>
+     </>
     ) : null}
     {!note ? <Options setOptions={setOptions} options={options} /> : null}
     {open.show ? (
@@ -499,6 +517,7 @@ export default function App() {
       selectedFolder={selectedFolder}
       setSelectedFolder={setSelectedFolder}
       SQLite={SQLite}
+      setSystemNotifs={setSystemNotifs} 
      />
     ) : null}
     {allData ? (
@@ -513,6 +532,7 @@ export default function App() {
       setPickFolder={setPickFolder}
       setAllData={setAllData}
       setUser={setUser}
+      setSystemNotifs={setSystemNotifs}
      />
     ) : null}
     {pickFolder ? (
@@ -535,6 +555,7 @@ export default function App() {
          parentId={null}
          level={1}
          open={open}
+         setMenuOpen={setMenuOpen}
         />
         <Text style={[styles.white, { marginTop: 10 }]}>
          {open.item.title} &rarr; {selectedFolder ? selectedFolder.title : ""}
@@ -554,6 +575,15 @@ export default function App() {
       </ScrollView>
      </>
     ) : null}
+    {systemNotifs.map((notif, index) => (
+     <SystemNotif
+      key={index}
+      setSystemNotifs={setSystemNotifs}
+      systemNotifs={systemNotifs}
+      notif={notif}
+      index={index}
+     />
+    ))}
    </View>
   </NativeRouter>
  );
@@ -581,6 +611,14 @@ const styles = StyleSheet.create({
   padding: 20,
   borderRadius: 1000,
   backgroundColor: "#111"
+ },
+ backdrop: {
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: "rgba(0,0,0,0.4)"
  },
  iconColor: {
   color: "#fcd34d",

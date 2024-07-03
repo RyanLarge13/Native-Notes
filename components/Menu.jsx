@@ -22,7 +22,8 @@ const Menu = ({
  setSystemFolder,
  setPickFolder,
  setAllData,
- setUser
+ setUser,
+ setSystemNotifs
 }) => {
  const animation = useRef(new Animated.Value(-500)).current;
  const animationOpacity = useRef(new Animated.Value(0)).current;
@@ -39,7 +40,7 @@ const Menu = ({
    Animated.spring(animationOpacity, {
     toValue: 1,
     tension: 100,
-    friction: 10, 
+    friction: 10,
     useNativeDriver: true
    }).start();
   }
@@ -58,6 +59,22 @@ const Menu = ({
    }).start();
   }
  }, [menuOpen]);
+
+ const confirmLogout = () => {
+  const newNotifs = [
+   {
+    id: 1,
+    color: "#fde047",
+    title: "Logout",
+    text: "Are you sure you want to logout?",
+    actions: [
+     { text: "cancel", func: () => setSystemNotifs([]) },
+     { text: "logout", func: () => logout() }
+    ]
+   }
+  ];
+  setSystemNotifs(newNotifs);
+ };
 
  const logout = async () => {
   await AsyncStorage.removeItem("authToken")
@@ -151,7 +168,7 @@ const Menu = ({
         <Icon name="trash" style={styles.white} />
        </Pressable>
       </View>
-      <Pressable onPress={() => logout()} style={styles.logout}>
+      <Pressable onPress={() => confirmLogout()} style={styles.logout}>
        <Text>Logout &rarr;</Text>
       </Pressable>
       <Pressable onPress={() => deleteAccount()} style={styles.delete}>
@@ -170,6 +187,7 @@ const Menu = ({
         parentId={null}
         level={0}
         open={{ item: { title: null } }}
+        setMenuOpen={setMenuOpen}
        />
       </View>
       <Pressable onPress={() => {}} style={styles.settings}>

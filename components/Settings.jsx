@@ -28,7 +28,8 @@ const Settings = ({
  setPickFolder,
  selectedFolder,
  setSelectedFolder,
- SQLite
+ SQLite,
+ setSystemNotifs
 }) => {
  const [newTitle, setNewTitle] = useState("");
  const [newColor, setNewColor] = useState(item.color);
@@ -91,6 +92,27 @@ const Settings = ({
    });
  };
 
+ const confirmDeleteFolder = () => {
+  setSystemNotifs([
+   {
+    id: 1,
+    color: "#f33",
+    title: "Delete Folder?",
+    text: "Are you sure you want to delete this folder?",
+    actions: [
+     { text: "close", func: () => setSystemNotifs([]) },
+     {
+      text: "delete",
+      func: () => {
+       setSystemNotifs([]);
+       deleteFolder();
+      }
+     }
+    ]
+   }
+  ]);
+ };
+
  const deleteFolder = async () => {
   const folderId = item.folderid;
   deleteAFolder(token, folderId)
@@ -121,6 +143,27 @@ const Settings = ({
    .finally(() => {
     console.log("delete a folder complete");
    });
+ };
+
+ const confirmDeleteNote = () => {
+  setSystemNotifs([
+   {
+    id: 1,
+    color: "#f33", 
+    title: "Delete Note?",
+    text: "Are you sure you want to delete this note?",
+    actions: [
+     { text: "close", func: () => setSystemNotifs([]) },
+     {
+      text: "delete",
+      func: () => {
+       setSystemNotifs([]);
+       deleteNote();
+      }
+     }
+    ]
+   }
+  ]);
  };
 
  const deleteNote = () => {
@@ -216,7 +259,7 @@ const Settings = ({
      ></View>
      <View style={styles.header}>
       <Text style={[styles.white, styles.largeText]}>{item.title}</Text>
-      <Pressable onPress={() => deleteFolder()}>
+      <Pressable onPress={() => confirmDeleteFolder()}>
        <Icon style={[styles.red, styles.largeText]} name="delete" />
       </Pressable>
      </View>
@@ -250,7 +293,7 @@ const Settings = ({
     >
      <View style={styles.header}>
       <Text style={[styles.white, styles.largeText]}>{item.title}</Text>
-      <Pressable onPress={() => deleteNote()}>
+      <Pressable onPress={() => confirmDeleteNote()}>
        <Icon style={[styles.red, styles.largeText]} name="delete" />
       </Pressable>
      </View>
