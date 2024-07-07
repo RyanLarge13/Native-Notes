@@ -190,7 +190,8 @@ export default function App() {
      userId INTEGER PRIMARY KEY NOT NULL, 
      username TEXT NOT NULL, 
      email TEXT NOT NULL, 
-     createdAt TEXT NOT NULL
+     createdAt TEXT NOT NULL,
+     preferences TEXT NOT NULL
     );
    CREATE TABLE IF NOT EXISTS folders (
      folderid INTEGER PRIMARY KEY NOT NULL, 
@@ -238,13 +239,14 @@ export default function App() {
     try {
       await db.runAsync(
         `
-    INSERT INTO user (userId, username, email, createdAt)
-    VALUES (?, ?, ?, ?);
+    INSERT INTO user (userId, username, email, createdAt, preferences)
+    VALUES (?, ?, ?, ?, ?);
    `,
         user.userId,
         user.username,
         user.email,
-        user.createdAt
+        user.createdAt,
+        JSON.stringify({ darkMode: true, theme: "bg-amber-300", view: "list" })
       );
     } catch (err) {
       console.log("inserting user", err);
@@ -465,6 +467,7 @@ export default function App() {
                   systemFolder={systemFolder}
                   layoutOptions={layoutOptions}
                   setLayoutOptions={setLayoutOptions}
+                  userSettingsOpen={userSettingsOpen}
                 />
               )
             }

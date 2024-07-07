@@ -25,6 +25,12 @@ const UserSettings = ({
 }) => {
   const [color, setColor] = useState("bg-amber-300");
   const [theme, setTheme] = useState(false);
+  // Change to global list/grid view state
+  const [view, setView] = useState(false);
+  const [autoSave, setAutoSave] = useState(false);
+  const [lockApp, setLockApp] = useState(false);
+  // replace with global order state
+  const [order, setorder] = useState(true);
 
   const transXAni = useRef(new Animated.Value(500)).current;
   const navigate = useNavigate();
@@ -109,39 +115,86 @@ const UserSettings = ({
         ></Pressable>
       ) : null}
       <Animated.View style={[styles.container, { translateX: transXAni }]}>
-        <View style={styles.switch}>
-          <Text style={styles.white}>Dark Mode</Text>
-          <Switch
-            trackColor={{ false: "#fda4af", true: "#6ee7b7" }}
-            thumbColor={darkMode ? "#6ee7b7" : "#fda4af"}
-            ios_backgroundColor="#000000"
-            onValueChange={() => setDarkMode((prev) => !prev)}
-            value={darkMode}
-          />
+        <View>
+          <View style={styles.switch}>
+            <Text style={styles.white}>Theme</Text>
+            <Switch
+              trackColor={{ false: "#fda4af", true: formatColor(color) }}
+              thumbColor={theme ? formatColor(color) : "#fda4af"}
+              ios_backgroundColor="#000000"
+              onValueChange={() => setTheme((prev) => !prev)}
+              value={theme}
+            />
+          </View>
+          <View
+            style={[styles.colorBar, { backgroundColor: formatColor(color) }]}
+          ></View>
+          <Colors setColor={setColor} selectedColor={color} />
+          <View style={styles.switch}>
+            <Text style={styles.white}>Dark Mode</Text>
+            <Switch
+              trackColor={{ false: "#fda4af", true: "#6ee7b7" }}
+              thumbColor={darkMode ? "#6ee7b7" : "#fda4af"}
+              ios_backgroundColor="#000000"
+              onValueChange={() => setDarkMode((prev) => !prev)}
+              value={darkMode}
+            />
+          </View>
+          <View style={styles.switch}>
+            <Text style={styles.white}>{view ? "Grid" : "List"} View</Text>
+            <Switch
+              trackColor={{ false: "#fda4af", true: "#6ee7b7" }}
+              thumbColor={view ? "#6ee7b7" : "#fda4af"}
+              ios_backgroundColor="#000000"
+              onValueChange={() => setView((prev) => !prev)}
+              value={view}
+            />
+          </View>
+          <View style={styles.switch}>
+            <Text style={styles.white}>Auto Save Notes</Text>
+            <Switch
+              trackColor={{ false: "#fda4af", true: "#6ee7b7" }}
+              thumbColor={autoSave ? "#6ee7b7" : "#fda4af"}
+              ios_backgroundColor="#000000"
+              onValueChange={() => setAutoSave((prev) => !prev)}
+              value={autoSave}
+            />
+          </View>
+          <View style={styles.switch}>
+            <Text style={styles.white}>Lock App</Text>
+            <Switch
+              trackColor={{ false: "#fda4af", true: "#6ee7b7" }}
+              thumbColor={lockApp ? "#6ee7b7" : "#fda4af"}
+              ios_backgroundColor="#000000"
+              onValueChange={() => setLockApp((prev) => !prev)}
+              value={lockApp}
+            />
+          </View>
+          <View style={styles.switch}>
+            <Text style={styles.white}>Lock App</Text>
+            <Switch
+              trackColor={{ false: "#fda4af", true: "#6ee7b7" }}
+              thumbColor={order ? "#6ee7b7" : "#fda4af"}
+              ios_backgroundColor="#000000"
+              onValueChange={() => setorder((prev) => !prev)}
+              value={order}
+            />
+          </View>
         </View>
-        <View style={styles.switch}>
-          <Text style={styles.white}>Theme</Text>
-          <Switch
-            trackColor={{ false: "#fda4af", true: formatColor(color) }}
-            thumbColor={theme ? formatColor(color) : "#fda4af"}
-            ios_backgroundColor="#000000"
-            onValueChange={() => setTheme((prev) => !prev)}
-            value={theme}
-          />
+        <View>
+          <Pressable onPress={() => confirmLogout()} style={styles.logout}>
+            <Text>Logout &rarr;</Text>
+          </Pressable>
+          <Pressable style={styles.bug}>
+            <Text>Report A Bug</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => confirmDeleteAccount()}
+            style={styles.delete}
+          >
+            <Text style={styles.white}>Delete Account</Text>
+          </Pressable>
         </View>
-        <View
-          style={[styles.colorBar, { backgroundColor: formatColor(color) }]}
-        ></View>
-        <Colors setColor={setColor} selectedColor={color} />
-        <Pressable onPress={() => confirmLogout()} style={styles.logout}>
-          <Text>Logout &rarr;</Text>
-        </Pressable>
-        <Pressable style={styles.bug}>
-          <Text>Report A Bug</Text>
-        </Pressable>
-        <Pressable onPress={() => confirmDeleteAccount()} style={styles.delete}>
-          <Text style={styles.white}>Delete Account</Text>
-        </Pressable>
       </Animated.View>
     </>
   );
@@ -163,8 +216,10 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: "90%",
     backgroundColor: "#000",
-    padding: 10,
+    padding: 15,
     paddingTop: 50,
+    justifyContent: "space-between",
+    flex: 1,
   },
   switch: {
     justifyContent: "space-between",

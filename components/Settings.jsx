@@ -52,7 +52,8 @@ const Settings = ({
     }).start();
   }, []);
 
-  const updateAFolder = () => {
+  const updateAFolder = async () => {
+    const db = await SQLite.openDatabaseAsync("localstore");
     const newFolder = {
       parentFolderId: selectedFolder
         ? selectedFolder.folderid
@@ -62,7 +63,7 @@ const Settings = ({
       folderId: item.folderid,
     };
     updateFolder(token, newFolder)
-      .then((res) => {
+      .then(async (res) => {
         const resFolder = res.data.data[0];
         const folderToPush = {
           title: resFolder.title,
@@ -81,6 +82,17 @@ const Settings = ({
           };
           return newData;
         });
+        await db.runAsync(
+          `
+      UPDATE folders SET title = ?, color = ?, parentFolderId = ? WHERE folderid = ?
+    `,
+          [
+            resFolder.title,
+            resFolder.color,
+            resFolder.parentfolderid,
+            resFolder.folderId,
+          ]
+        );
         setOpen({ show: false });
         setSelectedFolder(null);
       })
@@ -195,7 +207,8 @@ const Settings = ({
       });
   };
 
-  const updateNoteTitleOrLocked = () => {
+  const updateNoteTitleOrLocked = async () => {
+    const db = await SQLite.openDatabaseAsync("localstore");
     const updatedNote = {
       notesId: item.noteid,
       title: newTitle ? newTitle : item.title,
@@ -204,7 +217,7 @@ const Settings = ({
       folderId: folder ? folder.folderId : null,
     };
     updateNote(token, updatedNote)
-      .then((res) => {
+      .then(async (res) => {
         const resNote = res.data.data[0];
         const noteToPush = {
           title: resNote.title,
@@ -225,6 +238,18 @@ const Settings = ({
           };
           return newData;
         });
+        await db.runAsync(
+          `
+      UPDATE notes SET title = ?, locked = ?, htmlText = ?, folderId = ? WHERE noteid = ?
+    `,
+          [
+            resNote.title,
+            resNote.locked,
+            resNote.htmlnotes,
+            resNote.folderid,
+            resNote.notesid,
+          ]
+        );
         setOpen({ show: false });
       })
       .catch((err) => {

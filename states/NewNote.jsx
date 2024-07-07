@@ -79,7 +79,7 @@ const NewNote = ({ folder, token, setAllData, note, SQLite }) => {
         folderId: folder ? folder.folderid : null,
       };
       updateNote(token, updatedNote)
-        .then((res) => {
+        .then(async (res) => {
           const resNote = res.data.data[0];
           const noteToPush = {
             title: resNote.title,
@@ -100,6 +100,16 @@ const NewNote = ({ folder, token, setAllData, note, SQLite }) => {
             };
             return newData;
           });
+          await db.runAsync(
+            `UPDATE notes SET title = ?, htmlText = ?, locked = ?, folderId = ? WHERE noteid = ?`,
+            [
+              resNote.title,
+              resNote.htmlnotes,
+              resNote.locked,
+              resNote.folderid,
+              resNote.notesid,
+            ]
+          );
           navigate("/");
         })
         .catch((err) => {
