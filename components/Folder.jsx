@@ -1,9 +1,21 @@
-import { Pressable, View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import Ripple from "react-native-material-ripple";
 import formatColor from "../utils/helpers/formatColor";
+import { useEffect, useState } from "react";
 
-const Folder = ({ folder, setFolder, setOpen }) => {
-  const openFolderSettings = (event) => {
+const Folder = ({ folder, setFolder, setOpen, allNotes }) => {
+  const [notesLen, setNotesLen] = useState(0);
+
+  useEffect(() => {
+    if (allNotes.length > 0) {
+      const lenOfNotes = allNotes.filter(
+        (anote) => anote.folderId === folder.folderid
+      ).length;
+      setNotesLen(lenOfNotes);
+    }
+  }, [allNotes]);
+
+  const openFolderSettings = () => {
     setOpen({ show: true, item: folder, type: "folder" });
   };
 
@@ -15,6 +27,7 @@ const Folder = ({ folder, setFolder, setOpen }) => {
       onPress={() => setFolder(folder)}
       style={styles.folder}
     >
+      <Text style={styles.gray}>{notesLen === 0 ? null : notesLen}</Text>
       <View
         style={[
           styles.color,
@@ -31,6 +44,8 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 10,
     backgroundColor: "#112",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     elevation: 2,
     width: 100,
     height: 65,
@@ -48,6 +63,10 @@ const styles = StyleSheet.create({
   white: {
     color: "#fff",
     fontSize: 10,
+  },
+  gray: {
+    color: "#777",
+    fontSize: 8,
   },
 });
 

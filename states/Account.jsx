@@ -1,5 +1,12 @@
-import { useState, useEffect, useCallback } from "react";
-import { ScrollView, StyleSheet, Pressable, View, Text } from "react-native";
+import { useState, useEffect, useRef } from "react";
+import {
+  ScrollView,
+  StyleSheet,
+  Pressable,
+  View,
+  Text,
+  Animated,
+} from "react-native";
 import { Outlet, useLocation, useNavigate } from "react-router-native";
 import { BackHandler } from "react-native";
 import Header from "../components/Header";
@@ -28,13 +35,20 @@ const Account = ({
   layoutOptions,
   setLayoutOptions,
   userSettingsOpen,
+  view,
+  setView,
+  order,
+  setOrder,
 }) => {
-  const [order, setOrder] = useState(true);
   const [filter, setFilter] = useState("Title");
   const [notesToRender, setNotesToRender] = useState([]);
-  const [searchedNotes, setSearchedNotes] = useState([]);
-  const [view, setView] = useState(false);
   const [sortOptions, setSortOptions] = useState(false);
+
+  const scrollRef = useRef(null);
+  const titleRef = useRef(null);
+
+  const infoOpacity = useRef(new Animated.Value(1)).current;
+  const miniTitleOpac = useRef(new Animated.Value(0)).current;
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -42,10 +56,7 @@ const Account = ({
   const nestedGoBack = () => {
     if (location.pathname !== "/") {
       navigate("/");
-      console.log("location is not home");
-      console.log(location.pathname);
       if (note) {
-        console.log("killing note");
         setNote(null);
       }
       return true;
@@ -96,7 +107,6 @@ const Account = ({
           ? +new Date(a.createdAt) - +new Date(b.createdAt)
           : +new Date(a.updated) - +new Date(b.updated)
       );
-      console.log("order");
     }
     if (!order) {
       copyOfNotes.sort((a, b) =>
@@ -106,36 +116,91 @@ const Account = ({
           ? +new Date(b.createdAt) - +new Date(a.createdAt)
           : +new Date(b.updated) - +new Date(a.updated)
       );
-      console.log("no order");
     }
     setNotesToRender(copyOfNotes);
+  };
+
+  const opacInfo = (diff) => {
+    if (diff < 0) {
+      return;
+    }
+    if (diff > 150) {
+      return;
+    }
+    const opacity = diff / 150;
+    Animated.timing(infoOpacity, {
+      toValue: opacity,
+      duration: 1,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const opacMiniTitle = (diff) => {
+    if (diff > 0) {
+      return;
+    }
+    if (diff < -150) {
+      return;
+    }
+    const opacity = Math.abs(diff) / 150;
+    Animated.timing(miniTitleOpac, {
+      toValue: opacity,
+      duration: 1,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleScroll = (e) => {
+    const scrollY = e.nativeEvent.contentOffset.y;
+    if (titleRef.current) {
+      titleRef.current.measureLayout(
+        scrollRef.current,
+        (x, y, width, height) => {
+          const diff = Math.floor(y - scrollY);
+          opacInfo(diff);
+          opacMiniTitle(diff);
+        }
+      );
+    }
   };
 
   return (
     <>
       <ScrollView
-        stickyHeaderIndices={[2]}
+        ref={scrollRef}
+        onScroll={handleScroll}
+        stickyHeaderIndices={[1]}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.container}
       >
-        <Text style={styles.mainTitle}>{mainTitle}</Text>
-        <Text style={styles.folderLen}>
-          {folders.length} {folders.length === 1 ? "folder" : "folders"}{" "}
-          {notes.length} {notes.length === 1 ? "note" : "notes"}
-        </Text>
-        <Header
-          folder={folder}
-          setFolder={setFolder}
-          goBack={goBack}
-          notes={notes}
-          setNotes={setNotes}
-          allNotes={allNotes}
-          setMenuOpen={setMenuOpen}
-          view={view}
-          setView={setView}
-          layoutOptions={layoutOptions}
-          setLayoutOptions={setLayoutOptions}
-        />
+        <Animated.View
+          ref={titleRef}
+          style={[styles.mainTitleContainer, { opacity: infoOpacity }]}
+        >
+          <Text style={styles.mainTitle}>{mainTitle}</Text>
+          <Text style={styles.folderLen}>
+            {folders.length} {folders.length === 1 ? "folder" : "folders"}{" "}
+            {notes.length} {notes.length === 1 ? "note" : "notes"}
+          </Text>
+        </Animated.View>
+        <View style={styles.headerContainer}>
+          <Animated.View style={{ opacity: miniTitleOpac }}>
+            <Text style={[styles.white, styles.miniTitle]}>{mainTitle}</Text>
+          </Animated.View>
+          <Header
+            folder={folder}
+            setFolder={setFolder}
+            goBack={goBack}
+            notes={notes}
+            setNotes={setNotes}
+            allNotes={allNotes}
+            setMenuOpen={setMenuOpen}
+            view={view}
+            setView={setView}
+            layoutOptions={layoutOptions}
+            setLayoutOptions={setLayoutOptions}
+          />
+        </View>
         <View style={styles.folderContainer}>
           {folders.map((fold) => (
             <Folder
@@ -143,6 +208,7 @@ const Account = ({
               folder={fold}
               setFolder={setFolder}
               setOpen={setOpen}
+              allNotes={allNotes}
             />
           ))}
         </View>
@@ -158,8 +224,8 @@ const Account = ({
           style={[
             styles.notesContainer,
             view
-              ? { flexDirection: "row", flexWrap: "wrap", gap: 25 }
-              : { flexDirection: "column", gap: 50 },
+              ? { flexDirection: "row", flexWrap: "wrap", gap: 15 }
+              : { flexDirection: "column", gap: 30 },
           ]}
         >
           {notesToRender.map((aNote, index) => (
@@ -192,6 +258,15 @@ const Account = ({
 };
 
 const styles = StyleSheet.create({
+  headerContainer: {
+    paddingVertical: 5,
+    paddingBottom: 8,
+    backgroundColor: "#000",
+  },
+  miniTitle: {
+    fontSize: 10,
+    marginTop: 5,
+  },
   note: {
     borderRadius: 10,
     backgroundColor: "#222",
@@ -205,9 +280,11 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: "rgba(0,0,0,0.4)",
   },
+  mainTitleContainer: {
+    marginTop: 150,
+  },
   mainTitle: {
     fontSize: 25,
-    marginTop: 100,
     color: "#fff",
     textAlign: "center",
   },
@@ -227,6 +304,9 @@ const styles = StyleSheet.create({
   },
   notesContainer: {
     marginVertical: 25,
+  },
+  white: {
+    color: "#fff",
   },
 });
 

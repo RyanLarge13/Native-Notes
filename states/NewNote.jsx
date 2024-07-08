@@ -15,7 +15,7 @@ import WebView from "react-native-webview";
 import EditorHTML from "../webView/html.js";
 import renderEditor from "../webView/editHTML";
 
-const NewNote = ({ folder, token, setAllData, note, SQLite }) => {
+const NewNote = ({ folder, token, setAllData, note, setNote, SQLite }) => {
   const [title, setTitle] = useState(note ? note.title : "");
   const [selected, setSelected] = useState([]);
   const [closed, setClosed] = useState(false);
@@ -111,6 +111,7 @@ const NewNote = ({ folder, token, setAllData, note, SQLite }) => {
             ]
           );
           navigate("/");
+          setNote(null);
         })
         .catch((err) => {
           console.log(err);
@@ -155,6 +156,7 @@ const NewNote = ({ folder, token, setAllData, note, SQLite }) => {
             resNote.trashed
           );
           navigate("/");
+          setNote(null);
         })
         .catch((err) => {
           console.log(err);

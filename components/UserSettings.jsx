@@ -22,15 +22,15 @@ const UserSettings = ({
   setAllData,
   setUser,
   deleteDatabase,
+  view,
+  setView,
+  order,
+  setOrder,
 }) => {
   const [color, setColor] = useState("bg-amber-300");
   const [theme, setTheme] = useState(false);
-  // Change to global list/grid view state
-  const [view, setView] = useState(false);
   const [autoSave, setAutoSave] = useState(false);
   const [lockApp, setLockApp] = useState(false);
-  // replace with global order state
-  const [order, setorder] = useState(true);
 
   const transXAni = useRef(new Animated.Value(500)).current;
   const navigate = useNavigate();
@@ -192,7 +192,7 @@ const UserSettings = ({
             onPress={() => confirmDeleteAccount()}
             style={styles.delete}
           >
-            <Text style={styles.white}>Delete Account</Text>
+            <Text style={styles.deleteColor}>Delete Account</Text>
           </Pressable>
         </View>
       </Animated.View>
@@ -250,10 +250,11 @@ const styles = StyleSheet.create({
   },
   delete: {
     paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 5,
-    backgroundColor: "#f55",
     marginTop: 10,
+  },
+  deleteColor: {
+    color: "#f55",
+    textAlign: "center",
   },
 });
 

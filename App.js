@@ -42,6 +42,8 @@ export default function App() {
   const [selectedFolder, setSelectedFolder] = useState(null);
   const [layoutOptions, setLayoutOptions] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
+  const [view, setView] = useState(false);
+  const [order, setOrder] = useState(false);
 
   useEffect(() => {
     createTables();
@@ -468,6 +470,10 @@ export default function App() {
                   layoutOptions={layoutOptions}
                   setLayoutOptions={setLayoutOptions}
                   userSettingsOpen={userSettingsOpen}
+                  view={view}
+                  setView={setView}
+                  order={order}
+                  setOrder={setOrder}
                 />
               )
             }
@@ -491,6 +497,7 @@ export default function App() {
                   token={token}
                   setAllData={setAllData}
                   note={note}
+                  setNote={setNote}
                   SQLite={SQLite}
                 />
               }
@@ -548,6 +555,10 @@ export default function App() {
               setAllData={setAllData}
               setUser={setUser}
               deleteDatabase={deleteDatabase}
+              view={view}
+              setView={setView}
+              order={order}
+              setOrder={setOrder}
             />
           </>
         ) : null}
