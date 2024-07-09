@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { View, Text, Pressable, Animated, StyleSheet } from "react-native";
 
-const SystemNotif = ({ setSystemNotifs, systemNotifs, notif, index }) => {
+const SystemNotif = ({ notif, index }) => {
   const transYAni = useRef(new Animated.Value(-100)).current;
 
   useEffect(() => {

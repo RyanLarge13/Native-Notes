@@ -12,6 +12,7 @@ import { BackHandler } from "react-native";
 import Header from "../components/Header";
 import Sorter from "../components/Sorter";
 import Folder from "../components/Folder";
+import Icon from "react-native-vector-icons/Feather";
 import Note from "../components/Note";
 
 const Account = ({
@@ -27,6 +28,7 @@ const Account = ({
   open,
   menuOpen,
   options,
+  setOptions,
   note,
   setNote,
   allNotes,
@@ -164,6 +166,10 @@ const Account = ({
     }
   };
 
+  const toggleOptions = () => {
+    setOptions((prev) => !prev);
+  };
+
   return (
     <>
       <ScrollView
@@ -252,6 +258,19 @@ const Account = ({
           ></Pressable>
         ) : null}
       </ScrollView>
+      {!note ? (
+        <>
+          {options ? (
+            <Pressable
+              style={styles.backdrop}
+              onPress={() => setOptions(false)}
+            ></Pressable>
+          ) : null}
+          <Pressable onPress={() => toggleOptions()} style={styles.addIcon}>
+            <Icon name="edit" style={styles.iconColor} />
+          </Pressable>
+        </>
+      ) : null}
       <Outlet />
     </>
   );
@@ -307,6 +326,18 @@ const styles = StyleSheet.create({
   },
   white: {
     color: "#fff",
+  },
+  addIcon: {
+    position: "absolute",
+    bottom: 10,
+    right: 10,
+    padding: 20,
+    borderRadius: 1000,
+    backgroundColor: "#111",
+  },
+  iconColor: {
+    color: "#fcd34d",
+    fontSize: 15,
   },
 });
 

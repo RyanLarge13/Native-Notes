@@ -261,11 +261,14 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: "#000",
-    paddingVertical: 50,
+    paddingTop: 50,
+    paddingBottom: 100,
     paddingHorizontal: 20,
   },
   title: {
     fontSize: 25,
+    paddingTop: 0,
+    paddingBottom: 10,
     color: "#fff",
   },
   saveInputContainer: {
