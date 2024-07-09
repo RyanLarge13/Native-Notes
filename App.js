@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { StatusBar } from "expo-status-bar";
+import { setStatusBarHidden, StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, Pressable, ScrollView, View } from "react-native";
 import Spinner from "react-native-loading-spinner-overlay";
 import { NativeRouter, Routes, Route } from "react-router-native";
@@ -44,6 +44,9 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(true);
   const [view, setView] = useState(false);
   const [order, setOrder] = useState(false);
+  const [theme, setTheme] = useState({ on: false, color: "bg-amber-300" });
+  const [autoSave, setAutoSave] = useState(false);
+  const [appLock, setAppLock] = useState(false);
 
   useEffect(() => {
     createTables();
@@ -168,12 +171,53 @@ export default function App() {
     }
   };
 
+  const setPreferences = (dbUser) => {
+    const stringPrefs = dbUser?.preferences;
+    if (stringPrefs) {
+      const preferences = JSON.parse(dbUser.preferences);
+      console.log(preferences);
+      if (preferences.darkMode !== null || preferences.darkMode !== undefined) {
+        setDarkMode(preferences.darkMode);
+      } else {
+        setDarkMode(true);
+      }
+      if (preferences.theme.on) {
+        setTheme(preferences.theme.color);
+      } else {
+        setTheme({ on: false, color: "bg-amber-300" });
+      }
+      if (preferences.view) {
+        setView(preferences.view);
+      } else {
+        setView("list");
+      }
+      if (preferences.autoSave === true) {
+        setAutoSave(preferences.autoSave);
+      } else {
+        setAutoSave(false);
+      }
+      if (preferences.appLock === true) {
+        setAppLock(true);
+      } else {
+        setAppLock(false);
+      }
+      if (preferences.order === true) {
+        setOrder(true);
+      } else {
+        setOrder(false);
+      }
+    } else {
+      console.log("No preferences");
+    }
+  };
+
   const fetchFromDb = async () => {
     try {
       const db = await SQLite.openDatabaseAsync("localstore");
       const dbUser = await db.getFirstAsync(`SELECT * FROM user`);
       const dbFolders = await db.getAllAsync(`SELECT * FROM folders`);
       const dbNotes = await db.getAllAsync(`SELECT * FROM notes`);
+      setPreferences(dbUser);
       const newAllData = { user: dbUser, folders: dbFolders, notes: dbNotes };
       return newAllData;
     } catch (err) {
@@ -183,8 +227,8 @@ export default function App() {
   };
 
   const createTables = async () => {
-    //  await deleteDatabase();
-    // return;
+    await deleteDatabase();
+    return;
     try {
       const db = await SQLite.openDatabaseAsync("localstore");
       await db.execAsync(`
@@ -248,7 +292,14 @@ export default function App() {
         user.username,
         user.email,
         user.createdAt,
-        JSON.stringify({ darkMode: true, theme: "bg-amber-300", view: "list" })
+        JSON.stringify({
+          darkMode: true,
+          theme: { on: false, color: "bg-amber-300" },
+          view: "list",
+          order: true,
+          autoSave: false,
+          appLock: false,
+        })
       );
     } catch (err) {
       console.log("inserting user", err);
@@ -559,6 +610,14 @@ export default function App() {
               setView={setView}
               order={order}
               setOrder={setOrder}
+              theme={theme}
+              setTheme={setTheme}
+              appLock={appLock}
+              setAppLock={setAppLock}
+              autoSave={autoSave}
+              setAutoSave={setAutoSave}
+              SQLite={SQLite}
+              user={user}
             />
           </>
         ) : null}

@@ -26,11 +26,16 @@ const UserSettings = ({
   setView,
   order,
   setOrder,
+  theme,
+  setTheme,
+  appLock,
+  setAppLock,
+  autoSave,
+  setAutoSave,
+  SQLite,
+  user,
 }) => {
   const [color, setColor] = useState("bg-amber-300");
-  const [theme, setTheme] = useState(false);
-  const [autoSave, setAutoSave] = useState(false);
-  const [lockApp, setLockApp] = useState(false);
 
   const transXAni = useRef(new Animated.Value(500)).current;
   const navigate = useNavigate();
@@ -120,10 +125,33 @@ const UserSettings = ({
             <Text style={styles.white}>Theme</Text>
             <Switch
               trackColor={{ false: "#fda4af", true: formatColor(color) }}
-              thumbColor={theme ? formatColor(color) : "#fda4af"}
+              thumbColor={theme.on ? formatColor(theme.color) : "#fda4af"}
               ios_backgroundColor="#000000"
-              onValueChange={() => setTheme((prev) => !prev)}
-              value={theme}
+              onValueChange={async () => {
+                setTheme((prev) => {
+                  return { on: !theme.on, ...prev };
+                });
+                const newPreferences = {
+                  order: order,
+                  appLock: appLock,
+                  autoSave: autoSave,
+                  darkMode: darkMode,
+                  theme: { ...theme, on: !theme.on },
+                  view: view,
+                };
+                try {
+                  const db = await SQLite.openDatabaseAsync("localstore");
+                  db.runAsync(
+                    `
+                      UPDATE user SET preferences = ? WHERE userId = ?
+                    `,
+                    [JSON.stringify(newPreferences), user.userId]
+                  );
+                } catch (err) {
+                  console.log(err);
+                }
+              }}
+              value={theme.on}
             />
           </View>
           <View
@@ -136,7 +164,28 @@ const UserSettings = ({
               trackColor={{ false: "#fda4af", true: "#6ee7b7" }}
               thumbColor={darkMode ? "#6ee7b7" : "#fda4af"}
               ios_backgroundColor="#000000"
-              onValueChange={() => setDarkMode((prev) => !prev)}
+              onValueChange={async () => {
+                setDarkMode((prev) => !prev);
+                const newPreferences = {
+                  order: order,
+                  appLock: appLock,
+                  autoSave: autoSave,
+                  darkMode: !darkMode,
+                  theme: theme,
+                  view: view,
+                };
+                try {
+                  const db = await SQLite.openDatabaseAsync("localstore");
+                  db.runAsync(
+                    `
+                      UPDATE user SET preferences = ? WHERE userId = ?
+                    `,
+                    [JSON.stringify(newPreferences), user.userId]
+                  );
+                } catch (err) {
+                  console.log(err);
+                }
+              }}
               value={darkMode}
             />
           </View>
@@ -146,8 +195,39 @@ const UserSettings = ({
               trackColor={{ false: "#fda4af", true: "#6ee7b7" }}
               thumbColor={view ? "#6ee7b7" : "#fda4af"}
               ios_backgroundColor="#000000"
-              onValueChange={() => setView((prev) => !prev)}
+              onValueChange={() => {
+                setView((prev) => !prev)
+                     const newPreferences = {
+                  order: order,
+                  appLock: appLock,
+                  autoSave: autoSave,
+                  darkMode: darkMode,
+                  theme: theme,
+                  view: view === "list" ? "grid" : "list",
+                };
+                try {
+                  const db = await SQLite.openDatabaseAsync("localstore");
+                  db.runAsync(
+                    `
+                      UPDATE user SET preferences = ? WHERE userId = ?
+                    `,
+                    [JSON.stringify(newPreferences), user.userId]
+                  );
+                } catch (err) {
+                  console.log(err);
+                }
+              }}
               value={view}
+            />
+          </View>
+          <View style={styles.switch}>
+            <Text style={styles.white}>Order</Text>
+            <Switch
+              trackColor={{ false: "#fda4af", true: "#6ee7b7" }}
+              thumbColor={order ? "#6ee7b7" : "#fda4af"}
+              ios_backgroundColor="#000000"
+              onValueChange={() => setOrder((prev) => !prev)}
+              value={order}
             />
           </View>
           <View style={styles.switch}>
@@ -164,20 +244,10 @@ const UserSettings = ({
             <Text style={styles.white}>Lock App</Text>
             <Switch
               trackColor={{ false: "#fda4af", true: "#6ee7b7" }}
-              thumbColor={lockApp ? "#6ee7b7" : "#fda4af"}
+              thumbColor={appLock ? "#6ee7b7" : "#fda4af"}
               ios_backgroundColor="#000000"
-              onValueChange={() => setLockApp((prev) => !prev)}
-              value={lockApp}
-            />
-          </View>
-          <View style={styles.switch}>
-            <Text style={styles.white}>Lock App</Text>
-            <Switch
-              trackColor={{ false: "#fda4af", true: "#6ee7b7" }}
-              thumbColor={order ? "#6ee7b7" : "#fda4af"}
-              ios_backgroundColor="#000000"
-              onValueChange={() => setorder((prev) => !prev)}
-              value={order}
+              onValueChange={() => setAppLock((prev) => !prev)}
+              value={appLock}
             />
           </View>
         </View>
