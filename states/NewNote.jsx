@@ -270,6 +270,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
     paddingBottom: 10,
     color: "#fff",
+    maxWidth: "75%",
   },
   saveInputContainer: {
     padding: 5,
@@ -304,11 +305,11 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     justifyContent: "flex-start",
     alignItems: "center",
-    gap: 10,
+    gap: 5,
   },
   btn: {
-    width: 30,
-    height: 30,
+    width: 26,
+    height: 26,
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 2,

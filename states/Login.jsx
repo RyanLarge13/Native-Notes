@@ -15,11 +15,11 @@ const Login = ({ handleLogin }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordShow, setPasswordShow] = useState(true);
-  const [signUpLoading, setSignUpLoading] = useState(false);
-  const [loginLoading, setLoginLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   return (
     <>
+      <Spinner visible={loading} />
       <View style={styles.imgContainer}>
         <Image
           source={require("../assets/adaptive-icon.png")}
@@ -64,23 +64,23 @@ const Login = ({ handleLogin }) => {
         </View>
         <Pressable
           onPress={async () => {
-            setSignUpLoading(true);
-            await handleLogin(username, email, password);
-            setSignUpLoading(false);
+            setLoading(true);
+            await handleLogin(username, email, password, "Signing Up");
+            setLoading(false);
           }}
           style={[styles.submit, { backgroundColor: "#fcd34d" }]}
         >
-          <Text>{signUpLoading ? <Spinner /> : "Sign up"}</Text>
+          <Text>Sign up</Text>
         </Pressable>
         <Pressable
           onPress={async () => {
-            setLoginLoading(true);
-            await handleLogin(username, email, password);
-            setLoginLoading(true);
+            setLoading(true);
+            await handleLogin(username, email, password, "Logging In");
+            setLoading(false);
           }}
           style={[styles.submit, { backgroundColor: "#ffef9f" }]}
         >
-          <Text>{loginLoading ? <Spinner /> : "Login"}</Text>
+          <Text>Log in</Text>
         </Pressable>
       </View>
     </>

@@ -27,6 +27,7 @@ const SystemNotif = ({ notif, index }) => {
       <View style={styles.actionContainer}>
         {notif.actions.map((action) => (
           <Pressable
+            key={action.title}
             style={styles.action}
             onPress={() => action.func(notif.id)}
           >

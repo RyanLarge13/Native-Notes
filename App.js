@@ -16,6 +16,7 @@ import Menu from "./components/Menu";
 import Tree from "./components/Tree";
 import SystemNotif from "./components/SystemNotif";
 import UserSettings from "./components/UserSettings";
+import { v4 as uuidv4 } from "uuid";
 
 export default function App() {
   const [allData, setAllData] = useState({
@@ -145,31 +146,34 @@ export default function App() {
     }
   };
 
-  const handleLogin = async (username, email, password) => {
-    loginUser(username, email, password)
+  const handleLogin = async (username, email, password, type) => {
+    await loginUser(username, email, password)
       .then((res) => {
         const newToken = res.data.data;
         setToken(newToken);
         storeToken(newToken);
-        setSystemNotifs([
+        const newNotifs = [
           {
-            title: "Logged In",
-            text: "Successful login",
-            color: "bg-green-300",
+            id: uuidv4(),
+            color: "#55ff55",
+            title: "Login Successful",
+            text: "Welcome back!",
             actions: [{ text: "close", func: () => setSystemNotifs([]) }],
           },
-        ]);
+        ];
+        setSystemNotifs(newNotifs);
       })
       .catch((err) => {
-        console.log(err);
-        setSystemNotifs([
+        const newNotifs = [
           {
-            title: "Error",
-            text: err,
-            color: "bg-red-300",
+            id: uuidv4(),
+            color: "#ff5555",
+            title: `Error ${type}`,
+            text: err.response.data.message,
             actions: [{ text: "close", func: () => setSystemNotifs([]) }],
           },
-        ]);
+        ];
+        setSystemNotifs(newNotifs);
       });
   };
 

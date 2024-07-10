@@ -7,7 +7,7 @@ import {
   StyleSheet,
   Switch,
 } from "react-native";
-import { useNavigate } from "react-router-native";
+import { v4 as uuidv4 } from "uuid";
 import Colors from "./Colors";
 import formatColor from "../utils/helpers/formatColor";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -19,7 +19,6 @@ const UserSettings = ({
   setDarkMode,
   setSystemNotifs,
   setMenuOpen,
-  setAllData,
   setUser,
   deleteDatabase,
   view,
@@ -38,7 +37,6 @@ const UserSettings = ({
   const [color, setColor] = useState("bg-amber-300");
 
   const transXAni = useRef(new Animated.Value(500)).current;
-  const navigate = useNavigate();
 
   useEffect(() => {
     if (open) {
@@ -62,7 +60,7 @@ const UserSettings = ({
   const confirmLogout = () => {
     const newNotifs = [
       {
-        id: 1,
+        id: uuidv4(),
         color: "#fde047",
         title: "Logout",
         text: "Are you sure you want to logout?",
@@ -76,6 +74,9 @@ const UserSettings = ({
   };
 
   const logout = async () => {
+    setOpen(false);
+    setMenuOpen(false);
+    setUser(null);
     await AsyncStorage.removeItem("authToken")
       .then(() => {
         console.log("Stored token removed");
@@ -86,17 +87,21 @@ const UserSettings = ({
       .finally(() => {
         console.log("Stored token removal attempt complete");
       });
-    setMenuOpen(false);
-    navigate("/");
-    setUser(null);
-    setAllData(null);
     deleteDatabase();
+    const newNotifs = {
+      id: uuidv4(),
+      title: "Logged Out",
+      color: "#55ff55",
+      text: "You successfully have been logged out",
+      actions: [{ text: "closed", func: () => setSystemNotifs([]) }],
+    };
+    setSystemNotifs(newNotifs);
   };
 
   const confirmDeleteAccount = () => {
     const newNotifs = [
       {
-        id: 1,
+        id: uuidv4(),
         color: "#ff5555",
         title: "Delete Account",
         text: "Are you sure you want to delete your account? Once you delete your account your data will be lost forever and you cannot get it back",
@@ -193,7 +198,7 @@ const UserSettings = ({
             <Text style={styles.white}>Grid View</Text>
             <Switch
               trackColor={{ false: "#fda4af", true: "#6ee7b7" }}
-              thumbColor={view === "Grid" ? "#6ee7b7" : "#fda4af"}
+              thumbColor={view ? "#6ee7b7" : "#fda4af"}
               ios_backgroundColor="#000000"
               onValueChange={async () => {
                 setView((prev) => !prev);

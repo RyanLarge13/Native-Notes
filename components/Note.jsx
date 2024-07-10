@@ -31,7 +31,7 @@ const Note = ({ note, setOpen, setNote, view, index }) => {
     if (note.locked) {
       LocalAuthentication.authenticateAsync({})
         .then((res) => {
-          const authenticated = res.success;
+          // res.success;
           if (!res.success) {
             console.log("Failed auth");
           }

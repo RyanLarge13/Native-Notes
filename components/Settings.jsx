@@ -12,9 +12,8 @@ import {
   deleteANote,
   updateFolder,
   updateNote,
-  updateFolderPosition,
 } from "../utils/api";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { v4 as uuidv4 } from "uuid";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import formatColor from "../utils/helpers/formatColor";
 import Colors from "./Colors";
@@ -107,7 +106,7 @@ const Settings = ({
   const confirmDeleteFolder = () => {
     setSystemNotifs([
       {
-        id: 1,
+        id: uuidv4(),
         color: "#f33",
         title: `Delete Folder ${item.title}`,
         text: "Are you sure you want to delete this folder?",
@@ -160,7 +159,7 @@ const Settings = ({
   const confirmDeleteNote = () => {
     setSystemNotifs([
       {
-        id: 1,
+        id: uuidv4(),
         color: "#f33",
         title: `Delete Note ${item.title}`,
         text: "Are you sure you want to delete this note?",
