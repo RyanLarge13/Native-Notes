@@ -31,7 +31,9 @@ const UserSettings = ({
   setAppLock,
   autoSave,
   setAutoSave,
-  SQLite,
+  sort,
+  setSort,
+  db,
   user,
 }) => {
   const [color, setColor] = useState("bg-amber-300");
@@ -114,6 +116,52 @@ const UserSettings = ({
     setSystemNotifs(newNotifs);
   };
 
+  const setSortAndUpdateDb = async (sortTitle) => {
+    setSort(sortTitle);
+    const newPreferences = {
+      order: order,
+      appLock: appLock,
+      autoSave: autoSave,
+      darkMode: darkMode,
+      theme: theme,
+      view: view,
+      sort: sortTitle,
+    };
+    try {
+      db.runAsync(
+        `
+                      UPDATE user SET preferences = ? WHERE userId = ?
+                    `,
+        [JSON.stringify(newPreferences), user.userId]
+      );
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  const setColorAndPreferences = async (color) => {
+    setColor(color);
+    setTheme({ on: true, color: color });
+    const newPreferences = {
+      order: order,
+      appLock: appLock,
+      autoSave: autoSave,
+      darkMode: darkMode,
+      theme: { ...theme, color: color },
+      view: view,
+    };
+    try {
+      db.runAsync(
+        `
+                      UPDATE user SET preferences = ? WHERE userId = ?
+                    `,
+        [JSON.stringify(newPreferences), user.userId]
+      );
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
   const deleteAccount = () => {};
 
   return (
@@ -130,7 +178,7 @@ const UserSettings = ({
             <Text style={styles.white}>Theme</Text>
             <Switch
               trackColor={{ false: "#fda4af", true: formatColor(color) }}
-              thumbColor={theme.on ? formatColor(theme.color) : "#fda4af"}
+              thumbColor={theme.on ? formatColor(theme.color) : "#ff808d"}
               ios_backgroundColor="#000000"
               onValueChange={async () => {
                 setTheme((prev) => {
@@ -145,7 +193,6 @@ const UserSettings = ({
                   view: view,
                 };
                 try {
-                  const db = await SQLite.openDatabaseAsync("localstore");
                   db.runAsync(
                     `
                       UPDATE user SET preferences = ? WHERE userId = ?
@@ -162,12 +209,15 @@ const UserSettings = ({
           <View
             style={[styles.colorBar, { backgroundColor: formatColor(color) }]}
           ></View>
-          <Colors setColor={setColor} selectedColor={color} />
+          <Colors
+            setColor={(newColor) => setColorAndPreferences(newColor)}
+            selectedColor={color}
+          />
           <View style={styles.switch}>
             <Text style={styles.white}>Dark Mode</Text>
             <Switch
               trackColor={{ false: "#fda4af", true: "#6ee7b7" }}
-              thumbColor={darkMode ? "#6ee7b7" : "#fda4af"}
+              thumbColor={darkMode ? "#5effa7" : "#ff808d"}
               ios_backgroundColor="#000000"
               onValueChange={async () => {
                 setDarkMode((prev) => !prev);
@@ -180,7 +230,6 @@ const UserSettings = ({
                   view: view,
                 };
                 try {
-                  const db = await SQLite.openDatabaseAsync("localstore");
                   db.runAsync(
                     `
                       UPDATE user SET preferences = ? WHERE userId = ?
@@ -198,7 +247,7 @@ const UserSettings = ({
             <Text style={styles.white}>Grid View</Text>
             <Switch
               trackColor={{ false: "#fda4af", true: "#6ee7b7" }}
-              thumbColor={view ? "#6ee7b7" : "#fda4af"}
+              thumbColor={view ? "#5effa7" : "#ff808d"}
               ios_backgroundColor="#000000"
               onValueChange={async () => {
                 setView((prev) => !prev);
@@ -211,7 +260,6 @@ const UserSettings = ({
                   view: !view,
                 };
                 try {
-                  const db = await SQLite.openDatabaseAsync("localstore");
                   db.runAsync(
                     `
                       UPDATE user SET preferences = ? WHERE userId = ?
@@ -229,7 +277,7 @@ const UserSettings = ({
             <Text style={styles.white}>Order</Text>
             <Switch
               trackColor={{ false: "#fda4af", true: "#6ee7b7" }}
-              thumbColor={order ? "#6ee7b7" : "#fda4af"}
+              thumbColor={order ? "#5effa7" : "#ff808d"}
               ios_backgroundColor="#000000"
               onValueChange={async () => {
                 setOrder((prev) => !prev);
@@ -242,7 +290,6 @@ const UserSettings = ({
                   view: view,
                 };
                 try {
-                  const db = await SQLite.openDatabaseAsync("localstore");
                   db.runAsync(
                     `
                       UPDATE user SET preferences = ? WHERE userId = ?
@@ -260,7 +307,7 @@ const UserSettings = ({
             <Text style={styles.white}>Auto Save Notes</Text>
             <Switch
               trackColor={{ false: "#fda4af", true: "#6ee7b7" }}
-              thumbColor={autoSave ? "#6ee7b7" : "#fda4af"}
+              thumbColor={autoSave ? "#5effa7" : "#ff808d"}
               ios_backgroundColor="#000000"
               onValueChange={async () => {
                 setAutoSave((prev) => !prev);
@@ -273,7 +320,6 @@ const UserSettings = ({
                   view: view,
                 };
                 try {
-                  const db = await SQLite.openDatabaseAsync("localstore");
                   db.runAsync(
                     `
                       UPDATE user SET preferences = ? WHERE userId = ?
@@ -291,7 +337,7 @@ const UserSettings = ({
             <Text style={styles.white}>Lock App</Text>
             <Switch
               trackColor={{ false: "#fda4af", true: "#6ee7b7" }}
-              thumbColor={appLock ? "#6ee7b7" : "#fda4af"}
+              thumbColor={appLock ? "#5effa7" : "#ff808d"}
               ios_backgroundColor="#000000"
               onValueChange={async () => {
                 setAppLock((prev) => !prev);
@@ -304,7 +350,6 @@ const UserSettings = ({
                   view: view,
                 };
                 try {
-                  const db = await SQLite.openDatabaseAsync("localstore");
                   db.runAsync(
                     `
                       UPDATE user SET preferences = ? WHERE userId = ?
@@ -317,6 +362,39 @@ const UserSettings = ({
               }}
               value={appLock}
             />
+          </View>
+          <View>
+            <Text style={[styles.white, styles.heading]}>Sort By</Text>
+            <View style={styles.switch}>
+              <Text style={styles.white}>Title</Text>
+              <Switch
+                trackColor={{ false: "#fda4af", true: "#6ee7b7" }}
+                thumbColor={sort === "Title" ? "#5effa7" : "#ff808d"}
+                ios_backgroundColor="#000000"
+                onValueChange={() => setSortAndUpdateDb("Title")}
+                value={sort === "Title"}
+              />
+            </View>
+            <View style={styles.switch}>
+              <Text style={styles.white}>Date</Text>
+              <Switch
+                trackColor={{ false: "#fda4af", true: "#6ee7b7" }}
+                thumbColor={sort === "Date" ? "#5effa7" : "#ff808d"}
+                ios_backgroundColor="#000000"
+                onValueChange={() => setSortAndUpdateDb("Date")}
+                value={sort === "Date"}
+              />
+            </View>
+            <View style={styles.switch}>
+              <Text style={styles.white}>Updated</Text>
+              <Switch
+                trackColor={{ false: "#fda4af", true: "#6ee7b7" }}
+                thumbColor={sort === "Update" ? "#5effa7" : "#ff808d"}
+                ios_backgroundColor="#000000"
+                onValueChange={() => setSortAndUpdateDb("Update")}
+                value={sort === "Update"}
+              />
+            </View>
           </View>
         </View>
         <View>
@@ -368,6 +446,10 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 4,
     borderRadius: 10,
+  },
+  heading: {
+    fontSize: 20,
+    marginTop: 10,
   },
   white: {
     color: "#fff",

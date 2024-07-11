@@ -6,7 +6,7 @@ import "react-native-get-random-values";
 import { v4 as uuidv4 } from "uuid";
 import Colors from "../components/Colors";
 
-const NewFolder = ({ setAllData, folder, token, SQLite }) => {
+const NewFolder = ({ setAllData, folder, token, db }) => {
   const [color, setColor] = useState("bg-red-300");
   const [title, setTitle] = useState("");
   const navigate = useNavigate();
@@ -50,7 +50,6 @@ const NewFolder = ({ setAllData, folder, token, SQLite }) => {
       navigate("/");
       createNewFolder(token, newFolder)
         .then(async (res) => {
-          const db = await SQLite.openDatabaseAsync("localstore");
           const resFolder = res.data.data[0];
           setAllData((prevData) => {
             const newFolders = prevData.folders.map((aFold) => {

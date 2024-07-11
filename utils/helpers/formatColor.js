@@ -1,4 +1,7 @@
 const formatColor = (color) => {
+  if (!color) {
+    return "#fcd34d";
+  }
   const plainColor = color.split("-")[1];
   switch (plainColor) {
     case "amber":
@@ -8,9 +11,9 @@ const formatColor = (color) => {
     case "rose":
       return "#fda4af";
     case "sky":
-    	return "#7dd3fc";
+      return "#7dd3fc";
     case "indigo":
-    	return "#a5b4fc";
+      return "#a5b4fc";
     default:
       return plainColor;
   }

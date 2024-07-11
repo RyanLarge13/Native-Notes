@@ -6,6 +6,7 @@ import {
   View,
   Text,
   Animated,
+  useWindowDimensions,
 } from "react-native";
 import { Outlet, useLocation, useNavigate } from "react-router-native";
 import { BackHandler } from "react-native";
@@ -41,8 +42,9 @@ const Account = ({
   setView,
   order,
   setOrder,
+  sort,
+  setSort,
 }) => {
-  const [filter, setFilter] = useState("Title");
   const [notesToRender, setNotesToRender] = useState([]);
   const [sortOptions, setSortOptions] = useState(false);
 
@@ -54,6 +56,7 @@ const Account = ({
 
   const navigate = useNavigate();
   const location = useLocation();
+  const { width } = useWindowDimensions();
 
   const nestedGoBack = () => {
     if (location.pathname !== "/") {
@@ -92,7 +95,7 @@ const Account = ({
 
   useEffect(() => {
     sortAndFilterNotes();
-  }, [order, notes, filter]);
+  }, [order, notes, sort]);
 
   const sortAndFilterNotes = () => {
     let copyOfNotes;
@@ -103,18 +106,18 @@ const Account = ({
     }
     if (order) {
       copyOfNotes.sort((a, b) =>
-        filter === "Title"
+        sort === "Title"
           ? a.title.localeCompare(b.title)
-          : filter === "Date"
+          : sort === "Date"
           ? +new Date(a.createdAt) - +new Date(b.createdAt)
           : +new Date(a.updated) - +new Date(b.updated)
       );
     }
     if (!order) {
       copyOfNotes.sort((a, b) =>
-        filter === "Title"
+        sort === "Title"
           ? b.title.localeCompare(a.title)
-          : filter === "Date"
+          : sort === "Date"
           ? +new Date(b.createdAt) - +new Date(a.createdAt)
           : +new Date(b.updated) - +new Date(a.updated)
       );
@@ -219,8 +222,8 @@ const Account = ({
           ))}
         </View>
         <Sorter
-          filter={filter}
-          setFilter={setFilter}
+          filter={sort}
+          setFilter={setSort}
           order={order}
           setOrder={setOrder}
           sortOptions={sortOptions}
@@ -242,6 +245,7 @@ const Account = ({
               setNote={setNote}
               view={view}
               index={index}
+              width={width}
             />
           ))}
         </View>

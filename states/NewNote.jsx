@@ -15,7 +15,7 @@ import WebView from "react-native-webview";
 import EditorHTML from "../webView/html.js";
 import renderEditor from "../webView/editHTML";
 
-const NewNote = ({ folder, token, setAllData, note, setNote, SQLite }) => {
+const NewNote = ({ folder, token, setAllData, note, setNote, db }) => {
   const [title, setTitle] = useState(note ? note.title : "");
   const [selected, setSelected] = useState([]);
   const [closed, setClosed] = useState(false);
@@ -68,7 +68,6 @@ const NewNote = ({ folder, token, setAllData, note, setNote, SQLite }) => {
   };
 
   const saveNote = async (content) => {
-    const db = await SQLite.openDatabaseAsync("localstore");
     setClosed(true);
     if (note) {
       const updatedNote = {

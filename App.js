@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, Pressable, ScrollView, View } from "react-native";
+import {
+  TRenderEngineProvider,
+  RenderHTMLConfigProvider,
+} from "react-native-render-html";
 import Spinner from "react-native-loading-spinner-overlay";
 import { NativeRouter, Routes, Route } from "react-router-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -18,7 +22,7 @@ import SystemNotif from "./components/SystemNotif";
 import UserSettings from "./components/UserSettings";
 import { v4 as uuidv4 } from "uuid";
 
-export default function App() {
+const App = () => {
   const [allData, setAllData] = useState({
     user: { username: "", email: "", userId: "", createdAt: "" },
     folders: [],
@@ -47,10 +51,22 @@ export default function App() {
   const [theme, setTheme] = useState({ on: false, color: "bg-amber-300" });
   const [autoSave, setAutoSave] = useState(false);
   const [appLock, setAppLock] = useState(false);
+  const [sort, setSort] = useState("Title");
+  const [db, setDb] = useState(null);
+
+  const customStyles = {
+    body: { color: "#fff", fontSize: 12 },
+  };
 
   useEffect(() => {
+    setDatabase();
     createTables();
   }, []);
+
+  const setDatabase = async (store) => {
+    const myStore = await SQLite.openDatabaseAsync("localstore");
+    setDb(myStore);
+  };
 
   useEffect(() => {
     setFolders([]);
@@ -183,6 +199,7 @@ export default function App() {
 
   const deleteDatabase = async () => {
     try {
+      await db.closeAsync();
       await SQLite.deleteDatabaseAsync("localstore");
       console.log("Database deleted successfully.");
     } catch (error) {
@@ -201,7 +218,8 @@ export default function App() {
         setDarkMode(true);
       }
       if (preferences.theme.on) {
-        setTheme(preferences.theme.color);
+        console.log("on", preferences.theme.color);
+        setTheme({ on: true, color: preferences.theme.color });
       } else {
         setTheme({ on: false, color: "bg-amber-300" });
       }
@@ -225,6 +243,11 @@ export default function App() {
       } else {
         setOrder(false);
       }
+      if (preferences.sort) {
+        setSort(preferences.sort);
+      } else {
+        setSort("Title");
+      }
     } else {
       console.log("No preferences");
     }
@@ -232,7 +255,6 @@ export default function App() {
 
   const fetchFromDb = async () => {
     try {
-      const db = await SQLite.openDatabaseAsync("localstore");
       const dbUser = await db.getFirstAsync(`SELECT * FROM user`);
       const dbFolders = await db.getAllAsync(`SELECT * FROM folders`);
       const dbNotes = await db.getAllAsync(`SELECT * FROM notes`);
@@ -249,7 +271,6 @@ export default function App() {
     // await deleteDatabase();
     // return;
     try {
-      const db = await SQLite.openDatabaseAsync("localstore");
       await db.execAsync(`
    CREATE TABLE IF NOT EXISTS user (
      userId INTEGER PRIMARY KEY NOT NULL, 
@@ -282,7 +303,6 @@ export default function App() {
 
   const storeDataInDb = async (data) => {
     try {
-      const db = await SQLite.openDatabaseAsync("localstore");
       const userToStore = data.userToStore;
       const foldersToStore = data.foldersToStore;
       const notesToStore = data.notesToStore;
@@ -318,6 +338,7 @@ export default function App() {
           order: true,
           autoSave: false,
           appLock: false,
+          sort: "Title",
         })
       );
     } catch (err) {
@@ -515,33 +536,39 @@ export default function App() {
                   <Login handleLogin={handleLogin} />
                 )
               ) : (
-                <Account
-                  mainTitle={mainTitle}
-                  folders={folders}
-                  notes={notes}
-                  setNotes={setNotes}
-                  folder={folder}
-                  setFolder={setFolder}
-                  goBack={goBack}
-                  setOpen={setOpen}
-                  pickFolder={pickFolder}
-                  open={open}
-                  menuOpen={menuOpen}
-                  options={options}
-                  setOptions={setOptions}
-                  note={note}
-                  setNote={setNote}
-                  allNotes={allData.notes}
-                  setMenuOpen={setMenuOpen}
-                  systemFolder={systemFolder}
-                  layoutOptions={layoutOptions}
-                  setLayoutOptions={setLayoutOptions}
-                  userSettingsOpen={userSettingsOpen}
-                  view={view}
-                  setView={setView}
-                  order={order}
-                  setOrder={setOrder}
-                />
+                <TRenderEngineProvider tagsStyles={customStyles}>
+                  <RenderHTMLConfigProvider>
+                    <Account
+                      mainTitle={mainTitle}
+                      folders={folders}
+                      notes={notes}
+                      setNotes={setNotes}
+                      folder={folder}
+                      setFolder={setFolder}
+                      goBack={goBack}
+                      setOpen={setOpen}
+                      pickFolder={pickFolder}
+                      open={open}
+                      menuOpen={menuOpen}
+                      options={options}
+                      setOptions={setOptions}
+                      note={note}
+                      setNote={setNote}
+                      allNotes={allData.notes}
+                      setMenuOpen={setMenuOpen}
+                      systemFolder={systemFolder}
+                      layoutOptions={layoutOptions}
+                      setLayoutOptions={setLayoutOptions}
+                      userSettingsOpen={userSettingsOpen}
+                      view={view}
+                      setView={setView}
+                      order={order}
+                      setOrder={setOrder}
+                      sort={sort}
+                      setSort={setSort}
+                    />
+                  </RenderHTMLConfigProvider>
+                </TRenderEngineProvider>
               )
             }
           >
@@ -552,7 +579,7 @@ export default function App() {
                   setAllData={setAllData}
                   folder={folder}
                   token={token}
-                  SQLite={SQLite}
+                  db={db}
                 />
               }
             />
@@ -565,7 +592,7 @@ export default function App() {
                   setAllData={setAllData}
                   note={note}
                   setNote={setNote}
-                  SQLite={SQLite}
+                  db={db}
                 />
               }
             />
@@ -582,7 +609,7 @@ export default function App() {
             setPickFolder={setPickFolder}
             selectedFolder={selectedFolder}
             setSelectedFolder={setSelectedFolder}
-            SQLite={SQLite}
+            db={db}
             setSystemNotifs={setSystemNotifs}
           />
         ) : null}
@@ -619,7 +646,9 @@ export default function App() {
               setAppLock={setAppLock}
               autoSave={autoSave}
               setAutoSave={setAutoSave}
-              SQLite={SQLite}
+              sort={sort}
+              setSort={setSort}
+              db={db}
               user={user}
             />
           </>
@@ -680,7 +709,7 @@ export default function App() {
       </View>
     </NativeRouter>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -737,3 +766,5 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
 });
+
+export default App;

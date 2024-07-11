@@ -1,16 +1,12 @@
 import { useEffect, useRef } from "react";
 import { View, Text, StyleSheet, Animated } from "react-native";
 import Ripple from "react-native-material-ripple";
-import RenderHtml from "react-native-render-html";
+import { RenderHTMLSource } from "react-native-render-html";
 import { useNavigate } from "react-router-native";
 import * as LocalAuthentication from "expo-local-authentication";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 
-const customStyles = {
-  body: { color: "#fff", fontSize: 12 },
-};
-
-const Note = ({ note, setOpen, setNote, view, index }) => {
+const Note = ({ note, setOpen, setNote, view, index, width }) => {
   const navigate = useNavigate();
 
   const scaleAni = useRef(new Animated.Value(0)).current;
@@ -31,7 +27,6 @@ const Note = ({ note, setOpen, setNote, view, index }) => {
     if (note.locked) {
       LocalAuthentication.authenticateAsync({})
         .then((res) => {
-          // res.success;
           if (!res.success) {
             console.log("Failed auth");
           }
@@ -88,10 +83,9 @@ const Note = ({ note, setOpen, setNote, view, index }) => {
         </Text>
         <View>
           {!note.locked ? (
-            <RenderHtml
-              contentWidth={200}
+            <RenderHTMLSource
+              contentWidth={width}
               source={{ html: htmlToRender }}
-              tagsStyles={customStyles}
             />
           ) : null}
         </View>
@@ -120,6 +114,7 @@ const styles = StyleSheet.create({
   date: {
     color: "#aaa",
     fontSize: 12,
+    marginBottom: 5,
   },
   white: {
     color: "#fff",

@@ -27,7 +27,7 @@ const Settings = ({
   setPickFolder,
   selectedFolder,
   setSelectedFolder,
-  SQLite,
+  db,
   setSystemNotifs,
 }) => {
   const [newTitle, setNewTitle] = useState("");
@@ -52,7 +52,6 @@ const Settings = ({
   }, []);
 
   const updateAFolder = async () => {
-    const db = await SQLite.openDatabaseAsync("localstore");
     const newFolder = {
       parentFolderId: selectedFolder
         ? selectedFolder.folderid
@@ -128,7 +127,6 @@ const Settings = ({
     const folderId = item.folderid;
     deleteAFolder(token, folderId)
       .then(async (res) => {
-        const db = await SQLite.openDatabaseAsync("localstore");
         const folderIdToDelete = res.data.data[0].folderid;
         setAllData((prevData) => {
           const newFolders = prevData.folders.filter(
@@ -181,7 +179,6 @@ const Settings = ({
     const noteId = item.noteid;
     deleteANote(token, noteId)
       .then(async (res) => {
-        const db = await SQLite.openDatabaseAsync("localstore");
         const noteIdToDelete = res.data.data[0].notesid;
         setAllData((prevData) => {
           const newNotes = prevData.notes.filter(
@@ -207,7 +204,6 @@ const Settings = ({
   };
 
   const updateNoteTitleOrLocked = async () => {
-    const db = await SQLite.openDatabaseAsync("localstore");
     const updatedNote = {
       notesId: item.noteid,
       title: newTitle ? newTitle : item.title,
