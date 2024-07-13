@@ -31,7 +31,6 @@ const Header = ({
   const animationOpacity = useRef(new Animated.Value(0)).current;
   const scaleAni = useRef(new Animated.Value(0)).current;
   const opacityAni = useRef(new Animated.Value(0)).current;
-  const titleOpac = useRef(new Animated.Value(1)).current;
 
   const navigate = useNavigate();
 
@@ -194,6 +193,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     columnGap: 2,
+    position: "relative",
   },
   white: {
     color: "#fff",
@@ -214,7 +214,8 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: 200,
     right: 0,
-    bottom: 0,
+    top: 40,
+    // transform: [{ translateY: 100 }],
     borderRadius: 10,
     backgroundColor: "#111",
     paddingHorizontal: 15,

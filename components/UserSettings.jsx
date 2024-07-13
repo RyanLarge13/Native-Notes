@@ -9,7 +9,6 @@ import {
 } from "react-native";
 import { v4 as uuidv4 } from "uuid";
 import Colors from "./Colors";
-import formatColor from "../utils/helpers/formatColor";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const UserSettings = ({
@@ -177,8 +176,8 @@ const UserSettings = ({
           <View style={styles.switch}>
             <Text style={styles.white}>Theme</Text>
             <Switch
-              trackColor={{ false: "#fda4af", true: formatColor(color) }}
-              thumbColor={theme.on ? formatColor(theme.color) : "#ff808d"}
+              trackColor={{ false: "#fda4af", true: color }}
+              thumbColor={theme.on ? theme.color : "#ff808d"}
               ios_backgroundColor="#000000"
               onValueChange={async () => {
                 setTheme((prev) => {
@@ -206,9 +205,7 @@ const UserSettings = ({
               value={theme.on}
             />
           </View>
-          <View
-            style={[styles.colorBar, { backgroundColor: formatColor(color) }]}
-          ></View>
+          <View style={[styles.colorBar, { backgroundColor: color }]}></View>
           <Colors
             setColor={(newColor) => setColorAndPreferences(newColor)}
             selectedColor={color}

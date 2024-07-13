@@ -22,6 +22,10 @@ import SystemNotif from "./components/SystemNotif";
 import UserSettings from "./components/UserSettings";
 import { v4 as uuidv4 } from "uuid";
 
+const customStyles = {
+  body: { color: "#fff", fontSize: 12 },
+};
+
 const App = () => {
   const [allData, setAllData] = useState({
     user: { username: "", email: "", userId: "", createdAt: "" },
@@ -53,10 +57,6 @@ const App = () => {
   const [appLock, setAppLock] = useState(false);
   const [sort, setSort] = useState("Title");
   const [db, setDb] = useState(null);
-
-  const customStyles = {
-    body: { color: "#fff", fontSize: 12 },
-  };
 
   useEffect(() => {
     setDatabase();
@@ -211,17 +211,20 @@ const App = () => {
     const stringPrefs = dbUser?.preferences;
     if (stringPrefs) {
       const preferences = JSON.parse(dbUser.preferences);
-      console.log(preferences);
       if (preferences.darkMode !== null || preferences.darkMode !== undefined) {
         setDarkMode(preferences.darkMode);
       } else {
         setDarkMode(true);
       }
       if (preferences.theme.on) {
-        console.log("on", preferences.theme.color);
         setTheme({ on: true, color: preferences.theme.color });
       } else {
-        setTheme({ on: false, color: "bg-amber-300" });
+        setTheme({
+          on: false,
+          color: preferences.theme.color
+            ? preferences.theme.color
+            : "bg-amber-300",
+        });
       }
       if (preferences.view === true) {
         setView(true);
@@ -332,13 +335,13 @@ const App = () => {
         user.email,
         user.createdAt,
         JSON.stringify({
-          darkMode: true,
-          theme: { on: false, color: "bg-amber-300" },
-          view: "list",
-          order: true,
-          autoSave: false,
-          appLock: false,
-          sort: "Title",
+          darkMode: darkMode,
+          theme: theme,
+          view: view,
+          order: order,
+          autoSave: autoSave,
+          appLock: appLock,
+          sort: sort,
         })
       );
     } catch (err) {
@@ -441,7 +444,7 @@ const App = () => {
     getUserData(token)
       .then(async (response) => {
         const data = response.data.data;
-        const dataToStore = await filterData(
+        const dataToStore = filterData(
           data.folders,
           data.notes,
           data.user,
@@ -522,22 +525,22 @@ const App = () => {
 
   return (
     <NativeRouter>
-      <View style={styles.container}>
-        <StatusBar style="light" />
-        <Spinner visible={loading} />
-        <Routes>
-          <Route
-            path="/"
-            element={
-              !user ? (
-                loading ? (
-                  <Spinner visible={loading} />
-                ) : (
-                  <Login handleLogin={handleLogin} />
-                )
-              ) : (
-                <TRenderEngineProvider tagsStyles={customStyles}>
-                  <RenderHTMLConfigProvider>
+      <TRenderEngineProvider tagsStyles={customStyles}>
+        <RenderHTMLConfigProvider>
+          <View style={styles.container}>
+            <StatusBar style="light" />
+            <Spinner visible={loading} />
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  !user ? (
+                    loading ? (
+                      <Spinner visible={loading} />
+                    ) : (
+                      <Login handleLogin={handleLogin} />
+                    )
+                  ) : (
                     <Account
                       mainTitle={mainTitle}
                       folders={folders}
@@ -566,147 +569,153 @@ const App = () => {
                       setOrder={setOrder}
                       sort={sort}
                       setSort={setSort}
+                      db={db}
                     />
-                  </RenderHTMLConfigProvider>
-                </TRenderEngineProvider>
-              )
-            }
-          >
-            <Route
-              path="newfolder"
-              element={
-                <NewFolder
-                  setAllData={setAllData}
-                  folder={folder}
-                  token={token}
-                  db={db}
+                  )
+                }
+              >
+                <Route
+                  path="newfolder"
+                  element={
+                    <NewFolder
+                      setAllData={setAllData}
+                      folder={folder}
+                      token={token}
+                      db={db}
+                    />
+                  }
                 />
-              }
-            />
-            <Route
-              path="newnote"
-              element={
-                <NewNote
-                  folder={folder}
-                  token={token}
-                  setAllData={setAllData}
-                  note={note}
-                  setNote={setNote}
-                  db={db}
+                <Route
+                  path="newnote"
+                  element={
+                    <NewNote
+                      folder={folder}
+                      token={token}
+                      setAllData={setAllData}
+                      note={note}
+                      setNote={setNote}
+                      db={db}
+                    />
+                  }
                 />
-              }
-            />
-          </Route>
-        </Routes>
-        {!note ? <Options setOptions={setOptions} options={options} /> : null}
-        {open.show ? (
-          <Settings
-            item={open.item}
-            type={open.type}
-            setOpen={setOpen}
-            token={token}
-            setAllData={setAllData}
-            setPickFolder={setPickFolder}
-            selectedFolder={selectedFolder}
-            setSelectedFolder={setSelectedFolder}
-            db={db}
-            setSystemNotifs={setSystemNotifs}
-          />
-        ) : null}
-        {allData ? (
-          <>
-            <Menu
-              menuOpen={menuOpen}
-              setMenuOpen={setMenuOpen}
-              folders={folders}
-              setFolder={setFolder}
-              allData={allData}
-              systemFolder={systemFolder}
-              setSystemFolder={setSystemFolder}
-              setPickFolder={setPickFolder}
-              setUserSettingsOpen={setUserSettingsOpen}
-            />
-            <UserSettings
-              open={userSettingsOpen}
-              setOpen={setUserSettingsOpen}
-              darkMode={darkMode}
-              setDarkMode={setDarkMode}
-              setSystemNotifs={setSystemNotifs}
-              setMenuOpen={setMenuOpen}
-              setAllData={setAllData}
-              setUser={setUser}
-              deleteDatabase={deleteDatabase}
-              view={view}
-              setView={setView}
-              order={order}
-              setOrder={setOrder}
-              theme={theme}
-              setTheme={setTheme}
-              appLock={appLock}
-              setAppLock={setAppLock}
-              autoSave={autoSave}
-              setAutoSave={setAutoSave}
-              sort={sort}
-              setSort={setSort}
-              db={db}
-              user={user}
-            />
-          </>
-        ) : null}
-        {pickFolder ? (
-          <>
-            <Pressable
-              onPress={() => {
-                setSelectedFolder(null);
-                setPickFolder(false);
-              }}
-              style={styles.backdrop}
-            ></Pressable>
-            <ScrollView style={styles.pickFolder}>
-              <View style={styles.tree}>
-                <Tree
-                  moving={true}
-                  setPickFolder={setPickFolder}
-                  setSelectedFolder={setSelectedFolder}
-                  setFolder={setFolder}
-                  folders={allData.folders}
-                  parentId={null}
-                  level={1}
-                  open={open}
+              </Route>
+            </Routes>
+            {!note ? (
+              <Options setOptions={setOptions} options={options} />
+            ) : null}
+            {open.show ? (
+              <Settings
+                item={open.item}
+                type={open.type}
+                setOpen={setOpen}
+                token={token}
+                setAllData={setAllData}
+                setPickFolder={setPickFolder}
+                selectedFolder={selectedFolder}
+                setSelectedFolder={setSelectedFolder}
+                db={db}
+                setSystemNotifs={setSystemNotifs}
+              />
+            ) : null}
+            {allData ? (
+              <>
+                <Menu
+                  menuOpen={menuOpen}
                   setMenuOpen={setMenuOpen}
+                  folders={folders}
+                  setFolder={setFolder}
+                  allData={allData}
+                  systemFolder={systemFolder}
+                  setSystemFolder={setSystemFolder}
+                  setPickFolder={setPickFolder}
+                  setUserSettingsOpen={setUserSettingsOpen}
                 />
-                <Text style={[styles.white, { marginTop: 10 }]}>
-                  {open.item.title} &rarr;{" "}
-                  {selectedFolder ? selectedFolder.title : ""}
-                </Text>
+                <UserSettings
+                  open={userSettingsOpen}
+                  setOpen={setUserSettingsOpen}
+                  darkMode={darkMode}
+                  setDarkMode={setDarkMode}
+                  setSystemNotifs={setSystemNotifs}
+                  setMenuOpen={setMenuOpen}
+                  setAllData={setAllData}
+                  setUser={setUser}
+                  deleteDatabase={deleteDatabase}
+                  view={view}
+                  setView={setView}
+                  order={order}
+                  setOrder={setOrder}
+                  theme={theme}
+                  setTheme={setTheme}
+                  appLock={appLock}
+                  setAppLock={setAppLock}
+                  autoSave={autoSave}
+                  setAutoSave={setAutoSave}
+                  sort={sort}
+                  setSort={setSort}
+                  db={db}
+                  user={user}
+                />
+              </>
+            ) : null}
+            {pickFolder ? (
+              <>
                 <Pressable
-                  style={styles.topLevel}
                   onPress={() => {
-                    setSelectedFolder({ folderid: null, title: "Top level" });
+                    setSelectedFolder(null);
+                    setPickFolder(false);
                   }}
-                >
-                  <Text style={styles.white}>Send to top level</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => saveNewLocation()}
-                  style={styles.saveFolder}
-                >
-                  <Text>Save</Text>
-                </Pressable>
-              </View>
-            </ScrollView>
-          </>
-        ) : null}
-        {systemNotifs.map((notif, index) => (
-          <SystemNotif
-            key={notif.id}
-            setSystemNotifs={setSystemNotifs}
-            systemNotifs={systemNotifs}
-            notif={notif}
-            index={index}
-          />
-        ))}
-      </View>
+                  style={styles.backdrop}
+                ></Pressable>
+                <ScrollView style={styles.pickFolder}>
+                  <View style={styles.tree}>
+                    <Tree
+                      moving={true}
+                      setPickFolder={setPickFolder}
+                      setSelectedFolder={setSelectedFolder}
+                      setFolder={setFolder}
+                      folders={allData.folders}
+                      parentId={null}
+                      level={1}
+                      open={open}
+                      setMenuOpen={setMenuOpen}
+                    />
+                    <Text style={[styles.white, { marginTop: 10 }]}>
+                      {open.item.title} &rarr;{" "}
+                      {selectedFolder ? selectedFolder.title : ""}
+                    </Text>
+                    <Pressable
+                      style={styles.topLevel}
+                      onPress={() => {
+                        setSelectedFolder({
+                          folderid: null,
+                          title: "Top level",
+                        });
+                      }}
+                    >
+                      <Text style={styles.white}>Send to top level</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => saveNewLocation()}
+                      style={styles.saveFolder}
+                    >
+                      <Text>Save</Text>
+                    </Pressable>
+                  </View>
+                </ScrollView>
+              </>
+            ) : null}
+            {systemNotifs.map((notif, index) => (
+              <SystemNotif
+                key={notif.id}
+                setSystemNotifs={setSystemNotifs}
+                systemNotifs={systemNotifs}
+                notif={notif}
+                index={index}
+              />
+            ))}
+          </View>
+        </RenderHTMLConfigProvider>
+      </TRenderEngineProvider>
     </NativeRouter>
   );
 };

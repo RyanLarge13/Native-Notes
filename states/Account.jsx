@@ -44,6 +44,7 @@ const Account = ({
   setOrder,
   sort,
   setSort,
+  db,
 }) => {
   const [notesToRender, setNotesToRender] = useState([]);
   const [sortOptions, setSortOptions] = useState(false);
@@ -228,6 +229,7 @@ const Account = ({
           setOrder={setOrder}
           sortOptions={sortOptions}
           setSortOptions={setSortOptions}
+          db={db}
         />
         <View
           style={[

@@ -6,6 +6,7 @@ import {
   Pressable,
   StyleSheet,
   Animated,
+  Switch,
 } from "react-native";
 import {
   deleteAFolder,
@@ -15,7 +16,6 @@ import {
 } from "../utils/api";
 import { v4 as uuidv4 } from "uuid";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-import formatColor from "../utils/helpers/formatColor";
 import Colors from "./Colors";
 
 const Settings = ({
@@ -278,23 +278,20 @@ const Settings = ({
         <Animated.View
           style={[styles.container, { scaleX: scaleAni, scaleY: scaleAni }]}
         >
-          <View
-            style={[styles.color, { backgroundColor: formatColor(newColor) }]}
-          ></View>
+          <View style={[styles.color, { backgroundColor: newColor }]}></View>
           <View style={styles.header}>
-            <Text style={[styles.white, styles.largeText]}>{item.title}</Text>
-            <Pressable onPress={() => confirmDeleteFolder()}>
-              <Icon style={[styles.red, styles.largeText]} name="delete" />
-            </Pressable>
-          </View>
-          <View style={styles.info}>
             <TextInput
-              style={styles.white}
+              style={[styles.white, styles.largeText]}
               placeholder={item.title}
               placeholderTextColor="#aaa"
               value={newTitle}
               onChangeText={(text) => setNewTitle(text)}
             />
+            <Pressable onPress={() => confirmDeleteFolder()}>
+              <Icon style={[styles.red, styles.largeText]} name="delete" />
+            </Pressable>
+          </View>
+          <View style={styles.info}>
             <Colors setColor={setNewColor} selectedColor={newColor} />
           </View>
           {selectedFolder && (
@@ -316,36 +313,34 @@ const Settings = ({
           style={[styles.container, { scaleX: scaleAni, scaleY: scaleAni }]}
         >
           <View style={styles.header}>
-            <Text style={[styles.white, styles.largeText]}>{item.title}</Text>
-            <Pressable onPress={() => confirmDeleteNote()}>
-              <Icon style={[styles.red, styles.largeText]} name="delete" />
-            </Pressable>
-          </View>
-          <Text style={styles.gray}>
-            {new Date(item.createdAt).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-            })}
-          </Text>
-          <Pressable
-            style={styles.lock}
-            onPress={() => setIsLocked((prev) => !prev)}
-          >
-            <Text style={styles.white}>Lock</Text>
-            {isLocked ? (
-              <Icon style={styles.lockedBtn} name="lock" />
-            ) : (
-              <Icon style={[styles.white, { fontSize: 18 }]} name="lock-open" />
-            )}
-          </Pressable>
-          <View style={styles.info}>
             <TextInput
+              style={[styles.title, styles.white]}
               placeholder={item.title}
               placeholderTextColor="#aaa"
               value={newTitle}
               onChangeText={(text) => setNewTitle(text)}
             />
+            <Pressable onPress={() => confirmDeleteNote()}>
+              <Icon style={[styles.red, styles.largeText]} name="delete" />
+            </Pressable>
           </View>
+          <View style={styles.lock}>
+            <Text style={styles.white}>Lock</Text>
+            <Switch
+              trackColor={{ false: "#fda4af", true: "#6ee7b7" }}
+              thumbColor={isLocked ? "#6ee7b7" : "#fda4af"}
+              ios_backgroundColor="#000000"
+              onValueChange={() => setIsLocked((prev) => !prev)}
+              value={isLocked}
+            />
+          </View>
+          <Text style={styles.gray}>
+            Created On{" "}
+            {new Date(item.createdAt).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            })}
+          </Text>
           <Pressable
             onPress={() => updateNoteTitleOrLocked()}
             style={styles.save}
@@ -366,6 +361,12 @@ const styles = StyleSheet.create({
     left: 0,
     bottom: 0,
     backgroundColor: "rgba(0,0,0,0.4)",
+  },
+  title: {
+    fontSize: 20,
+  },
+  largeText: {
+    fontSize: 20,
   },
   container: {
     position: "absolute",
@@ -404,16 +405,13 @@ const styles = StyleSheet.create({
   gray: {
     color: "#aaa",
   },
-  largeText: {
-    fontSize: 20,
-  },
   save: {
     padding: 10,
     borderRadius: 10,
     elevation: 2,
     backgroundColor: "#fcd34d",
     marginTop: 15,
-    width: 100,
+    flex: 1,
   },
   lock: {
     marginTop: 5,
@@ -429,6 +427,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
+    gap: 10,
   },
   move: {
     padding: 10,

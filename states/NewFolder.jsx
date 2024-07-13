@@ -1,5 +1,13 @@
 import { useState, useEffect, useRef } from "react";
-import { StyleSheet, Animated, TextInput, Text, Pressable } from "react-native";
+import {
+  StyleSheet,
+  Animated,
+  TextInput,
+  Text,
+  Pressable,
+  View,
+} from "react-native";
+import { unFormatColor } from "../utils/helpers/formatColor";
 import { useNavigate } from "react-router-native";
 import { createNewFolder } from "../utils/api";
 import "react-native-get-random-values";
@@ -36,7 +44,7 @@ const NewFolder = ({ setAllData, folder, token, db }) => {
       const newFolder = {
         folderid: tempId,
         title,
-        color,
+        color: unFormatColor(color),
         parentFolderId: folder ? folder.folderid : null,
       };
       setAllData((prevUser) => {
@@ -89,6 +97,7 @@ const NewFolder = ({ setAllData, folder, token, db }) => {
           { opacity: opacityAni, scaleX: scaleAni, scaleY: scaleAni },
         ]}
       >
+        <View style={[styles.color, { backgroundColor: color }]}></View>
         <Text style={[styles.white, styles.heading]}>Create a new folder</Text>
         <TextInput
           style={[styles.white, styles.input, styles.heading]}
@@ -124,6 +133,15 @@ const styles = StyleSheet.create({
     elevation: 10,
     borderRadius: 10,
     backgroundColor: "#222",
+  },
+  color: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    width: "50%",
+    height: 6,
+    borderBottomLeftRadius: 10,
+    borderTopRightRadius: 10,
   },
   heading: {
     fontSize: 16,

@@ -1,17 +1,18 @@
 import { View, StyleSheet, Pressable } from "react-native";
-import formatColor from "../utils/helpers/formatColor";
-import colors from "../constants/colors";
+import { tailwindValues } from "../constants/colors";
 
 const Colors = ({ setColor, selectedColor }) => {
   return (
     <View style={styles.container}>
-      {colors.map((color) => (
+      {tailwindValues.map((color) => (
         <Pressable
-          key={color.color}
-        onPress={() => setColor(color.color)} 
-          style={
-            ([styles.color, selectedColor === color.color ? styles.big : styles.normal, { backgroundColor: formatColor(color.color) }])
-          }
+          key={color}
+          onPress={() => setColor(color)}
+          style={[
+            styles.color,
+            selectedColor === color ? styles.big : styles.normal,
+            { backgroundColor: color },
+          ]}
         ></Pressable>
       ))}
     </View>
