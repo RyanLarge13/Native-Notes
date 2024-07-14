@@ -6,7 +6,7 @@ import {
   KeyboardAvoidingView,
   Pressable,
   Animated,
-  Text,
+  Keyboard,
 } from "react-native";
 import { createNewNote, updateNote } from "../utils/api";
 import { useNavigate } from "react-router-native";
@@ -14,16 +14,23 @@ import Icon from "react-native-vector-icons/FontAwesome5";
 import WebView from "react-native-webview";
 import EditorHTML from "../webView/html.js";
 import renderEditor from "../webView/editHTML";
+import Toolbar from "../components/Toolbar.jsx";
 
 const NewNote = ({ folder, token, setAllData, note, setNote, db }) => {
   const [title, setTitle] = useState(note ? note.title : "");
-  const [selected, setSelected] = useState([]);
   const [closed, setClosed] = useState(false);
   const navigate = useNavigate();
   const webviewRef = useRef();
 
   const opacityAni = useRef(new Animated.Value(0)).current;
   const transYAni = useRef(new Animated.Value(500)).current;
+
+  const handleFormat = (format) => {
+    if (format === "html") {
+      Keyboard.dismiss();
+    }
+    webviewRef.current?.postMessage(format);
+  };
 
   useEffect(() => {
     Animated.parallel([
@@ -55,12 +62,6 @@ const NewNote = ({ folder, token, setAllData, note, setNote, db }) => {
       ]).start();
     }
   }, [closed]);
-
-  const handleFormat = (format) => {
-    const newSelected = [...selected, format];
-    setSelected(newSelected);
-    webviewRef.current?.postMessage(format);
-  };
 
   const onMessage = (event) => {
     const receivedData = event.nativeEvent.data;
@@ -194,58 +195,7 @@ const NewNote = ({ folder, token, setAllData, note, setNote, db }) => {
             console.error("WebView error: ", nativeEvent);
           }}
         />
-        <View style={styles.controlBar}>
-          <Pressable onPress={() => handleFormat("heading")} style={styles.btn}>
-            <Icon
-              name="heading"
-              style={[
-                styles.white,
-                selected.includes("heading") && styles.selected,
-              ]}
-            />
-          </Pressable>
-          <Pressable onPress={() => handleFormat("bold")} style={styles.btn}>
-            <Icon name="bold" style={styles.white} />
-          </Pressable>
-          <Pressable onPress={() => handleFormat("italic")} style={styles.btn}>
-            <Icon name="italic" style={styles.white} />
-          </Pressable>
-          <Pressable
-            onPress={() => handleFormat("underline")}
-            style={styles.btn}
-          >
-            <Icon name="underline" style={styles.white} />
-          </Pressable>
-          <Text style={styles.seperator}> | </Text>
-          <Pressable
-            onPress={() => handleFormat("alignLeft")}
-            style={styles.btn}
-          >
-            <Icon name="align-left" style={styles.white} />
-          </Pressable>
-          <Pressable
-            onPress={() => handleFormat("alignCenter")}
-            style={styles.btn}
-          >
-            <Icon name="align-center" style={styles.white} />
-          </Pressable>
-          <Pressable
-            onPress={() => handleFormat("alignRight")}
-            style={styles.btn}
-          >
-            <Icon name="align-right" style={styles.white} />
-          </Pressable>
-          <Text style={styles.seperator}> | </Text>
-          <Pressable onPress={() => handleFormat("list")} style={styles.btn}>
-            <Icon name="list" style={styles.white} />
-          </Pressable>
-          <Pressable onPress={() => handleFormat("undo")} style={styles.btn}>
-            <Icon name="undo" style={styles.white} />
-          </Pressable>
-          <Pressable onPress={() => handleFormat("redo")} style={styles.btn}>
-            <Icon name="redo" style={styles.white} />
-          </Pressable>
-        </View>
+        <Toolbar webviewRef={webviewRef} />
       </KeyboardAvoidingView>
     </Animated.View>
   );
@@ -291,40 +241,9 @@ const styles = StyleSheet.create({
     textAlignVertical: "top",
     backgroundColor: "#000",
   },
-  controlBar: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    left: 0,
-    paddingVertical: 10,
-    paddingRight: 50,
-    paddingLeft: 10,
-    backgroundColor: "#111",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "flex-start",
-    alignItems: "center",
-    gap: 5,
-  },
-  btn: {
-    width: 26,
-    height: 26,
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 2,
-    elevation: 2,
-    backgroundColor: "#555",
-  },
-  selected: {
-    borderWidth: 3,
-    borderEndColor: "#fff",
-  },
   white: {
     color: "#fff",
     fontSize: 17,
-  },
-  seperator: {
-    color: "#aaa",
   },
 });
 
