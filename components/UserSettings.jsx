@@ -6,6 +6,7 @@ import {
   Animated,
   StyleSheet,
   Switch,
+  Linking,
 } from "react-native";
 import { v4 as uuidv4 } from "uuid";
 import Colors from "./Colors";
@@ -57,6 +58,19 @@ const UserSettings = ({
       }).start();
     }
   }, [open]);
+
+  const openIssue = () => {
+    const repoOwner = "RyanLarge13";
+    const repoName = "Native-Notes";
+    const issueTitle = "New Issue";
+    const issueBody = "What bug did you find with the app?";
+    const url = `https://github.com/${repoOwner}/${repoName}/issues/new?title=${encodeURIComponent(
+      issueTitle
+    )}&body=${encodeURIComponent(issueBody)}`;
+    Linking.openURL(url).catch((err) =>
+      console.error("Couldn't load page", err)
+    );
+  };
 
   const confirmLogout = () => {
     const newNotifs = [
@@ -398,7 +412,7 @@ const UserSettings = ({
           <Pressable onPress={() => confirmLogout()} style={styles.logout}>
             <Text>Logout &rarr;</Text>
           </Pressable>
-          <Pressable style={styles.bug}>
+          <Pressable onPress={() => openIssue()} style={styles.bug}>
             <Text>Report A Bug</Text>
           </Pressable>
           <Pressable

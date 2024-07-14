@@ -39,7 +39,8 @@ const editorHTML = `
     var editor = document.getElementById('editor');
     editor.contentEditable = true;
 
-    var getRequest = function(event) {  
+    var getRequest = function(event) {
+    if (typeof event.data === "string") {
       switch (event.data) {
         case 'bold':
           document.execCommand('bold', false, '');
@@ -88,8 +89,20 @@ const editorHTML = `
         case 'redo':
              document.execCommand('redo', false, null);
               break;
+        case "color":
+
+          break;
         default:
           break;
+      }
+}
+      if (typeof event.data === "object") {
+        const command = event.data.command;
+        switch (command) {
+          case "color":
+            document.execCommand('foreColor', false, event.data.color);
+            break;
+        }
       }
     }
 

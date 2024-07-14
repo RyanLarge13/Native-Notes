@@ -59,9 +59,13 @@ const App = () => {
   const [db, setDb] = useState(null);
 
   useEffect(() => {
-    setDatabase();
-    createTables();
-  }, []);
+    if (!db) {
+      setDatabase();
+    }
+    if (db) {
+      createTables();
+    }
+  }, [db]);
 
   const setDatabase = async (store) => {
     const myStore = await SQLite.openDatabaseAsync("localstore");

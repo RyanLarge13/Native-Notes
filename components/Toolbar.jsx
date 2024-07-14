@@ -1,6 +1,8 @@
 import { StyleSheet, ScrollView, Pressable, View, Text } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome5";
 import { useState } from "react";
+import ColorPicker from "./ColorPicker";
+import FontSizePicker from "./FontSizePicker";
 
 const Toolbar = ({ webviewRef }) => {
   const [selected, setSelected] = useState([]);
@@ -10,10 +12,21 @@ const Toolbar = ({ webviewRef }) => {
   const [fontSize, setFontSize] = useState(false);
   const [alignAndSpace, setAlignAndSpace] = useState(false);
 
-  const handleFormat = (format) => {
+  const handleFormat = (format, setState, color) => {
     const newSelected = [...selected, format];
     setSelected(newSelected);
-    webviewRef.current?.postMessage(format);
+    if (format === "color" && color) {
+      webviewRef.current?.postMessage({ command: "color", color: color });
+    } else {
+      webviewRef.current?.postMessage(format);
+    }
+    if (setState) {
+      setState();
+    }
+  };
+
+  const closeView = (setState) => {
+    setState(false);
   };
 
   /*
@@ -30,17 +43,20 @@ const Toolbar = ({ webviewRef }) => {
       {textOptions ? (
         <View style={[styles.optionsContainer]}>
           <View style={styles.selectGroup}>
-            <Pressable onPress={() => handleFormat("bold")} style={styles.btn}>
+            <Pressable
+              onPress={() => handleFormat("bold", setTextOptions)}
+              style={styles.btn}
+            >
               <Icon name="bold" style={[styles.white, styles.iconSize]} />
             </Pressable>
             <Pressable
-              onPress={() => handleFormat("italic")}
+              onPress={() => handleFormat("italic", setTextOptions)}
               style={styles.btn}
             >
               <Icon name="italic" style={[styles.white, styles.iconSize]} />
             </Pressable>
             <Pressable
-              onPress={() => handleFormat("underline")}
+              onPress={() => handleFormat("underline", setTextOptions)}
               style={styles.btn}
             >
               <Icon name="underline" style={[styles.white, styles.iconSize]} />
@@ -48,13 +64,13 @@ const Toolbar = ({ webviewRef }) => {
           </View>
           <View style={styles.selectGroup}>
             <Pressable
-              onPress={() => handleFormat("alignLeft")}
+              onPress={() => handleFormat("alignLeft", setTextOptions)}
               style={styles.btn}
             >
               <Icon name="align-left" style={[styles.white, styles.iconSize]} />
             </Pressable>
             <Pressable
-              onPress={() => handleFormat("alignCenter")}
+              onPress={() => handleFormat("alignCenter", setTextOptions)}
               style={styles.btn}
             >
               <Icon
@@ -63,7 +79,7 @@ const Toolbar = ({ webviewRef }) => {
               />
             </Pressable>
             <Pressable
-              onPress={() => handleFormat("alignRight")}
+              onPress={() => handleFormat("alignRight", setTextOptions)}
               style={styles.btn}
             >
               <Icon
@@ -73,25 +89,34 @@ const Toolbar = ({ webviewRef }) => {
             </Pressable>
           </View>
           <View style={styles.selectGroup}>
-            <Pressable onPress={() => handleFormat("ol")} style={styles.btn}>
+            <Pressable
+              onPress={() => handleFormat("ol", setTextOptions)}
+              style={styles.btn}
+            >
               <Icon name="list-ol" style={[styles.white, styles.iconSize]} />
             </Pressable>
-            <Pressable onPress={() => handleFormat("ul")} style={styles.btn}>
+            <Pressable
+              onPress={() => handleFormat("ul", setTextOptions)}
+              style={styles.btn}
+            >
               <Icon name="list-ul" style={[styles.white, styles.iconSize]} />
             </Pressable>
-            <Pressable onPress={() => handleFormat("check")} style={styles.btn}>
+            <Pressable
+              onPress={() => handleFormat("check", setTextOptions)}
+              style={styles.btn}
+            >
               <Icon name="list" style={[styles.white, styles.iconSize]} />
             </Pressable>
           </View>
           <View style={styles.selectGroup}>
             <Pressable
-              onPress={() => handleFormat("indent")}
+              onPress={() => handleFormat("indent", setTextOptions)}
               style={styles.btn}
             >
               <Icon name="indent" style={[styles.white, styles.iconSize]} />
             </Pressable>
             <Pressable
-              onPress={() => handleFormat("outdent")}
+              onPress={() => handleFormat("outdent", setTextOptions)}
               style={styles.btn}
             >
               <Icon name="outdent" style={[styles.white, styles.iconSize]} />
@@ -99,12 +124,19 @@ const Toolbar = ({ webviewRef }) => {
           </View>
         </View>
       ) : null}
-      {fontColor ? <View style={styles.optionsContainer}></View> : null}
+      {fontColor ? <ColorPicker /> : null}
+      {fontSize ? <FontSizePicker /> : null}
       <ScrollView horizontal={true} style={styles.container}>
-        <Pressable onPress={() => handleFormat("undo")} style={styles.btn}>
+        <Pressable
+          onPress={() => handleFormat("undo", null)}
+          style={styles.btn}
+        >
           <Icon name="undo" style={[styles.white, styles.iconSize]} />
         </Pressable>
-        <Pressable onPress={() => handleFormat("redo")} style={styles.btn}>
+        <Pressable
+          onPress={() => handleFormat("redo", null)}
+          style={styles.btn}
+        >
           <Icon name="redo" style={[styles.white, styles.iconSize]} />
         </Pressable>
         <Pressable
