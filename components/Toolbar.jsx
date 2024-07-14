@@ -1,11 +1,4 @@
-import {
-  StyleSheet,
-  ScrollView,
-  Pressable,
-  View,
-  Text,
-  Keyboard,
-} from "react-native";
+import { StyleSheet, ScrollView, Pressable, View, Text } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome5";
 import { useState } from "react";
 
@@ -138,9 +131,6 @@ const Toolbar = ({ webviewRef }) => {
         >
           <Text style={styles.white}>12</Text>
           <Icon name="angle-down" style={[styles.white, styles.iconSize]} />
-        </Pressable>
-        <Pressable onPress={() => Keyboard.dismiss()} style={styles.btn}>
-          <Text style={styles.white}>close</Text>
         </Pressable>
       </ScrollView>
     </>

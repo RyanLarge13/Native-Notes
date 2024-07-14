@@ -50,11 +50,14 @@ const editorHTML = `
         case 'underline':
             document.execCommand('underline',false,'');
             break;
-        case 'heading':
-            document.execCommand('formatBlock',false,'<h1>');
+        case 'ol':
+            document.execCommand('insertOrderedList',false,null);
             break;
-        case 'list':
+        case 'ul':
             document.execCommand('insertUnorderedList',false,null);
+            break;
+        case 'check':
+            insertCheckList();
             break;
         case 'html':
               sendMessage(
@@ -73,6 +76,12 @@ const editorHTML = `
         case 'alignJustify':
              document.execCommand('justifyFull', false, null);
               break;
+    case 'indent':
+            document.execCommand('indent', false, null);
+            break;
+        case 'outdent':
+            document.execCommand('outdent', false, null);
+            break;
         case 'undo':
              document.execCommand('undo', false, null);
               break;
@@ -83,6 +92,19 @@ const editorHTML = `
           break;
       }
     }
+
+      var insertCheckList = function() {
+      var range = window.getSelection().getRangeAt(0);
+      var checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      var span = document.createElement('span');
+      span.contentEditable = 'true';
+      var div = document.createElement('div');
+      div.className = 'checklist-item';
+      div.appendChild(checkbox);
+      div.appendChild(span);
+      range.insertNode(div);
+    };
 
     var sendMessage = function(message) {
       if(window.ReactNativeWebView)

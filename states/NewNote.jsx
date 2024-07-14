@@ -7,6 +7,7 @@ import {
   Pressable,
   Animated,
   Keyboard,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { createNewNote, updateNote } from "../utils/api";
 import { useNavigate } from "react-router-native";
@@ -26,9 +27,6 @@ const NewNote = ({ folder, token, setAllData, note, setNote, db }) => {
   const transYAni = useRef(new Animated.Value(500)).current;
 
   const handleFormat = (format) => {
-    if (format === "html") {
-      Keyboard.dismiss();
-    }
     webviewRef.current?.postMessage(format);
   };
 
@@ -180,9 +178,14 @@ const NewNote = ({ folder, token, setAllData, note, setNote, db }) => {
             placeholderTextColor="#aaa"
             onChangeText={(titleText) => setTitle(titleText)}
           />
-          <Pressable style={styles.save} onPress={() => handleFormat("html")}>
-            <Icon name="save" />
-          </Pressable>
+          <TouchableWithoutFeedback
+            onPress={Keyboard.dismiss}
+            accessible={false}
+          >
+            <Pressable style={styles.save} onPress={() => handleFormat("html")}>
+              <Icon name="save" />
+            </Pressable>
+          </TouchableWithoutFeedback>
         </View>
         <WebView
           ref={webviewRef}
