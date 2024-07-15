@@ -10,19 +10,25 @@ const Toolbar = ({ webviewRef }) => {
   const [fontColor, setFontColor] = useState(false);
   const [fontHighlight, setFontHighlight] = useState(false);
   const [fontSize, setFontSize] = useState(false);
-  const [alignAndSpace, setAlignAndSpace] = useState(false);
 
-  const handleFormat = (format, setState, color) => {
+  const handleFormat = (format, setState, value) => {
     const newSelected = [...selected, format];
     setSelected(newSelected);
-    if (format === "color" && color) {
-      webviewRef.current?.postMessage({ command: "color", color: color });
-    } else {
-      webviewRef.current?.postMessage(format);
-    }
     if (setState) {
       setState();
     }
+    if (format === "color" && value) {
+      webviewRef.current?.postMessage({ command: "color", color: value });
+      return;
+    }
+    if (format === "font-size") {
+      webviewRef.current?.postMessage({ command: "font-size", size: value });
+    }
+    webviewRef.current?.postMessage(format);
+  };
+
+  const setSize = (size) => {
+    handleFormat("font-size", setFontSize, size);
   };
 
   const closeView = (setState) => {
@@ -32,11 +38,8 @@ const Toolbar = ({ webviewRef }) => {
   /*
     TODO:
         1. Implement these features in webview
-               * ol
-               * ul
-               * indent
-               * outdent
-    */
+               * checklists
+  */
 
   return (
     <>
@@ -125,7 +128,7 @@ const Toolbar = ({ webviewRef }) => {
         </View>
       ) : null}
       {fontColor ? <ColorPicker /> : null}
-      {fontSize ? <FontSizePicker /> : null}
+      {fontSize ? <FontSizePicker setFontSize={setSize} /> : null}
       <ScrollView horizontal={true} style={styles.container}>
         <Pressable
           onPress={() => handleFormat("undo", null)}

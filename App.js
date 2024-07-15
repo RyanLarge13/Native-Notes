@@ -710,7 +710,6 @@ const App = () => {
             ) : null}
             {systemNotifs.map((notif, index) => (
               <SystemNotif
-                key={notif.id}
                 setSystemNotifs={setSystemNotifs}
                 systemNotifs={systemNotifs}
                 notif={notif}

@@ -98,10 +98,10 @@ const NewFolder = ({ setAllData, folder, token, db }) => {
         ]}
       >
         <View style={[styles.color, { backgroundColor: color }]}></View>
-        <Text style={[styles.white, styles.heading]}>Create a new folder</Text>
+        <Text style={[styles.white, styles.heading]}>New Folder</Text>
         <TextInput
           style={[styles.white, styles.input, styles.heading]}
-          placeholder="title"
+          placeholder="Give your folder a title"
           placeholderTextColor="#aaa"
           value={title}
           onChangeText={(text) => setTitle(text)}
@@ -156,7 +156,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#fcd34d",
     elevation: 3,
     marginTop: 15,
-    width: 125,
   },
   input: {
     paddingVertical: 10,

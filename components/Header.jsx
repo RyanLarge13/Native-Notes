@@ -146,7 +146,10 @@ const Header = ({
         >
           <Icon name="search" style={styles.white} />
         </Pressable>
-        <Pressable onPress={() => setLayoutOptions(true)} style={styles.btn}>
+        <Pressable
+          onPress={() => setLayoutOptions((prev) => !prev)}
+          style={styles.btn}
+        >
           <MaterialIcon name="dots-vertical" style={styles.white} />
         </Pressable>
         <Animated.View

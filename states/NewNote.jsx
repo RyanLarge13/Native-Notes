@@ -76,6 +76,8 @@ const NewNote = ({ folder, token, setAllData, note, setNote, db }) => {
         locked: note.locked,
         folderId: folder ? folder.folderid : null,
       };
+      setNote(null);
+      navigate("/");
       updateNote(token, updatedNote)
         .then(async (res) => {
           const resNote = res.data.data[0];
@@ -108,8 +110,6 @@ const NewNote = ({ folder, token, setAllData, note, setNote, db }) => {
               resNote.notesid,
             ]
           );
-          navigate("/");
-          setNote(null);
         })
         .catch((err) => {
           console.log(err);
@@ -170,23 +170,20 @@ const NewNote = ({ folder, token, setAllData, note, setNote, db }) => {
       style={[styles.container, { opacity: opacityAni, translateY: transYAni }]}
     >
       <KeyboardAvoidingView style={styles.container}>
-        <View style={styles.saveInputContainer}>
-          <TextInput
-            style={styles.title}
-            placeholder="Title"
-            value={title}
-            placeholderTextColor="#aaa"
-            onChangeText={(titleText) => setTitle(titleText)}
-          />
-          <TouchableWithoutFeedback
-            onPress={Keyboard.dismiss}
-            accessible={false}
-          >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View style={styles.saveInputContainer}>
+            <TextInput
+              style={styles.title}
+              placeholder="Title"
+              value={title}
+              placeholderTextColor="#aaa"
+              onChangeText={(titleText) => setTitle(titleText)}
+            />
             <Pressable style={styles.save} onPress={() => handleFormat("html")}>
               <Icon name="save" />
             </Pressable>
-          </TouchableWithoutFeedback>
-        </View>
+          </View>
+        </TouchableWithoutFeedback>
         <WebView
           ref={webviewRef}
           style={styles.editor}

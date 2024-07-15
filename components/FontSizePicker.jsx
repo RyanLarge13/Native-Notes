@@ -1,21 +1,31 @@
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import { Text, StyleSheet, ScrollView, Pressable } from "react-native";
 import React from "react";
 
-const FontSizePicker = () => {
+const FontSizePicker = ({ setFontSize }) => {
+  const fontSizes = new Array(60).fill(null);
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.subContainer}>
-        <Text style={styles.white}>10</Text>
-        <Text style={styles.white}>12</Text>
-        <Text style={styles.white}>14</Text>
-        <Text style={styles.white}>16</Text>
-        <Text style={styles.white}>18</Text>
-        <Text style={styles.white}>20</Text>
-        <Text style={styles.white}>22</Text>
-        <Text style={styles.white}>24</Text>
-        <Text style={styles.white}>24</Text>
-        <Text style={styles.white}>24</Text>
-      </View>
+      {fontSizes.map((_, index) => {
+        if (index < 5) return;
+        else {
+          return (
+            <Pressable
+              key={index}
+              style={styles.btn}
+              onPress={() => setFontSize(index)}
+            >
+              <Text
+                style={[
+                  styles.white,
+                  index === 59 ? { marginBottom: 25 } : { marginBottom: 0 },
+                ]}
+              >
+                {index}
+              </Text>
+            </Pressable>
+          );
+        }
+      })}
     </ScrollView>
   );
 };
@@ -24,18 +34,20 @@ const styles = StyleSheet.create({
   container: {
     position: "absolute",
     bottom: 50,
-    left: 0,
-    padding: 15,
-    height: 150,
-  },
-  subContainer: {
-    elevation: 3,
-    padding: 15,
-    borderRadius: 10,
+    // left: 0,
+    right: 100,
+    height: 200,
     backgroundColor: "#222",
+    borderRadius: 10,
+    elevation: 3,
+    padding: 25,
   },
   white: {
     color: "#fff",
+    fontSize: 16,
+  },
+  btn: {
+    padding: 15,
   },
 });
 

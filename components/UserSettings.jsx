@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Switch,
   Linking,
+  ScrollView,
 } from "react-native";
 import { v4 as uuidv4 } from "uuid";
 import Colors from "./Colors";
@@ -154,15 +155,16 @@ const UserSettings = ({
 
   const setColorAndPreferences = async (color) => {
     setColor(color);
-    setTheme({ on: true, color: color });
     const newPreferences = {
       order: order,
       appLock: appLock,
       autoSave: autoSave,
       darkMode: darkMode,
-      theme: { ...theme, color: color },
+      theme: { on: true, color: color },
       view: view,
+      sort: sort,
     };
+    setTheme({ on: true, color: color });
     try {
       db.runAsync(
         `
@@ -186,7 +188,7 @@ const UserSettings = ({
         ></Pressable>
       ) : null}
       <Animated.View style={[styles.container, { translateX: transXAni }]}>
-        <View>
+        <ScrollView>
           <View style={styles.switch}>
             <Text style={styles.white}>Theme</Text>
             <Switch
@@ -194,17 +196,18 @@ const UserSettings = ({
               thumbColor={theme.on ? theme.color : "#ff808d"}
               ios_backgroundColor="#000000"
               onValueChange={async () => {
-                setTheme((prev) => {
-                  return { on: !theme.on, ...prev };
-                });
                 const newPreferences = {
                   order: order,
                   appLock: appLock,
                   autoSave: autoSave,
                   darkMode: darkMode,
-                  theme: { ...theme, on: !theme.on },
+                  theme: { ...theme, on: theme.on ? false : true },
                   view: view,
+                  sort: sort,
                 };
+                setTheme((prev) => {
+                  return { on: theme.on ? false : true, ...prev };
+                });
                 try {
                   db.runAsync(
                     `
@@ -239,6 +242,7 @@ const UserSettings = ({
                   darkMode: !darkMode,
                   theme: theme,
                   view: view,
+                  sort: sort,
                 };
                 try {
                   db.runAsync(
@@ -269,6 +273,7 @@ const UserSettings = ({
                   darkMode: darkMode,
                   theme: theme,
                   view: !view,
+                  sort: sort,
                 };
                 try {
                   db.runAsync(
@@ -299,6 +304,7 @@ const UserSettings = ({
                   darkMode: darkMode,
                   theme: theme,
                   view: view,
+                  sort: sort,
                 };
                 try {
                   db.runAsync(
@@ -329,6 +335,7 @@ const UserSettings = ({
                   darkMode: darkMode,
                   theme: theme,
                   view: view,
+                  sort: sort,
                 };
                 try {
                   db.runAsync(
@@ -359,6 +366,7 @@ const UserSettings = ({
                   darkMode: darkMode,
                   theme: theme,
                   view: view,
+                  sort: sort,
                 };
                 try {
                   db.runAsync(
@@ -407,7 +415,7 @@ const UserSettings = ({
               />
             </View>
           </View>
-        </View>
+        </ScrollView>
         <View>
           <Pressable onPress={() => confirmLogout()} style={styles.logout}>
             <Text>Logout &rarr;</Text>
@@ -449,6 +457,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   switch: {
+    narginVertical: 10,
     justifyContent: "space-between",
     alignItems: "center",
     flexDirection: "row",

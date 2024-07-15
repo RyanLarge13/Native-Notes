@@ -42,8 +42,9 @@ const renderEditor = (html) => {
     editor.contentEditable = true;
 
     var getRequest = function(event) {  
+    if (typeof event.data === "string") {
       switch (event.data) {
-        case 'bold':
+     case 'bold':
           document.execCommand('bold', false, '');
           break;
         case 'italic':
@@ -52,11 +53,14 @@ const renderEditor = (html) => {
         case 'underline':
             document.execCommand('underline',false,'');
             break;
-        case 'heading':
-            document.execCommand('formatBlock',false,'<h1>');
+        case 'ol':
+            document.execCommand('insertOrderedList',false,null);
             break;
-        case 'list':
+        case 'ul':
             document.execCommand('insertUnorderedList',false,null);
+            break;
+        case 'check':
+            insertCheckList();
             break;
         case 'html':
               sendMessage(
@@ -75,16 +79,52 @@ const renderEditor = (html) => {
         case 'alignJustify':
              document.execCommand('justifyFull', false, null);
               break;
+    case 'indent':
+            document.execCommand('indent', false, null);
+            break;
+        case 'outdent':
+            document.execCommand('outdent', false, null);
+            break;
         case 'undo':
              document.execCommand('undo', false, null);
               break;
         case 'redo':
              document.execCommand('redo', false, null);
               break;
+        case "color":
+
+          break;
         default:
           break;
       }
     }
+
+     if (typeof event.data === "object") {
+        const command = event.data.command;
+        switch (command) {
+          case "color":
+            document.execCommand('foreColor', false, event.data.color);
+            break;
+          case "font=size":
+             document.execCommand('styleWithCSS', true, null);
+          document.execCommand('fontSize', false, event.data.size);
+            break;
+        }
+      }
+    }
+
+      var insertCheckList = function() {
+      var range = window.getSelection().getRangeAt(0);
+      var checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      var span = document.createElement('span');
+      span.contentEditable = 'true';
+      var div = document.createElement('div');
+      div.className = 'checklist-item';
+      div.appendChild(checkbox);
+      div.appendChild(span);
+      range.insertNode(div);
+    };
 
     var sendMessage = function(message) {
       if(window.ReactNativeWebView)

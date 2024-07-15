@@ -10,7 +10,7 @@ const Colors = ({ setColor, selectedColor }) => {
           onPress={() => setColor(color)}
           style={[
             styles.color,
-            selectedColor === color ? styles.big : styles.normal,
+            selectedColor === color ? styles.outline : styles.normal,
             { backgroundColor: color },
           ]}
         ></Pressable>
@@ -33,9 +33,11 @@ const styles = StyleSheet.create({
     borderRadius: 1000,
     elevation: 2,
   },
-  big: {
-    width: 23,
-    height: 23,
+  outline: {
+    borderWidth: 4,
+    borderColor: "#fff",
+    width: 20,
+    height: 20,
   },
   normal: {
     width: 20,

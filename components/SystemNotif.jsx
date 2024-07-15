@@ -16,6 +16,7 @@ const SystemNotif = ({ notif, index }) => {
 
   return (
     <Animated.View
+      key={notif.id}
       style={[
         styles.notif,
         { translateY: transYAni, top: 50 * (index * 1.5 + 1) },

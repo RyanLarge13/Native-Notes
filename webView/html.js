@@ -102,6 +102,10 @@ const editorHTML = `
           case "color":
             document.execCommand('foreColor', false, event.data.color);
             break;
+          case "font=size":
+             document.execCommand('styleWithCSS', true, null);
+          document.execCommand('fontSize', false, event.data.size);
+            break;
         }
       }
     }
