@@ -125,26 +125,26 @@ const Settings = ({
 
   const deleteFolder = async () => {
     const folderId = item.folderid;
-    deleteAFolder(token, folderId)
-      .then(async (res) => {
-        const folderIdToDelete = res.data.data[0].folderid;
-        setAllData((prevData) => {
-          const newFolders = prevData.folders.filter(
-            (fold) => fold.folderid !== folderIdToDelete
-          );
-          const newData = {
-            ...prevData,
-            folders: newFolders,
-          };
-          return newData;
-        });
-        await db.runAsync(
-          `
+    setAllData((prevData) => {
+      const newFolders = prevData.folders.filter(
+        (fold) => fold.folderid !== folderId
+      );
+      const newData = {
+        ...prevData,
+        folders: newFolders,
+      };
+      return newData;
+    });
+    await db.runAsync(
+      `
       DELETE FROM folders WHERE folderid = $deleteId
     `,
-          { $deleteId: folderIdToDelete }
-        );
-        setOpen({ show: false });
+      { $deleteId: folderId }
+    );
+    setOpen({ show: false });
+    deleteAFolder(token, folderId)
+      .then(async (res) => {
+        console.log("response complete");
       })
       .catch((err) => {
         console.log(err);
@@ -175,25 +175,23 @@ const Settings = ({
     ]);
   };
 
-  const deleteNote = () => {
+  const deleteNote = async () => {
     const noteId = item.noteid;
-    deleteANote(token, noteId)
-      .then(async (res) => {
-        const noteIdToDelete = res.data.data[0].notesid;
-        setAllData((prevData) => {
-          const newNotes = prevData.notes.filter(
-            (note) => note.noteid !== noteIdToDelete
-          );
-          const newData = { ...prevData, notes: newNotes };
-          return newData;
-        });
-        await db.runAsync(
-          `
+    setAllData((prevData) => {
+      const newNotes = prevData.notes.filter((note) => note.noteid !== noteId);
+      const newData = { ...prevData, notes: newNotes };
+      return newData;
+    });
+    await db.runAsync(
+      `
       DELETE FROM notes WHERE noteid = $deleteId
     `,
-          { $deleteId: noteIdToDelete }
-        );
-        setOpen({ show: false });
+      { $deleteId: noteId }
+    );
+    setOpen({ show: false });
+    deleteANote(token, noteId)
+      .then(async (res) => {
+        console.log("request complete");
       })
       .catch((err) => {
         console.log(err);

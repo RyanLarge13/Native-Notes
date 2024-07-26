@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, Pressable, ScrollView, View } from "react-native";
 import {
@@ -56,6 +56,8 @@ const App = () => {
   const [autoSave, setAutoSave] = useState(false);
   const [appLock, setAppLock] = useState(false);
   const [sort, setSort] = useState("Title");
+  const [saveLocation, setSaveLocation] = useState(false);
+  const [location, setLocation] = useState(null);
   const [db, setDb] = useState(null);
 
   useEffect(() => {
@@ -94,12 +96,28 @@ const App = () => {
     }
   }, [folder, allData]);
 
+  const fetchLocation = () => {
+    const theFolder = allData.folders.filter(
+      (fold) => fold.folderid === location
+    );
+    const subfolders = allData.folders.filter(
+      (fold) => fold.parentFolderId === location
+    );
+    const nestedNotes = allData.notes.filter(
+      (aNote) => aNote.folderId === location
+    );
+    setFolders(subfolders);
+    setNotes(nestedNotes);
+    setMainTitle(theFolder.title);
+    setLocation(null);
+  };
+
   const findChildNotes = () => {
     if (!folder && allData.folders.length > 0 && allData.notes.length > 0) {
       const topFolders = allData.folders.filter(
         (fold) => fold.parentFolderId === null
       );
-      const topNotes = allData.notes.filter((aNote) => aNote.folderId === null);
+      const topNotes = allData.notes.filter((aNote) => !aNote.folderId);
       setNotes(topNotes);
       setFolders(topFolders);
       setMainTitle("Folders");
@@ -115,7 +133,6 @@ const App = () => {
       setFolders(subfolders);
       setNotes(nestedNotes);
       setMainTitle(folder.title);
-      return;
     }
   };
 
@@ -255,6 +272,8 @@ const App = () => {
       } else {
         setSort("Title");
       }
+      setSaveLocation(preferences.saveLocation);
+      setLocation(preferences?.location);
     } else {
       console.log("No preferences");
     }
@@ -346,6 +365,8 @@ const App = () => {
           autoSave: autoSave,
           appLock: appLock,
           sort: sort,
+          saveLocation: true,
+          location: "null",
         })
       );
     } catch (err) {
@@ -437,7 +458,7 @@ const App = () => {
     } else {
       console.log("No data");
     }
-    getData(storedData);
+    // getData(storedData);
   };
 
   const getData = (storedData) => {
@@ -468,6 +489,30 @@ const App = () => {
       .finally(() => {
         console.log("Finished data");
       });
+  };
+
+  const setNewLocation = (id) => {
+    const newPreferences = {
+      order: order,
+      appLock: appLock,
+      autoSave: autoSave,
+      darkMode: darkMode,
+      theme: theme,
+      view: view,
+      sort: sort,
+      saveLocation: saveLocation,
+      location: id,
+    };
+    try {
+      db.runAsync(
+        `
+        UPDATE user SET preferences = ? WHERE userId = ?
+        `,
+        [JSON.stringify(newPreferences), user.userId]
+      );
+    } catch (err) {
+      console.log(err);
+    }
   };
 
   const goBack = () => {
@@ -505,6 +550,9 @@ const App = () => {
       setSystemFolder("main");
       setMainTitle("Folders");
       setFolder(null);
+      if (saveLocation) {
+        setNewLocation(null);
+      }
       return true;
     }
     if (parentId === null && folder === null) {
@@ -515,6 +563,9 @@ const App = () => {
         (fold) => fold.folderid === parentId
       )[0];
       setFolder(parentFolder);
+      if (saveLocation) {
+        setNewLocation(parentFolder.id);
+      }
       return true;
     }
     if (parentId === null) {
@@ -573,6 +624,12 @@ const App = () => {
                       setOrder={setOrder}
                       sort={sort}
                       setSort={setSort}
+                      saveLocation={saveLocation}
+                      autoSave={autoSave}
+                      darkMode={darkMode}
+                      theme={theme}
+                      appLock={appLock}
+                      user={user}
                       db={db}
                     />
                   )
@@ -656,6 +713,8 @@ const App = () => {
                   setAutoSave={setAutoSave}
                   sort={sort}
                   setSort={setSort}
+                  saveLocation={saveLocation}
+                  setSaveLocation={setSaveLocation}
                   db={db}
                   user={user}
                 />

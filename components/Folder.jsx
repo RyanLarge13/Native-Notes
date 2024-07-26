@@ -3,7 +3,7 @@ import Ripple from "react-native-material-ripple";
 import formatColor from "../utils/helpers/formatColor";
 import { useEffect, useState } from "react";
 
-const Folder = ({ folder, setFolder, setOpen, allNotes }) => {
+const Folder = ({ folder, setFolder, setOpen, allNotes, saveLocation }) => {
   const [notesLen, setNotesLen] = useState(0);
 
   useEffect(() => {
@@ -24,7 +24,10 @@ const Folder = ({ folder, setFolder, setOpen, allNotes }) => {
       rippleColor="#fff"
       rippleOpacity={0}
       onLongPress={(e) => openFolderSettings(e)}
-      onPress={() => setFolder(folder)}
+      onPress={() => {
+        setFolder(folder);
+        saveLocation(folder.folderid);
+      }}
       style={styles.folder}
     >
       <Text style={styles.gray}>{notesLen === 0 ? null : notesLen}</Text>

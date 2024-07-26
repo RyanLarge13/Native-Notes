@@ -44,6 +44,12 @@ const Account = ({
   setOrder,
   sort,
   setSort,
+  saveLocation,
+  autoSave,
+  darkMode,
+  theme,
+  appLock,
+  user,
   db,
 }) => {
   const [notesToRender, setNotesToRender] = useState([]);
@@ -99,11 +105,16 @@ const Account = ({
   }, [order, notes, sort]);
 
   const sortAndFilterNotes = () => {
-    let copyOfNotes;
+    let copyOfNotes = notes;
     if (mainTitle === "Trashed") {
       copyOfNotes = notes.filter((aNote) => aNote.trashed);
-    } else {
+      setNotesToRender(copyOfNotes);
+      return;
+    }
+    if (mainTitle !== "Trashed") {
       copyOfNotes = notes.filter((aNote) => !aNote.trashed);
+      setNotesToRender(copyOfNotes);
+      return;
     }
     if (order) {
       copyOfNotes.sort((a, b) =>
@@ -113,6 +124,8 @@ const Account = ({
           ? +new Date(a.createdAt) - +new Date(b.createdAt)
           : +new Date(a.updated) - +new Date(b.updated)
       );
+      setNotesToRender(copyOfNotes);
+      return;
     }
     if (!order) {
       copyOfNotes.sort((a, b) =>
@@ -122,8 +135,9 @@ const Account = ({
           ? +new Date(b.createdAt) - +new Date(a.createdAt)
           : +new Date(b.updated) - +new Date(a.updated)
       );
+      setNotesToRender(copyOfNotes);
+      return;
     }
-    setNotesToRender(copyOfNotes);
   };
 
   const opacInfo = (diff) => {
@@ -174,6 +188,32 @@ const Account = ({
     setOptions((prev) => !prev);
   };
 
+  const saveNewLocation = async (id) => {
+    if (saveLocation) {
+      const newPreferences = {
+        order: order,
+        appLock: appLock,
+        autoSave: autoSave,
+        darkMode: darkMode,
+        theme: theme,
+        view: view,
+        sort: sort,
+        saveLocation: true,
+        location: id,
+      };
+      try {
+        db.runAsync(
+          `
+          UPDATE user SET preferences = ? WHERE userId = ?
+          `,
+          [JSON.stringify(newPreferences), user.userId]
+        );
+      } catch (err) {
+        console.log(err);
+      }
+    }
+  };
+
   return (
     <>
       <ScrollView
@@ -219,6 +259,7 @@ const Account = ({
               setFolder={setFolder}
               setOpen={setOpen}
               allNotes={allNotes}
+              saveLocation={(folderId) => saveNewLocation(folderId)}
             />
           ))}
         </View>
