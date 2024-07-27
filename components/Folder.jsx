@@ -3,7 +3,7 @@ import Ripple from "react-native-material-ripple";
 import formatColor from "../utils/helpers/formatColor";
 import { useEffect, useState } from "react";
 
-const Folder = ({ folder, setFolder, setOpen, allNotes, saveLocation }) => {
+const Folder = ({ folder, setFolder, setOpen, allNotes, saveLocation, darkMode}) => {
   const [notesLen, setNotesLen] = useState(0);
 
   useEffect(() => {
@@ -28,7 +28,7 @@ const Folder = ({ folder, setFolder, setOpen, allNotes, saveLocation }) => {
         setFolder(folder);
         saveLocation(folder.folderid);
       }}
-      style={styles.folder}
+      style={[styles.folder, {backgroundColor: darkMode ? "#112" : "#aaa"}]}
     >
       <Text style={styles.gray}>{notesLen === 0 ? null : notesLen}</Text>
       <View
@@ -46,7 +46,6 @@ const styles = StyleSheet.create({
   folder: {
     padding: 8,
     borderRadius: 10,
-    backgroundColor: "#112",
     justifyContent: "space-between",
     alignItems: "flex-start",
     elevation: 2,

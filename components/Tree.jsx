@@ -11,8 +11,9 @@ const NestedFolder = ({
  childFolders,
  parentId,
  level,
- open, 
- setMenuOpen
+ open,
+ setMenuOpen,
+ darkMode
 }) => {
  return (
   <Tree
@@ -25,6 +26,7 @@ const NestedFolder = ({
    level={level}
    open={open}
    setMenuOpen={setMenuOpen}
+   darkMode={darkMode}
   />
  );
 };
@@ -38,7 +40,8 @@ const Tree = ({
  parentId,
  level,
  open,
- setMenuOpen
+ setMenuOpen,
+ darkMode
 }) => {
  const childFolders = folders.filter(fold => fold.parentFolderId !== parentId);
  const topFolders = folders.filter(fold => fold.parentFolderId === parentId);
@@ -78,20 +81,25 @@ const Tree = ({
      {topFolders.map(fold => (
       <Animated.View
        key={fold.folderid}
-       style={[styles.folder, { translateX: transXAni, opacity: opacAni }]}
+       style={[
+        styles.folder,
+        {
+         translateX: transXAni,
+         opacity: opacAni,
+         backgroundColor: darkMode ? "#111" : "#fff"
+        }
+       ]}
       >
        <Pressable
         key={fold.folderid}
         style={[styles.folder, { marginLeft: 5 * level }]}
         onPress={() => {
          if (moving) {
-           open.item.title === fold.title
-            ? null
-            : setSelectedFolder(fold)
-            return;
-         } 
-             setFolder(fold);
-             setMenuOpen(false);
+          open.item.title === fold.title ? null : setSelectedFolder(fold);
+          return;
+         }
+         setFolder(fold);
+         setMenuOpen(false);
         }}
        >
         <View
@@ -102,16 +110,16 @@ const Tree = ({
          ]}
         ></View>
         <View style={styles.titleAndArrow}>
-         <Text style={styles.white}>{fold.title}</Text>
+         <Text style={darkMode ? styles.white : styles.black }>{fold.title}</Text>
          {open.item.title !== fold.title && (
           <Pressable
            style={styles.dropDown}
            onPress={() => toggleNested(fold.folderid)}
           >
            {folderStates[fold.folderid] ? (
-            <Icon style={styles.white} name="arrow-down" />
+            <Icon style={darkMode ? styles.white : styles.black} name="arrow-down" />
            ) : (
-            <Icon style={styles.white} name="arrow-right" />
+            <Icon style={darkMode ? styles.white : styles.black } name="arrow-right" />
            )}
           </Pressable>
          )}
@@ -128,6 +136,7 @@ const Tree = ({
            level={level + 1}
            open={open}
            setMenuOpen={setMenuOpen}
+           darkMode={darkMode}
           />
          ) : null}
         </View>
@@ -147,7 +156,6 @@ const styles = StyleSheet.create({
   paddingVertical: 5,
   paddingRight: 10,
   paddingLeft: 15,
-  backgroundColor: "#111",
   borderRadius: 10,
   position: "relative"
  },
@@ -172,6 +180,9 @@ const styles = StyleSheet.create({
  },
  white: {
   color: "#fff"
+ },
+ black: {
+  color: "#000"
  },
  slate: {
   color: "#aaa"

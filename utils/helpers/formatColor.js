@@ -1,6 +1,6 @@
 import { hexValues, tailwindValues } from "../../constants/colors";
 
-const formatColor = (color) => {
+export const formatColor = (color) => {
   if (!color) {
     return "#fcd34d";
   }
