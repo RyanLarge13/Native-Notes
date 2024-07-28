@@ -279,7 +279,8 @@ const UserSettings = ({
           {theme.on ? (
             <>
               <View
-                style={[styles.colorBar, { backgroundColor: color }]}
+                style={[styles.colorBar, { backgroundColor: theme.on ?
+                theme.color : "transparent"}]}
               ></View>
               <Colors
                 setColor={(newColor) => setColorAndPreferences(newColor, true)}
