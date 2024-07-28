@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, Pressable, ScrollView, View } from "react-native";
 import {
@@ -9,7 +9,12 @@ import Spinner from "react-native-loading-spinner-overlay";
 import { NativeRouter, Routes, Route } from "react-router-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SQLite from "expo-sqlite";
-import { loginUser, getUserData } from "./utils/api";
+import {
+  loginUser,
+  getUserData,
+  createNewFolder,
+  createNewNote,
+} from "./utils/api";
 import * as LocalAuthentication from "expo-local-authentication";
 import Login from "./states/Login";
 import Account from "./states/Account";
@@ -353,7 +358,7 @@ const App = () => {
      title TEXT NOT NULL, 
      noteid INTEGER NOT NULL, 
      locked BOOLEAN DEFAULT FALSE, 
-     htmlText TEXT NOT NULL, 
+     htmlText TEXT, 
      folderId INTEGER, 
      createdAt TIMESTAMP NOT NULL, 
      updated TIMESTAMP NOT NULL, 
@@ -483,6 +488,44 @@ const App = () => {
     }
   };
 
+  const updateLocalDb = (serverFolders, serverNotes, storedData) => {
+    const serverFoldersIdSet = new Set(
+      serverFolders.map((fold) => fold.folderid)
+    );
+    const foldersToPush = storedData.folders.filter(
+      (fold) => !serverFoldersIdSet.has(fold.folderid)
+    );
+    const serverNotesIdSet = new Set(serverNotes.map((note) => note.noteid));
+    const notesToPush = storedData.notes.filter(
+      (note) => !serverNotesIdSet.has(note.noteid)
+    );
+    try {
+      foldersToPush.forEach(async (fold) => {
+        await db.runAsync(
+          `
+            DELETE FROM folders WHERE folderid = $deleteid
+          `,
+          { $deleteId: fold.folderid }
+        );
+      });
+    } catch (err) {
+      console.log("Failed to push folders to server");
+    }
+    try {
+      notesToPush.forEach(async (note) => {
+        await db.runAsync(
+          `
+            DELETE FROM notes WHERE noteid = $deleteId
+          `,
+          { $deleteId: note.noteid }
+        );
+      });
+    } catch (err) {
+      console.log("failed to push notes to server");
+    }
+    console.log("finished updating local db");
+  };
+
   const grabFromDb = async () => {
     const storedData = await fetchFromDb();
     if (
@@ -513,6 +556,7 @@ const App = () => {
           data.user,
           storedData
         );
+        updateLocalDb(data.folders, data.notes, storedData);
         setAllData(data);
         setUser(data.user);
         setLoading(false);
@@ -523,9 +567,6 @@ const App = () => {
         setToken(null);
         setUser(null);
         removeToken();
-      })
-      .finally(() => {
-        console.log("Finished data");
       });
   };
 

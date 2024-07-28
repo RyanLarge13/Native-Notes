@@ -269,7 +269,7 @@ const UserSettings = ({
               Theme beta
             </Text>
             <Switch
-              trackColor={{ false: "#fda4af", true: color }}
+              trackColor={{ false: "#fda4af", true: theme.color }}
               thumbColor={theme.on ? "#5effa7" : "#ff808d"}
               ios_backgroundColor="#000000"
               onValueChange={() => setColorAndPreferences(null, !theme.on)}
@@ -279,8 +279,10 @@ const UserSettings = ({
           {theme.on ? (
             <>
               <View
-                style={[styles.colorBar, { backgroundColor: theme.on ?
-                theme.color : "transparent"}]}
+                style={[
+                  styles.colorBar,
+                  { backgroundColor: theme.on ? theme.color : "transparent" },
+                ]}
               ></View>
               <Colors
                 setColor={(newColor) => setColorAndPreferences(newColor, true)}

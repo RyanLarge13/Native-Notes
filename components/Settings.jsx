@@ -95,9 +95,6 @@ const Settings = ({
       })
       .catch((err) => {
         console.log(err);
-      })
-      .finally(() => {
-        console.log("Finsihed updating folder");
       });
   };
 
@@ -147,9 +144,6 @@ const Settings = ({
       })
       .catch((err) => {
         console.log(err);
-      })
-      .finally(() => {
-        console.log("delete a folder complete");
       });
   };
 
@@ -194,9 +188,6 @@ const Settings = ({
       })
       .catch((err) => {
         console.log(err);
-      })
-      .finally(() => {
-        console.log("delete a note complete");
       });
   };
 
@@ -255,9 +246,6 @@ const Settings = ({
       })
       .catch((err) => {
         console.log(err);
-      })
-      .finally(() => {
-        console.log("Finished note update of title or locked");
       });
   };
 

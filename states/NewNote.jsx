@@ -141,9 +141,6 @@ const NewNote = ({
         })
         .catch((err) => {
           console.log(err);
-        })
-        .finally(() => {
-          console.log("Finished updating");
         });
       return;
     } else {
@@ -189,9 +186,6 @@ const NewNote = ({
         })
         .catch((err) => {
           console.log(err);
-        })
-        .finally(() => {
-          console.log("new note uploaded");
         });
     }
   };
