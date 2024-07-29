@@ -304,6 +304,7 @@ const Account = ({
               index={index}
               width={width}
               darkMode={darkMode}
+              theme={theme}
             />
           ))}
         </View>

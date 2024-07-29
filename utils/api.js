@@ -11,6 +11,11 @@ export const loginUser = (username, email, password) => {
   return res;
 };
 
+export const signupUser = (username, email, password) => {
+  const res = Axios.post(`${devUrl}/users/signup`, { username, email, password});
+  return res;
+};
+
 export const getUserData = (token) => {
   const res = Axios.get(`${devUrl}/users/seperated/data`, {
     headers: { Authorization: `Bearer ${token}` },
