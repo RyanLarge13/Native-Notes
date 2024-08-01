@@ -8,7 +8,6 @@ const editorHTML = `
         html {
             height: 100%;
             width: 100%;
-            background-color: #000;
         }
         body {
             display: flex;
@@ -16,7 +15,6 @@ const editorHTML = `
             flex-direction: column;
             height: 100%;
             margin: 0;
-            background-color: #000;
         }
         body::focus {
         	outline: none;
@@ -24,8 +22,6 @@ const editorHTML = `
         }
         #editor {
            flex-grow: 1;
-           background-color: #000;
-           color: #fff;
            border: none;
            outline: none;
         }
@@ -90,24 +86,37 @@ const editorHTML = `
              document.execCommand('redo', false, null);
               break;
         case "color":
-
           break;
+         case "000":
+            document.body.style.backgroundColor = "#000";
+            document.body.style.color = "#fff";
+          break; 
+          case "EEE":
+            document.body.style.backgroundColor = "#eee";
+            document.body.style.color = "#000";
+          break; 
         default:
           break;
       }
 }
       if (typeof event.data === "object") {
-        const command = event.data.command;
-        switch (command) {
-          case "color":
+    const command = event.data.command;
+    switch (command) {
+        case "color":
             document.execCommand('foreColor', false, event.data.color);
             break;
-          case "font=size":
-             document.execCommand('styleWithCSS', true, null);
-          document.execCommand('fontSize', false, event.data.size);
+        case "font-size":
+            document.execCommand('styleWithCSS', true, null);
+            document.execCommand('fontSize', false, '7'); // Setting a placeholder size
+            const fontElements = document.querySelectorAll('font[size="7"]');
+            fontElements.forEach(el => {
+                el.removeAttribute('size');
+                el.style.fontSize = event.data.size + 'px';
+            });
             break;
-        }
-      }
+    }
+}
+
     }
 
       var insertCheckList = function() {

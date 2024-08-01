@@ -57,6 +57,7 @@ const Menu = ({
         ></Pressable>
       ) : null}
       <Animated.ScrollView
+      showsVerticalScrollIndicator={false}
         style={[
           styles.container,
           {

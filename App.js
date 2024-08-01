@@ -215,12 +215,14 @@ const App = () => {
    })
    .catch(err => {
     console.log(err);
-        const newNotifs = [
+    const newNotifs = [
      {
       id: uuidv4(),
       color: "#ff5555",
       title: "Error Signing Up",
-      text: err.response.data.message || "It looks like there might be an issue with your internet connection, please try to sign up again",
+      text:
+       err.response.data.message ||
+       "It looks like there might be an issue with your internet connection, please try to sign up again",
       actions: [{ text: "close", func: () => setSystemNotifs([]) }]
      }
     ];
@@ -569,10 +571,10 @@ const App = () => {
  };
 
  const getData = storedData => {
-  const notesToRender = storedData.notes.filter(
-   aNote => aNote.folderId == null
-  );
-  setNotes(notesToRender);
+  // const notesToRender = storedData.notes.filter(
+  //    aNote => aNote.folderId == null
+  //   );
+  //   setNotes(notesToRender);
   getUserData(token)
    .then(async response => {
     const data = response.data.data;
@@ -584,6 +586,7 @@ const App = () => {
     );
     updateLocalDb(data.folders, data.notes, storedData);
     setAllData(data);
+    setFolders(data.folders);
     setUser(data.user);
     setLoading(false);
     await storeDataInDb(dataToStore);
@@ -771,6 +774,7 @@ const App = () => {
            db={db}
            autoSave={autoSave}
            theme={theme}
+           darkMode={darkMode}
           />
          }
         />

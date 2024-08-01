@@ -54,6 +54,7 @@ const Note = React.memo(
     style={[
      styles.note,
      {
+backgroundColor: darkMode ? "#222" : "#ccc", 
       transform: [
        { scaleX: scaleAni },
        { scaleY: scaleAni }
@@ -64,7 +65,6 @@ const Note = React.memo(
       : {
          width: "100%",
          height: 200,
-         backgroundColor: darkMode ? "#222" : "#ccc"
         }
     ]}
    >
