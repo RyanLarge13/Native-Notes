@@ -40,8 +40,8 @@ const styles = StyleSheet.create({
     height: 20,
   },
   normal: {
-    width: 20,
-    height: 20,
+    width: 23,
+    height: 23,
   },
 });
 
