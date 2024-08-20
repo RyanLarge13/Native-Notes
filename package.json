@@ -16,18 +16,18 @@
     "expo-status-bar": "~1.12.1",
     "react": "18.2.0",
     "react-native": "^0.74.2",
+    "react-native-color-picker": "^0.6.0",
+    "react-native-gesture-handler": "~2.16.1",
     "react-native-get-random-values": "^1.11.0",
     "react-native-loading-spinner-overlay": "^3.0.1",
     "react-native-material-ripple": "^0.9.1",
+    "react-native-reanimated": "~3.10.1",
     "react-native-render-html": "^6.3.4",
-    "react-native-svg": "^15.4.0",
     "react-native-threads": "^0.0.19",
     "react-native-vector-icons": "^10.0.2",
     "react-native-webview": "13.8.6",
     "react-router-native": "^6.20.1",
-    "uuid": "^10.0.0",
-    "react-native-gesture-handler": "~2.16.1",
-    "react-native-reanimated": "~3.10.1"
+    "uuid": "^10.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.24.0"
