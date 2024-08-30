@@ -1,36 +1,24 @@
-import React, { useEffect, useRef } from "react";
-import { View, Text, StyleSheet, Animated } from "react-native";
+import React from "react";
+import { View, Text, StyleSheet } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
 import Ripple from "react-native-material-ripple";
 import { RenderHTMLSource } from "react-native-render-html";
 import { useNavigate } from "react-router-native";
 import * as LocalAuthentication from "expo-local-authentication";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-import {
-  useSharedValue,
-  useAnimatedStyle,
-  useAnimatedGestureHandler,
-  withSpring,
-} from "react-native-reanimated";
-import { PanGestureHandler } from "react-native-gesture-handler";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 
 const Note = React.memo(
   ({ note, setOpen, setNote, view, index, width, darkMode, theme }) => {
-    const scaleAni = useRef(new Animated.Value(0)).current;
-    const transX = useSharedValue(0);
-    const transY = useSharedValue(0);
+    const isPressed = useSharedValue(false);
+    const offset = useSharedValue({ x: 0, y: 0 });
 
     const navigate = useNavigate();
     const htmlToRender = note?.htmlText?.slice(0, 200) + " ..." || "";
-
-    useEffect(() => {
-      Animated.spring(scaleAni, {
-        toValue: 1,
-        tension: 100,
-        delay: 100 * index,
-        friction: 10,
-        useNativeDriver: true,
-      }).start();
-    }, []);
 
     const openNote = () => {
       if (note.locked) {
@@ -58,40 +46,58 @@ const Note = React.memo(
       setOpen({ show: true, item: note, type: "note" });
     };
 
-    const dragHandler = useAnimatedGestureHandler({
-      onStart: (_, ctx) => {
-        ctx.startX = translateX.value;
-        ctx.startY = translateY.value;
-      },
-      onActive: (event, ctx) => {
-        translateX.value = ctx.startX + event.translationX;
-        translateY.value = ctx.startY + event.translationY;
-      },
-      onEnd: () => {
-        translateX.value = withSpring(0);
-        translateY.value = withSpring(0);
-      },
-    });
-
-    const animatedStyle = useAnimatedStyle(() => {
+    const animatedDrag = useAnimatedStyle(() => {
       return {
         transform: [
-          { translateX: translateX.value },
-          { translateY: translateY.value },
+          { translateX: offset.value.x },
+          { translateY: offset.value.y },
+          { scale: withSpring(isPressed.value ? 1.01 : 1) },
         ],
+        backgroundColor: darkMode
+          ? isPressed.value
+            ? "#333"
+            : "#222"
+          : isPressed
+          ? "#ddd"
+          : "#ccc",
       };
     });
 
+    const start = useSharedValue({ x: 0, y: 0 });
+    const gesture = Gesture.Pan()
+      .onBegin(() => {
+        isPressed.value = true;
+      })
+      .onUpdate((e) => {
+        offset.value = {
+          x: e.translationX + start.value.x,
+          y: e.translationY + start.value.y,
+        };
+      })
+      .onEnd(() => {
+        start.value = {
+          x: offset.value.x,
+          y: offset.value.y,
+        };
+      })
+      .onFinalize(() => {
+        isPressed.value = false;
+        offset.value = {
+          x: 0,
+          y: 0,
+        };
+        start.value = {
+          x: 0,
+          y: 0,
+        };
+      });
+
     return (
-      <PanGestureHandler onGestureEvent={dragHandler}>
+      <GestureDetector gesture={gesture}>
         <Animated.View
           style={[
             styles.note,
-            animatedStyle,
-            {
-              backgroundColor: darkMode ? "#222" : "#ccc",
-              transform: [{ scaleX: scaleAni }, { scaleY: scaleAni }],
-            },
+            animatedDrag,
             view
               ? { width: "45%", height: 100 }
               : {
@@ -157,7 +163,7 @@ const Note = React.memo(
             />
           </View>
         </Animated.View>
-      </PanGestureHandler>
+      </GestureDetector>
     );
   }
 );
