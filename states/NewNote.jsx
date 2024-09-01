@@ -58,15 +58,13 @@ const NewNote = ({
     return () => clearInterval(saveInterval);
   }, [autoSave]);
 
-  useEffect(() => {
-    setTimeout(() => {
-      if (!darkMode) {
-        handleFormat("EEE");
-      } else {
-        handleFormat("000");
-      }
-    }, 100);
-  }, []);
+  const setWebViewTheme = () => {
+    if (!darkMode) {
+      handleFormat("EEE");
+    } else {
+      handleFormat("000");
+    }
+  };
 
   useEffect(() => {
     Animated.parallel([
@@ -246,6 +244,7 @@ const NewNote = ({
           ref={webviewRef}
           style={[styles.editor, { color: darkMode ? "#fff" : "#000" }]}
           javaScriptEnabled={true}
+          onLoad={() => setWebViewTheme()}
           source={{ html: note ? renderEditor(note.htmlText) : EditorHTML }}
           onMessage={onMessage}
           onError={(syntheticEvent) => {
