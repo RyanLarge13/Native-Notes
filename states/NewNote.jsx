@@ -44,11 +44,16 @@ const NewNote = ({
   };
 
   useEffect(() => {
-    let saveInterval;
+    let saveInterval = null;
     if (autoSave && note) {
       saveInterval = setInterval(() => {
         handleFormat("html", false);
       }, 10000);
+    }
+    if (!autoSave || !note) {
+      if (saveInterval !== null) {
+        clearInterval(saveInterval);
+      }
     }
     return () => clearInterval(saveInterval);
   }, [autoSave]);
