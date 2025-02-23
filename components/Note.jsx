@@ -93,7 +93,6 @@ const Note = React.memo(
       });
 
     return (
-      <GestureDetector gesture={gesture}>
         <Animated.View
           style={[
             styles.note,
@@ -149,6 +148,7 @@ const Note = React.memo(
               <Icon name="lock" style={styles.red} />
             </View>
           ) : null}
+      <GestureDetector gesture={gesture}>
           <View style={styles.drag}>
             <Icon
               name="drag"
@@ -162,8 +162,8 @@ const Note = React.memo(
               ]}
             />
           </View>
-        </Animated.View>
       </GestureDetector>
+        </Animated.View>
     );
   }
 );
