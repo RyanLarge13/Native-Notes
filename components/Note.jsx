@@ -93,62 +93,62 @@ const Note = React.memo(
       });
 
     return (
-        <Animated.View
+      <Animated.View
+        style={[
+          styles.note,
+          animatedDrag,
+          view
+            ? { width: "45%", height: 100 }
+            : {
+                width: "100%",
+                height: 200,
+              },
+        ]}
+      >
+        <Ripple
+          onPress={() => openNote()}
+          onLongPress={() => openSettings()}
+          rippleColor="#fff"
+          rippleOpacity={0.9}
           style={[
             styles.note,
-            animatedDrag,
-            view
-              ? { width: "45%", height: 100 }
-              : {
-                  width: "100%",
-                  height: 200,
-                },
+            {
+              width: "100%",
+              height: "100%",
+              elevation: 0,
+            },
           ]}
         >
-          <Ripple
-            onPress={() => openNote()}
-            onLongPress={() => openSettings()}
-            rippleColor="#fff"
-            rippleOpacity={0.9}
-            style={[
-              styles.note,
-              {
-                width: "100%",
-                height: "100%",
-                elevation: 0,
-              },
-            ]}
+          <Text
+            style={{
+              fontSize: view ? 14 : 25,
+              color: darkMode ? "#fff" : "#000",
+            }}
           >
-            <Text
-              style={{
-                fontSize: view ? 14 : 25,
-                color: darkMode ? "#fff" : "#000",
-              }}
-            >
-              {note.title}
-            </Text>
-            <Text style={styles.date}>
-              {new Date(note.createdAt).toLocaleDateString("en-US", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-              })}
-            </Text>
-            <View>
-              {!note.locked ? (
-                <RenderHTMLSource
-                  contentWidth={width}
-                  source={{ html: htmlToRender }}
-                />
-              ) : null}
-            </View>
-          </Ripple>
-          {note.locked ? (
-            <View style={styles.locked}>
-              <Icon name="lock" style={styles.red} />
-            </View>
-          ) : null}
-      <GestureDetector gesture={gesture}>
+            {note.title}
+          </Text>
+          <Text style={styles.date}>
+            {new Date(note.createdAt).toLocaleDateString("en-US", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })}
+          </Text>
+          <View>
+            {!note.locked ? (
+              <RenderHTMLSource
+                contentWidth={width}
+                source={{ html: htmlToRender }}
+              />
+            ) : null}
+          </View>
+        </Ripple>
+        {note.locked ? (
+          <View style={styles.locked}>
+            <Icon name="lock" style={styles.red} />
+          </View>
+        ) : null}
+        <GestureDetector gesture={gesture}>
           <View style={styles.drag}>
             <Icon
               name="drag"
@@ -162,8 +162,8 @@ const Note = React.memo(
               ]}
             />
           </View>
-      </GestureDetector>
-        </Animated.View>
+        </GestureDetector>
+      </Animated.View>
     );
   }
 );
@@ -197,6 +197,7 @@ const styles = StyleSheet.create({
     left: 5,
   },
   drag: {
+    display: "none",
     position: "absolute",
     padding: 20,
     top: -15,
