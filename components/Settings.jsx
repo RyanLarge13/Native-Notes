@@ -16,7 +16,7 @@ import {
 } from "../utils/api";
 import { unFormatColor, formatColor } from "../utils/helpers/formatColor.js";
 import { v4 as uuidv4 } from "uuid";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Colors from "./Colors";
 
 const Settings = ({
@@ -36,7 +36,7 @@ const Settings = ({
   const [newTitle, setNewTitle] = useState("");
   const [newColor, setNewColor] = useState(formatColor(item.color));
   const [isLocked, setIsLocked] = useState(
-    item.locked === 1 || item.locked === true ? true : false
+    item.locked === 1 || item.locked === true ? true : false,
   );
 
   const scaleAni = useRef(new Animated.Value(0)).current;
@@ -67,7 +67,7 @@ const Settings = ({
     };
     setAllData((prevData) => {
       const newFolders = prevData.folders.filter(
-        (fold) => fold.folderid !== newFolder.folderId
+        (fold) => fold.folderid !== newFolder.folderId,
       );
       newFolders.push({ ...newFolder, folderid: item.folderid });
       const newData = {
@@ -85,7 +85,7 @@ const Settings = ({
         newFolder.color,
         newFolder.parentFolderId,
         newFolder.folderId,
-      ]
+      ],
     );
     setOpen({ show: false });
     setSelectedFolder(null);
@@ -123,7 +123,7 @@ const Settings = ({
     const folderId = item.folderid;
     setAllData((prevData) => {
       const newFolders = prevData.folders.filter(
-        (fold) => fold.folderid !== folderId
+        (fold) => fold.folderid !== folderId,
       );
       const newData = {
         ...prevData,
@@ -135,7 +135,7 @@ const Settings = ({
       `
       DELETE FROM folders WHERE folderid = $deleteId
     `,
-      { $deleteId: folderId }
+      { $deleteId: folderId },
     );
     setOpen({ show: false });
     deleteAFolder(token, folderId)
@@ -179,7 +179,7 @@ const Settings = ({
       `
       DELETE FROM notes WHERE noteid = $deleteId
     `,
-      { $deleteId: noteId }
+      { $deleteId: noteId },
     );
     setOpen({ show: false });
     deleteANote(token, noteId)
@@ -215,7 +215,7 @@ const Settings = ({
         };
         setAllData((prevUser) => {
           const newNotes = prevUser.notes.filter(
-            (note) => note.noteid !== resNote.notesid
+            (note) => note.noteid !== resNote.notesid,
           );
           newNotes.push(noteToPush);
           const newData = {
@@ -237,7 +237,7 @@ const Settings = ({
               resNote.folderid,
               resNote.updated,
               resNote.notesid,
-            ]
+            ],
           );
         } catch (err) {
           console.log("err updating db note");
@@ -289,7 +289,10 @@ const Settings = ({
               onChangeText={(text) => setNewTitle(text)}
             />
             <Pressable onPress={() => confirmDeleteFolder()}>
-              <Icon style={[styles.red, styles.largeText]} name="delete" />
+              <MaterialCommunityIcons
+                style={[styles.red, styles.largeText]}
+                name="delete"
+              />
             </Pressable>
           </View>
           <View style={styles.info}>
@@ -311,7 +314,7 @@ const Settings = ({
               <Text>Save</Text>
             </Pressable>
             <Pressable onPress={() => openFolderTree()} style={styles.move}>
-              <Icon
+              <MaterialCommunityIcons
                 style={[
                   styles.moveBtn,
                   {
@@ -343,7 +346,10 @@ const Settings = ({
               onChangeText={(text) => setNewTitle(text)}
             />
             <Pressable onPress={() => confirmDeleteNote()}>
-              <Icon style={[styles.red, styles.largeText]} name="delete" />
+              <MaterialCommunityIcons
+                style={[styles.red, styles.largeText]}
+                name="delete"
+              />
             </Pressable>
           </View>
           <View style={styles.lock}>

@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { View, Text, Animated, StyleSheet, Pressable } from "react-native";
-import Icon from "react-native-vector-icons/FontAwesome";
+import { FontAwesome } from "@expo/vector-icons";
 
 const Sorter = ({
   filter,
@@ -54,39 +54,39 @@ const Sorter = ({
         onPress={async () => setSortOptions((prev) => !prev)}
         style={styles.flexRow}
       >
-        <Icon
+        <FontAwesome
           name="sort-amount-desc"
           style={{
             color: theme.on
               ? theme.color
               : darkMode
-              ? styles.white
-              : styles.black,
+                ? styles.white
+                : styles.black,
           }}
         />
         <Text style={darkMode ? styles.name : styles.nameBlack}>{filter}</Text>
       </Pressable>
       <Pressable style={styles.btn} onPress={() => setOrder((prev) => !prev)}>
         {order ? (
-          <Icon
+          <FontAwesome
             name="long-arrow-up"
             style={{
               color: theme.on
                 ? theme.color
                 : darkMode
-                ? styles.white
-                : styles.black,
+                  ? styles.white
+                  : styles.black,
             }}
           />
         ) : (
-          <Icon
+          <FontAwesome
             name="long-arrow-down"
             style={{
               color: theme.on
                 ? theme.color
                 : darkMode
-                ? styles.white
-                : styles.black,
+                  ? styles.white
+                  : styles.black,
             }}
           />
         )}

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { View, Text, Pressable, Animated, StyleSheet } from "react-native";
 import formatColor from "../utils/helpers/formatColor";
-import Icon from "react-native-vector-icons/FontAwesome5";
+import { FontAwesome5 } from "@expo/vector-icons";
 
 const NestedFolder = ({
   moving,
@@ -44,7 +44,7 @@ const Tree = ({
   darkMode,
 }) => {
   const childFolders = folders.filter(
-    (fold) => fold.parentFolderId !== parentId
+    (fold) => fold.parentFolderId !== parentId,
   );
   const topFolders = folders.filter((fold) => fold.parentFolderId === parentId);
 
@@ -125,12 +125,12 @@ const Tree = ({
                       onPress={() => toggleNested(fold.folderid)}
                     >
                       {folderStates[fold.folderid] ? (
-                        <Icon
+                        <FontAwesome5
                           style={darkMode ? styles.white : styles.black}
                           name="arrow-down"
                         />
                       ) : (
-                        <Icon
+                        <FontAwesome5
                           style={darkMode ? styles.white : styles.black}
                           name="arrow-right"
                         />

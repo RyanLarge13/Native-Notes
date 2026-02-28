@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Native-Notes",
-    "slug": "Native-Notes",
+    "name": "Native Notes",
+    "slug": "Native Notes",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -30,6 +30,7 @@
       "eas": {
         "projectId": "3b175d4f-c03a-4efa-8650-4e17106394f5"
       }
-    }
+    },
+    "plugins": ["expo-asset", "expo-sqlite"]
   }
 }

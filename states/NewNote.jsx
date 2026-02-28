@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { createNewNote, updateNote } from "../utils/api";
 import { useNavigate } from "react-router-native";
-import Icon from "react-native-vector-icons/FontAwesome5";
+import { FontAwesome5 } from "@expo/vector-icons";
 import WebView from "react-native-webview";
 import EditorHTML from "../webView/html.js";
 import renderEditor from "../webView/editHTML";
@@ -137,7 +137,7 @@ const NewNote = ({
           setSaving(false);
           setAllData((prevUser) => {
             const newNotes = prevUser.notes.filter(
-              (note) => note.noteid !== resNote.notesid
+              (note) => note.noteid !== resNote.notesid,
             );
             newNotes.push(noteToPush);
             const newData = {
@@ -156,7 +156,7 @@ const NewNote = ({
               resNote.folderid,
               resNote.updated,
               resNote.notesid,
-            ]
+            ],
           );
         })
         .catch((err) => {
@@ -197,7 +197,7 @@ const NewNote = ({
             resNote.folderid,
             resNote.createdat,
             resNote.updated,
-            resNote.trashed
+            resNote.trashed,
           );
           if (close) {
             navigate("/");
@@ -236,7 +236,11 @@ const NewNote = ({
               ]}
               onPress={() => handleFormat("html", true)}
             >
-              {saving ? <Icon name="cloud-upload-alt" /> : <Icon name="save" />}
+              {saving ? (
+                <FontAwesome5 name="cloud-upload-alt" />
+              ) : (
+                <FontAwesome5 name="save" />
+              )}
             </Pressable>
           </View>
         </TouchableWithoutFeedback>

@@ -1,22 +1,13 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from "react-native-reanimated";
+import { View, Text, StyleSheet, Animated } from "react-native";
 import Ripple from "react-native-material-ripple";
 import { RenderHTMLSource } from "react-native-render-html";
 import { useNavigate } from "react-router-native";
 import * as LocalAuthentication from "expo-local-authentication";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 const Note = React.memo(
   ({ note, setOpen, setNote, view, index, width, darkMode, theme }) => {
-    const isPressed = useSharedValue(false);
-    const offset = useSharedValue({ x: 0, y: 0 });
-
     const navigate = useNavigate();
     const htmlToRender = note?.htmlText?.slice(0, 200) + " ..." || "";
 
@@ -46,63 +37,15 @@ const Note = React.memo(
       setOpen({ show: true, item: note, type: "note" });
     };
 
-    const animatedDrag = useAnimatedStyle(() => {
-      return {
-        transform: [
-          { translateX: offset.value.x },
-          { translateY: offset.value.y },
-          { scale: withSpring(isPressed.value ? 1.01 : 1) },
-        ],
-        backgroundColor: darkMode
-          ? isPressed.value
-            ? "#333"
-            : "#222"
-          : isPressed
-          ? "#ddd"
-          : "#ccc",
-      };
-    });
-
-    const start = useSharedValue({ x: 0, y: 0 });
-    const gesture = Gesture.Pan()
-      .onBegin(() => {
-        isPressed.value = true;
-      })
-      .onUpdate((e) => {
-        offset.value = {
-          x: e.translationX + start.value.x,
-          y: e.translationY + start.value.y,
-        };
-      })
-      .onEnd(() => {
-        start.value = {
-          x: offset.value.x,
-          y: offset.value.y,
-        };
-      })
-      .onFinalize(() => {
-        isPressed.value = false;
-        offset.value = {
-          x: 0,
-          y: 0,
-        };
-        start.value = {
-          x: 0,
-          y: 0,
-        };
-      });
-
     return (
       <Animated.View
         style={[
           styles.note,
-          animatedDrag,
-          view
-            ? { width: "45%", height: 100 }
-            : {
-                width: "100%",
-                height: 200,
-              },
+          {
+            width: view ? "45%" : "100%",
+            height: view ? 100 : 200,
+            backgroundColor: darkMode ? "#222" : "#EEE",
+          },
         ]}
       >
         <Ripple
@@ -145,27 +88,25 @@ const Note = React.memo(
         </Ripple>
         {note.locked ? (
           <View style={styles.locked}>
-            <Icon name="lock" style={styles.red} />
+            <MaterialCommunityIcons name="lock" style={styles.red} />
           </View>
         ) : null}
-        <GestureDetector gesture={gesture}>
-          <View style={styles.drag}>
-            <Icon
-              name="drag"
-              style={[
-                theme.on
-                  ? { color: theme.color }
-                  : darkMode
+        <View style={styles.drag}>
+          <MaterialCommunityIcons
+            name="drag"
+            style={[
+              theme.on
+                ? { color: theme.color }
+                : darkMode
                   ? styles.white
                   : styles.black,
-                { fontSize: 20 },
-              ]}
-            />
-          </View>
-        </GestureDetector>
+              { fontSize: 20 },
+            ]}
+          />
+        </View>
       </Animated.View>
     );
-  }
+  },
 );
 
 const styles = StyleSheet.create({

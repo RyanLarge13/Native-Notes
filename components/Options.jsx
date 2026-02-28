@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { StyleSheet, Text, Animated, Pressable } from "react-native";
-import Icon from "react-native-vector-icons/Feather";
+import { Feather } from "@expo/vector-icons";
 import { useNavigate } from "react-router-native";
 
 const Options = ({ setOptions, options, darkMode, theme }) => {
@@ -81,7 +81,7 @@ const Options = ({ setOptions, options, darkMode, theme }) => {
         >
           New folder
         </Text>
-        <Icon
+        <Feather
           name="folder-plus"
           style={
             theme ? { color: theme } : darkMode ? styles.white : styles.black
@@ -103,7 +103,7 @@ const Options = ({ setOptions, options, darkMode, theme }) => {
         >
           New note
         </Text>
-        <Icon
+        <Feather
           name="file-plus"
           style={
             theme ? { color: theme } : darkMode ? styles.white : styles.black

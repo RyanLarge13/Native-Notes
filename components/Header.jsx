@@ -7,8 +7,8 @@ import {
   StyleSheet,
   Pressable,
 } from "react-native";
-import Icon from "react-native-vector-icons/Feather";
-import MaterialIcon from "react-native-vector-icons/MaterialCommunityIcons";
+import { Feather } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigate } from "react-router-native";
 
 // use folder for the folder title on scroll in header
@@ -47,7 +47,7 @@ const Header = ({
     if (folder) {
       if (!searchText) {
         const folderNotes = allNotes.filter(
-          (aNote) => aNote.folderId === folder.folderid
+          (aNote) => aNote.folderId === folder.folderid,
         );
         return setNotes(folderNotes);
       }
@@ -116,7 +116,7 @@ const Header = ({
     <View style={styles.container}>
       <View style={styles.subContainer}>
         <Pressable onPress={() => setMenuOpen(true)}>
-          <Icon
+          <Feather
             name="menu"
             style={{
               color: theme.on ? theme.color : darkMode ? "#fff" : "#000",
@@ -139,7 +139,7 @@ const Header = ({
               </Text>
             </Pressable>
             <Pressable onPress={() => setFolder(null)}>
-              <Icon
+              <Feather
                 name="home"
                 style={[
                   styles.home,
@@ -172,7 +172,7 @@ const Header = ({
           onPress={() => setSearch((prev) => !prev)}
           style={styles.btn}
         >
-          <Icon
+          <Feather
             name="search"
             style={[
               styles.search,
@@ -184,7 +184,7 @@ const Header = ({
           onPress={() => setLayoutOptions((prev) => !prev)}
           style={styles.btn}
         >
-          <MaterialIcon
+          <MaterialCommunityIcons
             name="dots-vertical"
             style={[
               styles.dots,

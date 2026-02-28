@@ -9,13 +9,7 @@ import Spinner from "react-native-loading-spinner-overlay";
 import { NativeRouter, Routes, Route } from "react-router-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SQLite from "expo-sqlite";
-import {
-  loginUser,
-  signupUser,
-  getUserData,
-  createNewFolder,
-  createNewNote,
-} from "./utils/api";
+import { loginUser, signupUser, getUserData } from "./utils/api";
 import * as LocalAuthentication from "expo-local-authentication";
 import Login from "./states/Login";
 import Signup from "./states/Signup";
@@ -29,7 +23,6 @@ import Tree from "./components/Tree";
 import SystemNotif from "./components/SystemNotif";
 import UserSettings from "./components/UserSettings";
 import { v4 as uuidv4 } from "uuid";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 const customStyles = {
   body: { color: "#fff", fontSize: 12 },
@@ -121,7 +114,7 @@ const App = () => {
     */
     setLocation(null);
     const theFolder = allData.folders.filter(
-      (fold) => fold.folderid === location
+      (fold) => fold.folderid === location,
     );
     // const subfolders = allData.folders.filter(
     //   (fold) => fold.parentFolderId === location
@@ -138,7 +131,7 @@ const App = () => {
   const findChildNotes = () => {
     if (!folder && allData.folders.length > 0 && allData.notes.length > 0) {
       const topFolders = allData.folders.filter(
-        (fold) => fold.parentFolderId === null
+        (fold) => fold.parentFolderId === null,
       );
       const topNotes = allData.notes.filter((aNote) => !aNote.folderId);
       setNotes(topNotes);
@@ -148,10 +141,10 @@ const App = () => {
     }
     if (folder) {
       const subfolders = allData.folders.filter(
-        (fold) => fold.parentFolderId === folder.folderid
+        (fold) => fold.parentFolderId === folder.folderid,
       );
       const nestedNotes = allData.notes.filter(
-        (aNote) => aNote.folderId === folder.folderid
+        (aNote) => aNote.folderId === folder.folderid,
       );
       setNotes(nestedNotes);
       setFolders(subfolders);
@@ -160,13 +153,13 @@ const App = () => {
   };
 
   useEffect(() => {
-    if (token) {
+    if (token && db) {
       grabFromDb();
     }
     if (!token) {
       getToken();
     }
-  }, [token]);
+  }, [token, db]);
 
   const getLocked = () => {
     setNotes(allData.notes.filter((note) => note?.locked));
@@ -368,6 +361,13 @@ const App = () => {
       const dbUser = await db.getFirstAsync(`SELECT * FROM user`);
       const dbFolders = await db.getAllAsync(`SELECT * FROM folders`);
       const dbNotes = await db.getAllAsync(`SELECT * FROM notes`);
+
+      if (!dbUser) {
+        console.log("No user in database");
+        // await deleteDatabase();
+        return { user: null, folders: [], notes: [] };
+      }
+
       setPreferences(dbUser);
       const newAllData = { user: dbUser, folders: dbFolders, notes: dbNotes };
       return newAllData;
@@ -382,31 +382,32 @@ const App = () => {
     // return;
     try {
       await db.execAsync(`
-   CREATE TABLE IF NOT EXISTS user (
-     userId INTEGER PRIMARY KEY NOT NULL, 
-     username TEXT NOT NULL, 
-     email TEXT NOT NULL, 
-     createdAt TEXT NOT NULL,
-     preferences TEXT NOT NULL
-    );
-   CREATE TABLE IF NOT EXISTS folders (
-     folderid INTEGER PRIMARY KEY NOT NULL, 
-     title TEXT NOT NULL, 
-     color TEXT NOT NULL, 
-     parentFolderId INTEGER
-    );
-   CREATE TABLE IF NOT EXISTS notes (
-     title TEXT NOT NULL, 
-     noteid INTEGER NOT NULL, 
-     locked BOOLEAN DEFAULT FALSE, 
-     htmlText TEXT, 
-     folderId INTEGER, 
-     createdAt TIMESTAMP NOT NULL, 
-     updated TIMESTAMP NOT NULL, 
-     trashed BOOLEAN
-    );
-  `);
+        CREATE TABLE IF NOT EXISTS user (
+          userId INTEGER PRIMARY KEY NOT NULL, 
+          username TEXT NOT NULL, 
+          email TEXT NOT NULL, 
+          createdAt TEXT NOT NULL,
+          preferences TEXT NOT NULL
+          );
+        CREATE TABLE IF NOT EXISTS folders (
+          folderid INTEGER PRIMARY KEY NOT NULL, 
+          title TEXT NOT NULL, 
+          color TEXT NOT NULL, 
+          parentFolderId INTEGER
+          );
+        CREATE TABLE IF NOT EXISTS notes (
+          title TEXT NOT NULL, 
+          noteid INTEGER NOT NULL, 
+          locked BOOLEAN DEFAULT FALSE, 
+          htmlText TEXT, 
+          folderId INTEGER, 
+          createdAt TIMESTAMP NOT NULL, 
+          updated TIMESTAMP NOT NULL, 
+          trashed BOOLEAN
+          );
+      `);
     } catch (err) {
+      console.log("Error creating tables inside sql database");
       console.log(err);
     }
   };
@@ -444,7 +445,7 @@ const App = () => {
 
   const storeUserInDb = async (db, user) => {
     console.log(
-      `Attempting to store user in local database. Checking if database exists or not`
+      `Attempting to store user in local database. Checking if database exists or not`,
     );
     console.log(db, user);
     try {
@@ -467,7 +468,7 @@ const App = () => {
           sort: sort,
           saveLocation: true,
           location: "null",
-        })
+        }),
       );
     } catch (err) {
       console.log("inserting user", err);
@@ -485,7 +486,7 @@ const App = () => {
           folder.folderid,
           folder.title,
           folder.color,
-          folder.parentFolderId
+          folder.parentFolderId,
         );
       }
     } catch (err) {
@@ -509,7 +510,7 @@ const App = () => {
           note.folderId,
           note.createdAt,
           note.updated,
-          note.trashed
+          note.trashed,
         );
       }
     } catch (err) {
@@ -524,7 +525,7 @@ const App = () => {
           `
             DELETE FROM folders WHERE folderid = $deleteid
           `,
-          { $deleteId: fold.folderid }
+          { $deleteId: fold.folderid },
         );
       });
     } catch (err) {
@@ -539,7 +540,7 @@ const App = () => {
           `
             DELETE FROM notes WHERE noteid = $deleteid
           `,
-          { $deleteId: note.noteid }
+          { $deleteId: note.noteid },
         );
       });
     } catch (err) {
@@ -547,63 +548,106 @@ const App = () => {
     }
   };
 
-  const filterData = (serverFolders, serverNotes, serverUser, storedData) => {
-    if (storedData.folders && storedData.notes && storedData.user) {
-      // Build unique Folder and Note ID sets
-      const localFoldersIdSet = new Set(
-        storedData.folders.map((fold) => fold.folderid)
-      );
-      const localNotesIdSet = new Set(
-        storedData.notes.map((aNote) => aNote.noteid)
-      );
+  const filterData = (
+    serverFolders = [],
+    serverNotes = [],
+    serverUser,
+    storedData,
+  ) => {
+    const hasLocal =
+      storedData?.folders && storedData?.notes && storedData?.user;
 
-      // Update local
-      // Folders to rove from local. What local has and server does not change when
-      //offline mode is created
-      const foldersToRemove = storedData.folders.filter(
-        (fold) =>
-          !serverFolders.some((aFold) => aFold.folderid === fold.folderid)
-      );
-      // Notes to rove from local. What local has and server does not change when
-      //	offline mode is created
-      const notesToRemove = storedData.notes.filter(
-        (not) => !serverFolders.some((aNote) => aNote.noteid === not.noteid)
-      );
-
-      // Only folders that local does NOT have
-      const foldersToStore = serverFolders.filter(
-        (fold) => !localFoldersIdSet.has(fold.folderid)
-      );
-      // Only notes that local does NOT have
-      const notesToStore = serverNotes.filter(
-        (aNote) => !localNotesIdSet.has(aNote.noteid)
-      );
-      // Update local
-
-      if (serverUser.userId === storedData.user.userId) {
-        return {
-          foldersToStore,
-          notesToStore,
-          userToStore: null,
-          foldersToRemove,
-          notesToRemove,
-        };
-      } else {
-        return {
-          foldersToStore,
-          notesToStore,
-          userToStore: serverUser,
-          foldersToRemove,
-          notesToRemove,
-        };
-      }
-    } else {
+    if (!hasLocal) {
       return {
         foldersToStore: serverFolders,
         notesToStore: serverNotes,
         userToStore: serverUser,
+        foldersToRemove: [],
+        notesToRemove: [],
       };
     }
+
+    const norm = (v) => String(v);
+
+    const serverFolderById = new Map(
+      serverFolders.map((f) => [norm(f.folderid), f]),
+    );
+    const serverNoteById = new Map(serverNotes.map((n) => [norm(n.noteid), n]));
+
+    const localFolderIds = new Set(
+      storedData.folders.map((f) => norm(f.folderid)),
+    );
+    const localNoteIds = new Set(storedData.notes.map((n) => norm(n.noteid)));
+
+    // Remove: local has it, server does not
+    const foldersToRemove = storedData.folders.filter(
+      (f) => !serverFolderById.has(norm(f.folderid)),
+    );
+
+    const notesToRemove = storedData.notes.filter(
+      (n) => !serverNoteById.has(norm(n.noteid)), // <-- FIXED
+    );
+
+    // Add: server has it, local does not
+    const foldersToAdd = serverFolders.filter(
+      (f) => !localFolderIds.has(norm(f.folderid)),
+    );
+
+    const notesToAdd = serverNotes.filter(
+      (n) => !localNoteIds.has(norm(n.noteid)),
+    );
+
+    // Update: same ID exists, but changed
+    const foldersToUpdate = storedData.folders
+      .map((local) => {
+        const server = serverFolderById.get(norm(local.folderid));
+        if (!server) return null;
+
+        // Prefer updatedAt/version if you have it
+        if (
+          server.updatedAt &&
+          local.updatedAt &&
+          server.updatedAt !== local.updatedAt
+        )
+          return server;
+
+        // Fallback: cheap stringify compare (ok for small objects)
+        if (JSON.stringify(server) !== JSON.stringify(local)) return server;
+
+        return null;
+      })
+      .filter(Boolean);
+
+    const notesToUpdate = storedData.notes
+      .map((local) => {
+        const server = serverNoteById.get(norm(local.noteid));
+        if (!server) return null;
+
+        if (
+          server.updatedAt &&
+          local.updatedAt &&
+          server.updatedAt !== local.updatedAt
+        )
+          return server;
+        if (JSON.stringify(server) !== JSON.stringify(local)) return server;
+
+        return null;
+      })
+      .filter(Boolean);
+
+    const foldersToStore = [...foldersToAdd, ...foldersToUpdate];
+    const notesToStore = [...notesToAdd, ...notesToUpdate];
+
+    const userToStore =
+      serverUser?.userId === storedData.user?.userId ? null : serverUser;
+
+    return {
+      foldersToStore,
+      notesToStore,
+      userToStore,
+      foldersToRemove,
+      notesToRemove,
+    };
   };
 
   const grabFromDb = async () => {
@@ -617,7 +661,9 @@ const App = () => {
       setUser(storedData.user);
       setLoading(false);
     } else {
-      console.log("No data");
+      console.log(
+        "Missing user and folders and notes. Something went wrong when pulling from the local sqlite db",
+      );
     }
     getData(storedData);
   };
@@ -630,7 +676,7 @@ const App = () => {
           data.folders,
           data.notes,
           data.user,
-          storedData
+          storedData,
         );
         setAllData(data);
         setFolders(data.folders);
@@ -665,7 +711,7 @@ const App = () => {
         `
         UPDATE user SET preferences = ? WHERE userId = ?
         `,
-        [JSON.stringify(newPreferences), user.userId]
+        [JSON.stringify(newPreferences), user.userId],
       );
     } catch (err) {
       console.log(err);
@@ -717,7 +763,7 @@ const App = () => {
     }
     if (parentId !== null) {
       const parentFolder = allData.folders.filter(
-        (fold) => fold.folderid === parentId
+        (fold) => fold.folderid === parentId,
       )[0];
       setFolder(parentFolder);
       if (saveLocation) {
@@ -737,246 +783,244 @@ const App = () => {
 
   return (
     <NativeRouter>
-      <GestureHandlerRootView>
-        <TRenderEngineProvider tagsStyles={customStyles}>
-          <RenderHTMLConfigProvider>
-            <View
-              style={[
-                styles.container,
-                { backgroundColor: darkMode ? "#000" : "#eee" },
-              ]}
-            >
-              <StatusBar style={darkMode ? "light" : "dark"} />
-              <Spinner visible={loading} />
-              <Routes>
-                <Route
-                  path="/signup"
-                  element={<Signup handleSignup={handleSignup} />}
-                />
-                <Route
-                  path="/"
-                  element={
-                    !user ? (
-                      loading ? (
-                        <Spinner visible={loading} />
-                      ) : (
-                        <Login handleLogin={handleLogin} />
-                      )
+      <TRenderEngineProvider tagsStyles={customStyles}>
+        <RenderHTMLConfigProvider>
+          <View
+            style={[
+              styles.container,
+              { backgroundColor: darkMode ? "#000" : "#eee" },
+            ]}
+          >
+            <StatusBar style={darkMode ? "light" : "dark"} />
+            <Spinner visible={loading} />
+            <Routes>
+              <Route
+                path="/signup"
+                element={<Signup handleSignup={handleSignup} />}
+              />
+              <Route
+                path="/"
+                element={
+                  !user ? (
+                    loading ? (
+                      <Spinner visible={loading} />
                     ) : (
-                      <Account
-                        mainTitle={mainTitle}
-                        folders={folders}
-                        notes={notes}
-                        setNotes={setNotes}
-                        folder={folder}
-                        setFolder={setFolder}
-                        goBack={goBack}
-                        setOpen={setOpen}
-                        pickFolder={pickFolder}
-                        open={open}
-                        menuOpen={menuOpen}
-                        options={options}
-                        setOptions={setOptions}
-                        note={note}
-                        setNote={setNote}
-                        allNotes={allData.notes}
-                        setMenuOpen={setMenuOpen}
-                        systemFolder={systemFolder}
-                        layoutOptions={layoutOptions}
-                        setLayoutOptions={setLayoutOptions}
-                        userSettingsOpen={userSettingsOpen}
-                        view={view}
-                        setView={setView}
-                        order={order}
-                        setOrder={setOrder}
-                        sort={sort}
-                        setSort={setSort}
-                        saveLocation={saveLocation}
-                        autoSave={autoSave}
-                        darkMode={darkMode}
-                        theme={theme}
-                        appLock={appLock}
-                        user={user}
-                        db={db}
-                      />
+                      <Login handleLogin={handleLogin} />
                     )
+                  ) : (
+                    <Account
+                      mainTitle={mainTitle}
+                      folders={folders}
+                      notes={notes}
+                      setNotes={setNotes}
+                      folder={folder}
+                      setFolder={setFolder}
+                      goBack={goBack}
+                      setOpen={setOpen}
+                      pickFolder={pickFolder}
+                      open={open}
+                      menuOpen={menuOpen}
+                      options={options}
+                      setOptions={setOptions}
+                      note={note}
+                      setNote={setNote}
+                      allNotes={allData.notes}
+                      setMenuOpen={setMenuOpen}
+                      systemFolder={systemFolder}
+                      layoutOptions={layoutOptions}
+                      setLayoutOptions={setLayoutOptions}
+                      userSettingsOpen={userSettingsOpen}
+                      view={view}
+                      setView={setView}
+                      order={order}
+                      setOrder={setOrder}
+                      sort={sort}
+                      setSort={setSort}
+                      saveLocation={saveLocation}
+                      autoSave={autoSave}
+                      darkMode={darkMode}
+                      theme={theme}
+                      appLock={appLock}
+                      user={user}
+                      db={db}
+                    />
+                  )
+                }
+              >
+                <Route
+                  path="newfolder"
+                  element={
+                    <NewFolder
+                      setAllData={setAllData}
+                      folder={folder}
+                      token={token}
+                      db={db}
+                      darkMode={darkMode}
+                      theme={theme}
+                    />
                   }
-                >
-                  <Route
-                    path="newfolder"
-                    element={
-                      <NewFolder
-                        setAllData={setAllData}
-                        folder={folder}
-                        token={token}
-                        db={db}
-                        darkMode={darkMode}
-                        theme={theme}
-                      />
-                    }
-                  />
-                  <Route
-                    path="newnote"
-                    element={
-                      <NewNote
-                        folder={folder}
-                        token={token}
-                        setAllData={setAllData}
-                        note={note}
-                        setNote={setNote}
-                        db={db}
-                        autoSave={autoSave}
-                        theme={theme}
-                        darkMode={darkMode}
-                      />
-                    }
-                  />
-                </Route>
-              </Routes>
-              {!note ? (
-                <Options
-                  setOptions={setOptions}
-                  options={options}
-                  darkMode={darkMode}
-                  theme={theme.color}
                 />
-              ) : null}
-              {open.show ? (
-                <Settings
-                  item={open.item}
-                  type={open.type}
-                  setOpen={setOpen}
-                  token={token}
-                  setAllData={setAllData}
+                <Route
+                  path="newnote"
+                  element={
+                    <NewNote
+                      folder={folder}
+                      token={token}
+                      setAllData={setAllData}
+                      note={note}
+                      setNote={setNote}
+                      db={db}
+                      autoSave={autoSave}
+                      theme={theme}
+                      darkMode={darkMode}
+                    />
+                  }
+                />
+              </Route>
+            </Routes>
+            {!note ? (
+              <Options
+                setOptions={setOptions}
+                options={options}
+                darkMode={darkMode}
+                theme={theme.color}
+              />
+            ) : null}
+            {open.show ? (
+              <Settings
+                item={open.item}
+                type={open.type}
+                setOpen={setOpen}
+                token={token}
+                setAllData={setAllData}
+                setPickFolder={setPickFolder}
+                selectedFolder={selectedFolder}
+                setSelectedFolder={setSelectedFolder}
+                db={db}
+                setSystemNotifs={setSystemNotifs}
+                darkMode={darkMode}
+                theme={theme}
+              />
+            ) : null}
+            {allData ? (
+              <>
+                <Menu
+                  menuOpen={menuOpen}
+                  setMenuOpen={setMenuOpen}
+                  folders={folders}
+                  setFolder={setFolder}
+                  allData={allData}
+                  systemFolder={systemFolder}
+                  setSystemFolder={setSystemFolder}
                   setPickFolder={setPickFolder}
-                  selectedFolder={selectedFolder}
-                  setSelectedFolder={setSelectedFolder}
-                  db={db}
-                  setSystemNotifs={setSystemNotifs}
+                  setUserSettingsOpen={setUserSettingsOpen}
                   darkMode={darkMode}
                   theme={theme}
                 />
-              ) : null}
-              {allData ? (
-                <>
-                  <Menu
-                    menuOpen={menuOpen}
-                    setMenuOpen={setMenuOpen}
-                    folders={folders}
-                    setFolder={setFolder}
-                    allData={allData}
-                    systemFolder={systemFolder}
-                    setSystemFolder={setSystemFolder}
-                    setPickFolder={setPickFolder}
-                    setUserSettingsOpen={setUserSettingsOpen}
-                    darkMode={darkMode}
-                    theme={theme}
-                  />
-                  <UserSettings
-                    open={userSettingsOpen}
-                    setOpen={setUserSettingsOpen}
-                    darkMode={darkMode}
-                    setDarkMode={setDarkMode}
-                    setSystemNotifs={setSystemNotifs}
-                    setMenuOpen={setMenuOpen}
-                    setAllData={setAllData}
-                    setUser={setUser}
-                    deleteDatabase={deleteDatabase}
-                    view={view}
-                    setView={setView}
-                    order={order}
-                    setOrder={setOrder}
-                    theme={theme}
-                    setTheme={setTheme}
-                    appLock={appLock}
-                    setAppLock={setAppLock}
-                    autoSave={autoSave}
-                    setAutoSave={setAutoSave}
-                    sort={sort}
-                    setSort={setSort}
-                    saveLocation={saveLocation}
-                    setSaveLocation={setSaveLocation}
-                    db={db}
-                    user={user}
-                  />
-                </>
-              ) : null}
-              {pickFolder ? (
-                <>
-                  <Pressable
-                    onPress={() => {
-                      setSelectedFolder(null);
-                      setPickFolder(false);
-                    }}
-                    style={styles.backdrop}
-                  ></Pressable>
-                  <ScrollView
-                    style={[
-                      styles.pickFolder,
-                      { backgroundColor: darkMode ? "#222" : "#eee" },
-                    ]}
-                  >
-                    <View style={styles.tree}>
-                      <Tree
-                        moving={true}
-                        setPickFolder={setPickFolder}
-                        setSelectedFolder={setSelectedFolder}
-                        setFolder={setFolder}
-                        folders={allData.folders}
-                        parentId={null}
-                        level={1}
-                        open={open}
-                        setMenuOpen={setMenuOpen}
-                        darkMode={darkMode}
-                      />
-                      <Text
-                        style={[
-                          darkMode ? styles.white : styles.black,
-                          { marginTop: 10 },
-                        ]}
-                      >
-                        {open.item.title} &rarr;{" "}
-                        {selectedFolder ? selectedFolder.title : ""}
-                      </Text>
-                      <Pressable
-                        style={styles.topLevel}
-                        onPress={() => {
-                          setSelectedFolder({
-                            folderid: null,
-                            title: "Top level",
-                          });
-                        }}
-                      >
-                        <Text style={styles.white}>Send to top level</Text>
-                      </Pressable>
-                      <Pressable
-                        onPress={() => saveNewLocation()}
-                        style={[
-                          styles.saveFolder,
-                          {
-                            backgroundColor: theme.on ? theme.color : "#fcd34d",
-                          },
-                        ]}
-                      >
-                        <Text>Save</Text>
-                      </Pressable>
-                    </View>
-                  </ScrollView>
-                </>
-              ) : null}
-              {systemNotifs.map((notif, index) => (
-                <SystemNotif
-                  setSystemNotifs={setSystemNotifs}
-                  systemNotifs={systemNotifs}
-                  notif={notif}
-                  index={index}
+                <UserSettings
+                  open={userSettingsOpen}
+                  setOpen={setUserSettingsOpen}
                   darkMode={darkMode}
+                  setDarkMode={setDarkMode}
+                  setSystemNotifs={setSystemNotifs}
+                  setMenuOpen={setMenuOpen}
+                  setAllData={setAllData}
+                  setUser={setUser}
+                  deleteDatabase={deleteDatabase}
+                  view={view}
+                  setView={setView}
+                  order={order}
+                  setOrder={setOrder}
+                  theme={theme}
+                  setTheme={setTheme}
+                  appLock={appLock}
+                  setAppLock={setAppLock}
+                  autoSave={autoSave}
+                  setAutoSave={setAutoSave}
+                  sort={sort}
+                  setSort={setSort}
+                  saveLocation={saveLocation}
+                  setSaveLocation={setSaveLocation}
+                  db={db}
+                  user={user}
                 />
-              ))}
-            </View>
-          </RenderHTMLConfigProvider>
-        </TRenderEngineProvider>
-      </GestureHandlerRootView>
+              </>
+            ) : null}
+            {pickFolder ? (
+              <>
+                <Pressable
+                  onPress={() => {
+                    setSelectedFolder(null);
+                    setPickFolder(false);
+                  }}
+                  style={styles.backdrop}
+                ></Pressable>
+                <ScrollView
+                  style={[
+                    styles.pickFolder,
+                    { backgroundColor: darkMode ? "#222" : "#eee" },
+                  ]}
+                >
+                  <View style={styles.tree}>
+                    <Tree
+                      moving={true}
+                      setPickFolder={setPickFolder}
+                      setSelectedFolder={setSelectedFolder}
+                      setFolder={setFolder}
+                      folders={allData.folders}
+                      parentId={null}
+                      level={1}
+                      open={open}
+                      setMenuOpen={setMenuOpen}
+                      darkMode={darkMode}
+                    />
+                    <Text
+                      style={[
+                        darkMode ? styles.white : styles.black,
+                        { marginTop: 10 },
+                      ]}
+                    >
+                      {open.item.title} &rarr;{" "}
+                      {selectedFolder ? selectedFolder.title : ""}
+                    </Text>
+                    <Pressable
+                      style={styles.topLevel}
+                      onPress={() => {
+                        setSelectedFolder({
+                          folderid: null,
+                          title: "Top level",
+                        });
+                      }}
+                    >
+                      <Text style={styles.white}>Send to top level</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => saveNewLocation()}
+                      style={[
+                        styles.saveFolder,
+                        {
+                          backgroundColor: theme.on ? theme.color : "#fcd34d",
+                        },
+                      ]}
+                    >
+                      <Text>Save</Text>
+                    </Pressable>
+                  </View>
+                </ScrollView>
+              </>
+            ) : null}
+            {systemNotifs.map((notif, index) => (
+              <SystemNotif
+                setSystemNotifs={setSystemNotifs}
+                systemNotifs={systemNotifs}
+                notif={notif}
+                index={index}
+                darkMode={darkMode}
+              />
+            ))}
+          </View>
+        </RenderHTMLConfigProvider>
+      </TRenderEngineProvider>
     </NativeRouter>
   );
 };

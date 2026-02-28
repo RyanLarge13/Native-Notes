@@ -13,8 +13,9 @@ import { BackHandler } from "react-native";
 import Header from "../components/Header";
 import Sorter from "../components/Sorter";
 import Folder from "../components/Folder";
-import Icon from "react-native-vector-icons/Feather";
+import { Feather } from "@expo/vector-icons";
 import Note from "../components/Note";
+import formatColor from "../utils/helpers/formatColor";
 
 const Account = ({
   mainTitle,
@@ -82,9 +83,6 @@ const Account = ({
 
   useEffect(() => {
     BackHandler.addEventListener("hardwareBackPress", nestedGoBack);
-    return () => {
-      BackHandler.removeEventListener("hardwareBackPress", nestedGoBack);
-    };
   }, [
     folder,
     note,
@@ -120,16 +118,16 @@ const Account = ({
         sort === "Title"
           ? a.title.localeCompare(b.title)
           : sort === "Date"
-          ? +new Date(a.createdAt) - +new Date(b.createdAt)
-          : +new Date(a.updated) - +new Date(b.updated)
+            ? +new Date(a.createdAt) - +new Date(b.createdAt)
+            : +new Date(a.updated) - +new Date(b.updated),
       );
     } else {
       copyOfNotes.sort((a, b) =>
         sort === "Title"
           ? b.title.localeCompare(a.title)
           : sort === "Date"
-          ? +new Date(b.createdAt) - +new Date(a.createdAt)
-          : +new Date(b.updated) - +new Date(a.updated)
+            ? +new Date(b.createdAt) - +new Date(a.createdAt)
+            : +new Date(b.updated) - +new Date(a.updated),
       );
     }
     setNotesToRender(copyOfNotes);
@@ -174,7 +172,7 @@ const Account = ({
           const diff = Math.floor(y - scrollY);
           opacInfo(diff);
           opacMiniTitle(diff);
-        }
+        },
       );
     }
   };
@@ -201,7 +199,7 @@ const Account = ({
           `
           UPDATE user SET preferences = ? WHERE userId = ?
           `,
-          [JSON.stringify(newPreferences), user.userId]
+          [JSON.stringify(newPreferences), user.userId],
         );
       } catch (err) {
         console.log(err);
@@ -232,6 +230,12 @@ const Account = ({
             {folders.length} {folders.length === 1 ? "folder" : "folders"}{" "}
             {notes.length} {notes.length === 1 ? "note" : "notes"}
           </Text>
+          <View
+            style={[
+              styles.folderColor,
+              { backgroundColor: folder ? formatColor(folder.color) : "" },
+            ]}
+          ></View>
         </Animated.View>
         <View
           style={[
@@ -336,7 +340,7 @@ const Account = ({
               { backgroundColor: darkMode ? "#111" : "#fff" },
             ]}
           >
-            <Icon
+            <Feather
               name="edit"
               style={
                 (styles.icon, { color: theme.on ? theme.color : "#fcd34d" })
@@ -354,6 +358,12 @@ const styles = StyleSheet.create({
   headerContainer: {
     paddingVertical: 5,
     paddingBottom: 8,
+  },
+  folderColor: {
+    minWidth: "100%",
+    marginTop: 2,
+    borderRadius: 3,
+    minHeight: 3,
   },
   miniTitle: {
     fontSize: 10,

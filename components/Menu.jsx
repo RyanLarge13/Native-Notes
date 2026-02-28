@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { View, Animated, StyleSheet, Text, Pressable } from "react-native";
-import Icon from "react-native-vector-icons/FontAwesome5";
+import { FontAwesome5 } from "@expo/vector-icons";
 import Tree from "./Tree";
 
 const Menu = ({
@@ -57,7 +57,7 @@ const Menu = ({
         ></Pressable>
       ) : null}
       <Animated.ScrollView
-      showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={false}
         style={[
           styles.container,
           {
@@ -96,14 +96,14 @@ const Menu = ({
                     {"   " + allData.notes.length}
                   </Text>
                 </Text>
-                <Icon
+                <FontAwesome5
                   name="sticky-note"
                   style={{
                     color: theme.on
                       ? theme.color
                       : darkMode
-                      ? styles.white
-                      : styles.black,
+                        ? styles.white
+                        : styles.black,
                   }}
                 />
               </Pressable>
@@ -124,14 +124,14 @@ const Menu = ({
                     {allData.notes.filter((note) => note.locked).length}
                   </Text>
                 </Text>
-                <Icon
+                <FontAwesome5
                   name="lock"
                   style={{
                     color: theme.on
                       ? theme.color
                       : darkMode
-                      ? styles.white
-                      : styles.black,
+                        ? styles.white
+                        : styles.black,
                   }}
                 />
               </Pressable>
@@ -152,14 +152,14 @@ const Menu = ({
                     Beta
                   </Text>
                 </Text>
-                <Icon
+                <FontAwesome5
                   name="share-alt"
                   style={{
                     color: theme.on
                       ? theme.color
                       : darkMode
-                      ? styles.white
-                      : styles.black,
+                        ? styles.white
+                        : styles.black,
                   }}
                 />
               </Pressable>
@@ -176,14 +176,14 @@ const Menu = ({
                 <Text style={darkMode ? styles.white : styles.black}>
                   Trash <Text style={styles.slate}> 0</Text>
                 </Text>
-                <Icon
+                <FontAwesome5
                   name="trash"
                   style={{
                     color: theme.on
                       ? theme.color
                       : darkMode
-                      ? styles.white
-                      : styles.black,
+                        ? styles.white
+                        : styles.black,
                   }}
                 />
               </Pressable>
