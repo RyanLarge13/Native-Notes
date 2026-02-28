@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import {
   View,
-  Text,
   TextInput,
   StyleSheet,
   KeyboardAvoidingView,
@@ -219,6 +218,7 @@ const NewNote = ({
           styles.container,
           { backgroundColor: darkMode ? "#000" : "#eee" },
         ]}
+        keyboardVerticalOffset={0} // adjust if you have a header
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
           <View style={styles.saveInputContainer}>

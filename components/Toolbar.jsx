@@ -22,17 +22,21 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
       setState();
     }
     if (format === "color" && value) {
-      webviewRef.current?.postMessage({ command: "color", color: value });
+      webviewRef.current?.postMessage(
+        JSON.stringify({ command: "color", color: value }),
+      );
       return;
     }
     if (format === "font-size") {
       console.log(
         `Format === font-size and now calling specific webviewRef command to update the fontsize. passing it in pixels value: ${value}`,
       );
-      webviewRef.current?.postMessage({
-        command: "font-size",
-        size: `${value}px`,
-      });
+      webviewRef.current?.postMessage(
+        JSON.stringify({
+          command: "font-size",
+          size: `${value}px`,
+        }),
+      );
       console.log("Successfully called webviewRef.current.postMessage");
       console.log(webviewRef.current);
       return;
@@ -234,6 +238,7 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
+    flex: 1,
     bottom: 0,
     right: 0,
     left: 0,

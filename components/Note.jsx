@@ -44,7 +44,7 @@ const Note = React.memo(
           {
             width: view ? "45%" : "100%",
             height: view ? 100 : 200,
-            backgroundColor: darkMode ? "#222" : "#EEE",
+            backgroundColor: darkMode ? "#222" : "#AAA",
           },
         ]}
       >

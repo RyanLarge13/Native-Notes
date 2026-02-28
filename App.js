@@ -651,38 +651,39 @@ const App = () => {
   };
 
   const grabFromDb = async () => {
-    const storedData = await fetchFromDb();
-    if (
-      storedData.user &&
-      storedData.folders.length > 0 &&
-      storedData.notes.length > 0
-    ) {
-      setAllData(storedData);
-      setUser(storedData.user);
-      setLoading(false);
-    } else {
-      console.log(
-        "Missing user and folders and notes. Something went wrong when pulling from the local sqlite db",
-      );
-    }
-    getData(storedData);
+    // const storedData = await fetchFromDb();
+    // if (
+    //   storedData.user &&
+    //   storedData.folders.length > 0 &&
+    //   storedData.notes.length > 0
+    // ) {
+    //   setAllData(storedData);
+    //   setUser(storedData.user);
+    //   setLoading(false);
+    // } else {
+    //   console.log(
+    //     "Missing user and folders and notes. Something went wrong when pulling from the local sqlite db",
+    //   );
+    // }
+    // getData(storedData);
+    getData(null);
   };
 
-  const getData = (storedData) => {
+  const getData = (storedData = null) => {
     getUserData(token)
       .then(async (response) => {
         const data = response.data.data;
-        const dataToStore = filterData(
-          data.folders,
-          data.notes,
-          data.user,
-          storedData,
-        );
+        // const dataToStore = filterData(
+        //   data.folders,
+        //   data.notes,
+        //   data.user,
+        //   storedData,
+        // );
         setAllData(data);
         setFolders(data.folders);
         setUser(data.user);
         setLoading(false);
-        await storeDataInDb(dataToStore);
+        // await storeDataInDb(dataToStore);
       })
       .catch((err) => {
         console.log(err);
