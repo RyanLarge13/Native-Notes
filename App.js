@@ -3,7 +3,7 @@ import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, Pressable, ScrollView, View } from "react-native";
 import {
   TRenderEngineProvider,
-  RenderHTMLConfigProvider,
+  RenderHTMLConfigProvider
 } from "react-native-render-html";
 import Spinner from "react-native-loading-spinner-overlay";
 import { NativeRouter, Routes, Route } from "react-router-native";
@@ -25,14 +25,14 @@ import UserSettings from "./components/UserSettings";
 import { v4 as uuidv4 } from "uuid";
 
 const customStyles = {
-  body: { color: "#fff", fontSize: 12 },
+  body: { color: "#fff", fontSize: 12 }
 };
 
 const App = () => {
   const [allData, setAllData] = useState({
     user: { username: "", email: "", userId: "", createdAt: "" },
     folders: [],
-    notes: [],
+    notes: []
   });
   const [user, setUser] = useState(null);
   const [systemNotifs, setSystemNotifs] = useState([]);
@@ -77,7 +77,7 @@ const App = () => {
     return db;
   };
 
-  const setDatabase = async (store) => {
+  const setDatabase = async store => {
     const myStore = await SQLite.openDatabaseAsync("localstore");
     setDb(myStore);
   };
@@ -114,7 +114,7 @@ const App = () => {
     */
     setLocation(null);
     const theFolder = allData.folders.filter(
-      (fold) => fold.folderid === location,
+      fold => fold.folderid === location
     );
     // const subfolders = allData.folders.filter(
     //   (fold) => fold.parentFolderId === location
@@ -131,9 +131,9 @@ const App = () => {
   const findChildNotes = () => {
     if (!folder && allData.folders.length > 0 && allData.notes.length > 0) {
       const topFolders = allData.folders.filter(
-        (fold) => fold.parentFolderId === null,
+        fold => fold.parentFolderId === null
       );
-      const topNotes = allData.notes.filter((aNote) => !aNote.folderId);
+      const topNotes = allData.notes.filter(aNote => !aNote.folderId);
       setNotes(topNotes);
       setFolders(topFolders);
       setMainTitle("Folders");
@@ -141,10 +141,10 @@ const App = () => {
     }
     if (folder) {
       const subfolders = allData.folders.filter(
-        (fold) => fold.parentFolderId === folder.folderid,
+        fold => fold.parentFolderId === folder.folderid
       );
       const nestedNotes = allData.notes.filter(
-        (aNote) => aNote.folderId === folder.folderid,
+        aNote => aNote.folderId === folder.folderid
       );
       setNotes(nestedNotes);
       setFolders(subfolders);
@@ -162,7 +162,7 @@ const App = () => {
   }, [token, db]);
 
   const getLocked = () => {
-    setNotes(allData.notes.filter((note) => note?.locked));
+    setNotes(allData.notes.filter(note => note?.locked));
     setMainTitle("Locked Notes");
   };
 
@@ -172,7 +172,7 @@ const App = () => {
   };
 
   const getTrash = () => {
-    setNotes(allData.notes.filter((note) => note?.trashed));
+    setNotes(allData.notes.filter(note => note?.trashed));
     setMainTitle("Trash");
   };
 
@@ -190,7 +190,7 @@ const App = () => {
     }
   };
 
-  const storeToken = async (storedToken) => {
+  const storeToken = async storedToken => {
     try {
       await AsyncStorage.setItem("authToken", storedToken);
       setToken(storedToken);
@@ -201,20 +201,20 @@ const App = () => {
 
   const handleSignup = (username, email, password) => {
     signupUser(username, email, password)
-      .then((res) => {
+      .then(res => {
         const newNotifs = [
           {
             id: uuidv4(),
             color: "#55ff55",
             title: "Successful Signup!",
             text: "Welcome, please login to access your account",
-            actions: [{ text: "close", func: () => setSystemNotifs([]) }],
-          },
+            actions: [{ text: "close", func: () => setSystemNotifs([]) }]
+          }
         ];
         setSystemNotifs(newNotifs);
         return true;
       })
-      .catch((err) => {
+      .catch(err => {
         console.log(err);
         const newNotifs = [
           {
@@ -224,8 +224,8 @@ const App = () => {
             text:
               err.response.data.message ||
               "It looks like there might be an issue with your internet connection, please try to sign up again",
-            actions: [{ text: "close", func: () => setSystemNotifs([]) }],
-          },
+            actions: [{ text: "close", func: () => setSystemNotifs([]) }]
+          }
         ];
         setSystemNotifs(newNotifs);
         return false;
@@ -234,7 +234,7 @@ const App = () => {
 
   const handleLogin = async (username, email, password) => {
     await loginUser(username, email, password)
-      .then((res) => {
+      .then(res => {
         const newToken = res.data.data;
         setToken(newToken);
         storeToken(newToken);
@@ -244,20 +244,20 @@ const App = () => {
             color: "#55ff55",
             title: "Login Successful",
             text: "Welcome back!",
-            actions: [{ text: "close", func: () => setSystemNotifs([]) }],
-          },
+            actions: [{ text: "close", func: () => setSystemNotifs([]) }]
+          }
         ];
         setSystemNotifs(newNotifs);
       })
-      .catch((err) => {
+      .catch(err => {
         const newNotifs = [
           {
             id: uuidv4(),
             color: "#ff5555",
             title: `Error ${type}`,
             text: err.response.data.message,
-            actions: [{ text: "close", func: () => setSystemNotifs([]) }],
-          },
+            actions: [{ text: "close", func: () => setSystemNotifs([]) }]
+          }
         ];
         setSystemNotifs(newNotifs);
       });
@@ -279,7 +279,7 @@ const App = () => {
 
   const authenticateUser = async () => {
     LocalAuthentication.authenticateAsync({})
-      .then((res) => {
+      .then(res => {
         if (!res.success) {
           if (tries > 2) {
             const newNotifs = [
@@ -288,8 +288,8 @@ const App = () => {
                 color: "#fde047",
                 title: "Last Attempt",
                 text: "You have attempted to unlock your notes 3 times. One more failed attempt and the app will close and you will be logged out for your security",
-                actions: [{ text: "close", func: () => setSystemNotifs([]) }],
-              },
+                actions: [{ text: "close", func: () => setSystemNotifs([]) }]
+              }
             ];
             setSystemNotifs(newNotifs);
           }
@@ -297,18 +297,18 @@ const App = () => {
             console.log("kill app");
           }
           authenticateUser();
-          setTries((prev) => prev + 1);
+          setTries(prev => prev + 1);
         }
         if (res.success) {
           return true;
         }
       })
-      .catch((err) => {
+      .catch(err => {
         console.log(err);
       });
   };
 
-  const setPreferences = async (dbUser) => {
+  const setPreferences = async dbUser => {
     const stringPrefs = dbUser?.preferences;
     if (stringPrefs) {
       const preferences = JSON.parse(dbUser.preferences);
@@ -321,7 +321,7 @@ const App = () => {
         on: preferences.theme.on,
         color: preferences.theme.color
           ? preferences.theme.color
-          : "bg-amber-300",
+          : "bg-amber-300"
       });
       if (preferences.view === true) {
         setView(true);
@@ -412,7 +412,7 @@ const App = () => {
     }
   };
 
-  const storeDataInDb = async (data) => {
+  const storeDataInDb = async data => {
     let tempDb = db;
     if (!tempDb) {
       tempDb = await generateDb();
@@ -445,7 +445,7 @@ const App = () => {
 
   const storeUserInDb = async (db, user) => {
     console.log(
-      `Attempting to store user in local database. Checking if database exists or not`,
+      `Attempting to store user in local database. Checking if database exists or not`
     );
     console.log(db, user);
     try {
@@ -467,8 +467,8 @@ const App = () => {
           appLock: appLock,
           sort: sort,
           saveLocation: true,
-          location: "null",
-        }),
+          location: "null"
+        })
       );
     } catch (err) {
       console.log("inserting user", err);
@@ -486,7 +486,7 @@ const App = () => {
           folder.folderid,
           folder.title,
           folder.color,
-          folder.parentFolderId,
+          folder.parentFolderId
         );
       }
     } catch (err) {
@@ -510,7 +510,7 @@ const App = () => {
           note.folderId,
           note.createdAt,
           note.updated,
-          note.trashed,
+          note.trashed
         );
       }
     } catch (err) {
@@ -520,12 +520,12 @@ const App = () => {
 
   const removeFoldersFromDb = async (db, foldersToRemove) => {
     try {
-      foldersToRemove.forEach(async (fold) => {
+      foldersToRemove.forEach(async fold => {
         await db.runAsync(
           `
             DELETE FROM folders WHERE folderid = $deleteid
           `,
-          { $deleteId: fold.folderid },
+          { $deleteId: fold.folderid }
         );
       });
     } catch (err) {
@@ -535,12 +535,12 @@ const App = () => {
 
   const removeNotesFromDb = async (db, notesToRemove) => {
     try {
-      notesToRemove.forEach(async (note) => {
+      notesToRemove.forEach(async note => {
         await db.runAsync(
           `
             DELETE FROM notes WHERE noteid = $deleteid
           `,
-          { $deleteId: note.noteid },
+          { $deleteId: note.noteid }
         );
       });
     } catch (err) {
@@ -552,7 +552,7 @@ const App = () => {
     serverFolders = [],
     serverNotes = [],
     serverUser,
-    storedData,
+    storedData
   ) => {
     const hasLocal =
       storedData?.folders && storedData?.notes && storedData?.user;
@@ -563,43 +563,43 @@ const App = () => {
         notesToStore: serverNotes,
         userToStore: serverUser,
         foldersToRemove: [],
-        notesToRemove: [],
+        notesToRemove: []
       };
     }
 
-    const norm = (v) => String(v);
+    const norm = v => String(v);
 
     const serverFolderById = new Map(
-      serverFolders.map((f) => [norm(f.folderid), f]),
+      serverFolders.map(f => [norm(f.folderid), f])
     );
-    const serverNoteById = new Map(serverNotes.map((n) => [norm(n.noteid), n]));
+    const serverNoteById = new Map(serverNotes.map(n => [norm(n.noteid), n]));
 
     const localFolderIds = new Set(
-      storedData.folders.map((f) => norm(f.folderid)),
+      storedData.folders.map(f => norm(f.folderid))
     );
-    const localNoteIds = new Set(storedData.notes.map((n) => norm(n.noteid)));
+    const localNoteIds = new Set(storedData.notes.map(n => norm(n.noteid)));
 
     // Remove: local has it, server does not
     const foldersToRemove = storedData.folders.filter(
-      (f) => !serverFolderById.has(norm(f.folderid)),
+      f => !serverFolderById.has(norm(f.folderid))
     );
 
     const notesToRemove = storedData.notes.filter(
-      (n) => !serverNoteById.has(norm(n.noteid)), // <-- FIXED
+      n => !serverNoteById.has(norm(n.noteid)) // <-- FIXED
     );
 
     // Add: server has it, local does not
     const foldersToAdd = serverFolders.filter(
-      (f) => !localFolderIds.has(norm(f.folderid)),
+      f => !localFolderIds.has(norm(f.folderid))
     );
 
     const notesToAdd = serverNotes.filter(
-      (n) => !localNoteIds.has(norm(n.noteid)),
+      n => !localNoteIds.has(norm(n.noteid))
     );
 
     // Update: same ID exists, but changed
     const foldersToUpdate = storedData.folders
-      .map((local) => {
+      .map(local => {
         const server = serverFolderById.get(norm(local.folderid));
         if (!server) return null;
 
@@ -619,7 +619,7 @@ const App = () => {
       .filter(Boolean);
 
     const notesToUpdate = storedData.notes
-      .map((local) => {
+      .map(local => {
         const server = serverNoteById.get(norm(local.noteid));
         if (!server) return null;
 
@@ -646,7 +646,7 @@ const App = () => {
       notesToStore,
       userToStore,
       foldersToRemove,
-      notesToRemove,
+      notesToRemove
     };
   };
 
@@ -671,7 +671,7 @@ const App = () => {
 
   const getData = (storedData = null) => {
     getUserData(token)
-      .then(async (response) => {
+      .then(async response => {
         const data = response.data.data;
         // const dataToStore = filterData(
         //   data.folders,
@@ -682,20 +682,21 @@ const App = () => {
         setAllData(data);
         setFolders(data.folders);
         setUser(data.user);
-        setLoading(false);
+    setLoading(false);
         // await storeDataInDb(dataToStore);
       })
-      .catch((err) => {
+      .catch(err => {
         console.log(err);
         setToken(null);
         setUser(null);
+    setLoading(false);
         if (err.response?.status === 401) {
           removeToken();
         }
       });
   };
 
-  const setNewLocation = (id) => {
+  const setNewLocation = id => {
     const newPreferences = {
       order: order,
       appLock: appLock,
@@ -705,14 +706,14 @@ const App = () => {
       view: view,
       sort: sort,
       saveLocation: saveLocation,
-      location: id,
+      location: id
     };
     try {
       db.runAsync(
         `
         UPDATE user SET preferences = ? WHERE userId = ?
         `,
-        [JSON.stringify(newPreferences), user.userId],
+        [JSON.stringify(newPreferences), user.userId]
       );
     } catch (err) {
       console.log(err);
@@ -764,7 +765,7 @@ const App = () => {
     }
     if (parentId !== null) {
       const parentFolder = allData.folders.filter(
-        (fold) => fold.folderid === parentId,
+        fold => fold.folderid === parentId
       )[0];
       setFolder(parentFolder);
       if (saveLocation) {
@@ -789,7 +790,7 @@ const App = () => {
           <View
             style={[
               styles.container,
-              { backgroundColor: darkMode ? "#000" : "#eee" },
+              { backgroundColor: darkMode ? "#000" : "#eee" }
             ]}
           >
             <StatusBar style={darkMode ? "light" : "dark"} />
@@ -959,7 +960,7 @@ const App = () => {
                 <ScrollView
                   style={[
                     styles.pickFolder,
-                    { backgroundColor: darkMode ? "#222" : "#eee" },
+                    { backgroundColor: darkMode ? "#222" : "#eee" }
                   ]}
                 >
                   <View style={styles.tree}>
@@ -978,7 +979,7 @@ const App = () => {
                     <Text
                       style={[
                         darkMode ? styles.white : styles.black,
-                        { marginTop: 10 },
+                        { marginTop: 10 }
                       ]}
                     >
                       {open.item.title} &rarr;{" "}
@@ -989,7 +990,7 @@ const App = () => {
                       onPress={() => {
                         setSelectedFolder({
                           folderid: null,
-                          title: "Top level",
+                          title: "Top level"
                         });
                       }}
                     >
@@ -1000,8 +1001,8 @@ const App = () => {
                       style={[
                         styles.saveFolder,
                         {
-                          backgroundColor: theme.on ? theme.color : "#fcd34d",
-                        },
+                          backgroundColor: theme.on ? theme.color : "#fcd34d"
+                        }
                       ]}
                     >
                       <Text>Save</Text>
@@ -1030,19 +1031,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 25,
-    paddingTop: 25,
+    paddingTop: 25
   },
   text: {
     color: "#fff",
-    textAlign: "center",
+    textAlign: "center"
   },
   white: {
     color: "#fff",
-    textAlign: "center",
+    textAlign: "center"
   },
   black: {
     color: "#000",
-    textAlign: "center",
+    textAlign: "center"
   },
   backdrop: {
     position: "absolute",
@@ -1050,10 +1051,10 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: "rgba(0,0,0,0.4)"
   },
   tree: {
-    marginTop: 40,
+    marginTop: 40
   },
   pickFolder: {
     position: "absolute",
@@ -1064,7 +1065,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     elevation: 2,
     paddingVertical: 0,
-    paddingHorizontal: 10,
+    paddingHorizontal: 10
   },
   topLevel: {
     marginTop: 20,
@@ -1073,14 +1074,14 @@ const styles = StyleSheet.create({
     borderColor: "#fff",
     padding: 8,
     borderRadius: 10,
-    elevation: 2,
+    elevation: 2
   },
   saveFolder: {
     marginVertical: 10,
     padding: 8,
     borderRadius: 10,
-    elevation: 2,
-  },
+    elevation: 2
+  }
 });
 
 export default App;
