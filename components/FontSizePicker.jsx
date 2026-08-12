@@ -1,7 +1,7 @@
 import { Text, StyleSheet, View, ScrollView, Pressable } from "react-native";
 import React from "react";
 
-const FontSizePicker = ({ setFontSize }) => {
+const FontSizePicker = ({ setFontSize, sendEditorCommand }) => {
   const fontSizes = new Array(60).fill(null);
   return (
     <View style={styles.container}>
@@ -13,8 +13,7 @@ const FontSizePicker = ({ setFontSize }) => {
               key={index}
               style={styles.btn}
               onPress={() => {
-                console.log(`Pressing new fontsize. Fontsize: ${index}`);
-                setFontSize(index);
+                sendEditorCommand("font-size", index);
               }}
             >
               <Text

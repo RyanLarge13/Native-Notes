@@ -6,55 +6,10 @@ import FontSizePicker from "./FontSizePicker";
 
 const Toolbar = ({ webviewRef, darkMode, theme }) => {
   const [selected, setSelected] = useState([]);
-  const [textOptions, setTextOptions] = useState(false);
   const [fontColor, setFontColor] = useState(false);
   const [fontHighlight, setFontHighlight] = useState(false);
   const [fontSize, setFontSize] = useState(false);
   const [fontSizeState, setFontSizeState] = useState(12);
-
-  const handleFormat = (format, setState, value) => {
-    console.log(
-      `Handling format. check for fontsize type: ${format}. Value: ${value}`,
-    );
-    const newSelected = [...selected, format];
-    setSelected(newSelected);
-    if (setState) {
-      setState();
-    }
-    if (format === "color" && value) {
-      webviewRef.current?.postMessage(
-        JSON.stringify({ command: "color", color: value }),
-      );
-      return;
-    }
-    if (format === "font-size") {
-      console.log(
-        `Format === font-size and now calling specific webviewRef command to update the fontsize. passing it in pixels value: ${value}`,
-      );
-      webviewRef.current?.postMessage(
-        JSON.stringify({
-          command: "font-size",
-          size: `${value}px`,
-        }),
-      );
-      console.log("Successfully called webviewRef.current.postMessage");
-      console.log(webviewRef.current);
-      return;
-    }
-    webviewRef.current?.postMessage(format);
-  };
-
-  const setSize = (size) => {
-    console.log(
-      `Set fontsize being called now in Toolbar component. Size: ${size}`,
-    );
-    setFontSizeState(size);
-    handleFormat("font-size", setFontSize, size);
-  };
-
-  const closeView = (setState) => {
-    setState(false);
-  };
 
   /*
     TODO:
@@ -62,13 +17,22 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
                * checklists
   */
 
+  const sendEditorCommand = (command, value) => {
+    webViewRef.current?.postMessage(
+      JSON.stringify({
+        command,
+        value,
+      }),
+    );
+  };
+
   return (
     <>
       {textOptions ? (
         <View style={[styles.optionsContainer]}>
           <View style={styles.selectGroup}>
             <Pressable
-              onPress={() => handleFormat("bold", setTextOptions)}
+              onPress={() => sendEditorCommand("bold")}
               style={styles.btn}
             >
               <FontAwesome5
@@ -77,7 +41,7 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
               />
             </Pressable>
             <Pressable
-              onPress={() => handleFormat("italic", setTextOptions)}
+              onPress={() => sendEditorCommand("italic")}
               style={styles.btn}
             >
               <FontAwesome5
@@ -86,7 +50,7 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
               />
             </Pressable>
             <Pressable
-              onPress={() => handleFormat("underline", setTextOptions)}
+              onPress={() => sendEditorCommand("underline")}
               style={styles.btn}
             >
               <FontAwesome5
@@ -97,7 +61,7 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
           </View>
           <View style={styles.selectGroup}>
             <Pressable
-              onPress={() => handleFormat("alignLeft", setTextOptions)}
+              onPress={() => sendEditorCommand("alignLeft")}
               style={styles.btn}
             >
               <FontAwesome5
@@ -106,7 +70,7 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
               />
             </Pressable>
             <Pressable
-              onPress={() => handleFormat("alignCenter", setTextOptions)}
+              onPress={() => sendEditorCommand("alignCenter")}
               style={styles.btn}
             >
               <FontAwesome5
@@ -115,7 +79,7 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
               />
             </Pressable>
             <Pressable
-              onPress={() => handleFormat("alignRight", setTextOptions)}
+              onPress={() => sendEditorCommand("alignRight")}
               style={styles.btn}
             >
               <FontAwesome5
@@ -126,7 +90,7 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
           </View>
           <View style={styles.selectGroup}>
             <Pressable
-              onPress={() => handleFormat("ol", setTextOptions)}
+              onPress={() => sendEditorCommand("ol")}
               style={styles.btn}
             >
               <FontAwesome5
@@ -135,7 +99,7 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
               />
             </Pressable>
             <Pressable
-              onPress={() => handleFormat("ul", setTextOptions)}
+              onPress={() => sendEditorCommand("ul")}
               style={styles.btn}
             >
               <FontAwesome5
@@ -144,7 +108,7 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
               />
             </Pressable>
             <Pressable
-              onPress={() => handleFormat("check", setTextOptions)}
+              onPress={() => sendEditorCommand("check")}
               style={styles.btn}
             >
               <FontAwesome5
@@ -155,7 +119,7 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
           </View>
           <View style={styles.selectGroup}>
             <Pressable
-              onPress={() => handleFormat("indent", setTextOptions)}
+              onPress={() => sendEditorCommand("indent")}
               style={styles.btn}
             >
               <FontAwesome5
@@ -164,7 +128,7 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
               />
             </Pressable>
             <Pressable
-              onPress={() => handleFormat("outdent", setTextOptions)}
+              onPress={() => sendEditorCommand("outdent")}
               style={styles.btn}
             >
               <FontAwesome5
@@ -175,8 +139,21 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
           </View>
         </View>
       ) : null}
-      {fontColor ? <ColorPicker /> : null}
-      {fontSize ? <FontSizePicker setFontSize={setSize} /> : null}
+      {fontColor ? (
+        <ColorPicker
+          setState={setFontColor}
+          initialColor="#FFFFFF"
+          onSelectColor={(color) => {
+            sendEditorCommand("foreColor", color);
+          }}
+        />
+      ) : null}
+      {fontSize ? (
+        <FontSizePicker
+          setFontSize={setSize}
+          sendEditorCommand={sendEditorCommand}
+        />
+      ) : null}
       <ScrollView
         horizontal={true}
         style={[
@@ -185,21 +162,18 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
         ]}
       >
         <Pressable
-          onPress={() => handleFormat("undo", null)}
+          onPress={() => sendEditorCommand("undo", null)}
           style={styles.btn}
         >
           <FontAwesome5 name="undo" style={[styles.white, styles.iconSize]} />
         </Pressable>
         <Pressable
-          onPress={() => handleFormat("redo", null)}
+          onPress={() => sendEditorCommand("redo", null)}
           style={styles.btn}
         >
           <FontAwesome5 name="redo" style={[styles.white, styles.iconSize]} />
         </Pressable>
-        <Pressable
-          onPress={() => setTextOptions((prev) => !prev)}
-          style={styles.btn}
-        >
+        <Pressable onPress={() => (prev) => !prev} style={styles.btn}>
           <FontAwesome5
             name="text-height"
             style={[styles.white, styles.iconSize]}

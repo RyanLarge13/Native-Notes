@@ -32,21 +32,39 @@ const NewNote = ({
   const [closed, setClosed] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Holds a list of format states to update toolbar
+  const [formatState, setFormatState] = useState({});
+
   const navigate = useNavigate();
   const webviewRef = useRef();
 
   const opacityAni = useRef(new Animated.Value(0)).current;
   const transYAni = useRef(new Animated.Value(500)).current;
 
+  const sendEditorCommand = (command, value) => {
+    webViewRef.current?.postMessage(
+      JSON.stringify({
+        command,
+        value,
+      }),
+    );
+  };
+
   const handleFormat = (format) => {
     webviewRef.current?.postMessage(format);
   };
 
   useEffect(() => {
+    if (note && webviewRef.current) {
+      sendEditorCommand("setHTML", note.content);
+    }
+  }, [note]);
+
+  useEffect(() => {
     let saveInterval = null;
     if (autoSave && note) {
       saveInterval = setInterval(() => {
-        handleFormat("html", false);
+        sendEditorCommand("html", false);
       }, 10000);
     }
     if (!autoSave || !note) {
@@ -59,9 +77,9 @@ const NewNote = ({
 
   const setWebViewTheme = () => {
     if (!darkMode) {
-      handleFormat("EEE");
+      sendEditorCommand("EEE");
     } else {
-      handleFormat("000");
+      sendEditorCommand("000");
     }
   };
 
@@ -99,7 +117,10 @@ const NewNote = ({
   }, [closed]);
 
   const onMessage = (event, close) => {
-    const receivedData = event.nativeEvent.data;
+    const receivedData = JSON.parse(event.nativeEvent.data);
+    if (receivedData.type === "selectionState") {
+      setFormatState(message.payload);
+    }
     saveNote(receivedData, close);
   };
 
@@ -234,7 +255,7 @@ const NewNote = ({
                 styles.save,
                 { backgroundColor: theme.on ? theme.color : "#fcd34d" },
               ]}
-              onPress={() => handleFormat("html", true)}
+              onPress={() => sendEditorCommand("html", true)}
             >
               {saving ? (
                 <FontAwesome5 name="cloud-upload-alt" />
@@ -249,12 +270,15 @@ const NewNote = ({
           style={[styles.editor, { color: darkMode ? "#fff" : "#000" }]}
           javaScriptEnabled={true}
           onLoad={() => setWebViewTheme()}
-          source={{ html: note ? renderEditor(note.htmlText) : EditorHTML }}
+          source={{ html: EditorHTML }}
           onMessage={onMessage}
           onError={(syntheticEvent) => {
             const { nativeEvent } = syntheticEvent;
             console.error("WebView error: ", nativeEvent);
           }}
+          originWhitelist={["*"]}
+          javaScriptEnabled
+          domStorageEnabled
         />
         <Toolbar webviewRef={webviewRef} darkMode={darkMode} theme={theme} />
       </KeyboardAvoidingView>
