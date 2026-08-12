@@ -682,14 +682,14 @@ const App = () => {
         setAllData(data);
         setFolders(data.folders);
         setUser(data.user);
-    setLoading(false);
+        setLoading(false);
         // await storeDataInDb(dataToStore);
       })
       .catch(err => {
         console.log(err);
         setToken(null);
         setUser(null);
-    setLoading(false);
+        setLoading(false);
         if (err.response?.status === 401) {
           removeToken();
         }
