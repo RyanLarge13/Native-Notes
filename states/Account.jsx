@@ -69,9 +69,6 @@ const Account = ({
   const nestedGoBack = () => {
     if (location.pathname !== "/") {
       navigate("/");
-      if (note) {
-        setNote(null);
-      }
       return true;
     }
     if (sortOptions) {

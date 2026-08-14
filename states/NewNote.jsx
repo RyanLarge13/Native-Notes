@@ -9,6 +9,7 @@ import {
   Animated,
   Keyboard,
   TouchableWithoutFeedback,
+  BackHandler,
 } from "react-native";
 import { createNewNote, updateNote } from "../utils/api";
 import { FontAwesome5 } from "@expo/vector-icons";
@@ -55,8 +56,20 @@ const NewNote = ({
   };
 
   useEffect(() => {
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        closeNote();
+        return true;
+      },
+    );
+
+    return () => subscription.remove();
+  }, [closed]);
+
+  useEffect(() => {
     if (note && webviewRef.current) {
-      sendEditorCommand("setHTML", note.content);
+      sendEditorCommand("setHTML", note.htmlText);
     }
   }, [note]);
 
@@ -64,7 +77,7 @@ const NewNote = ({
     let saveInterval = null;
     if (autoSave && note) {
       saveInterval = setInterval(() => {
-        sendEditorCommand("html", false);
+        sendEditorCommand("setHTML", sendEditorCommand("getHTML"));
       }, 10000);
     }
     if (!autoSave || !note) {
@@ -105,22 +118,30 @@ const NewNote = ({
         useNativeDriver: true,
       }),
     ]).start();
-    if (closed) {
-      Animated.parallel([
-        Animated.timing(opacityAni, {
-          toValue: 0,
-          duration: 100,
-          useNativeDriver: true,
-        }),
-        Animated.spring(transYAni, {
-          toValue: 500,
-          tension: 150,
-          friction: 10,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [closed]);
+  }, []);
+
+  const closeNote = () => {
+    if (closed) return;
+
+    setClosed(true);
+
+    Animated.parallel([
+      Animated.timing(opacityAni, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.spring(transYAni, {
+        toValue: 500,
+        tension: 150,
+        friction: 10,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setNote(null);
+      navigate(-1);
+    });
+  };
 
   const onMessage = (event, close) => {
     const receivedData = JSON.parse(event.nativeEvent.data);
@@ -133,7 +154,7 @@ const NewNote = ({
   const saveNote = async (content, close) => {
     setSaving(true);
     if (close) {
-      setClosed(true);
+      closeNote();
     }
     if (note) {
       const updatedNote = {
