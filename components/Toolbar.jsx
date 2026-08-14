@@ -12,12 +12,6 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
   const [fontSize, setFontSize] = useState(false);
   const [fontSizeState, setFontSizeState] = useState(12);
 
-  /*
-    TODO:
-        1. Implement these features in webview
-               * checklists
-  */
-
   const sendEditorCommand = (command, value) => {
     webviewRef.current?.postMessage(
       JSON.stringify({
@@ -150,7 +144,7 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
           setState={setFontColor}
           initialColor="#FFFFFF"
           onSelectColor={(color) => {
-            sendEditorCommand("foreColor", color);
+            sendEditorCommand("color", color);
           }}
         />
       ) : null}
@@ -158,6 +152,15 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
         <FontSizePicker
           setFontSize={selectNewFontSize}
           sendEditorCommand={sendEditorCommand}
+        />
+      ) : null}
+      {fontHighlight ? (
+        <ColorPicker
+          setState={setFontHighlight}
+          initialColor="#FFFFFF"
+          onSelectColor={(color) => {
+            sendEditorCommand("highlight", color);
+          }}
         />
       ) : null}
       <ScrollView
@@ -179,7 +182,10 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
         >
           <FontAwesome5 name="redo" style={[styles.white, styles.iconSize]} />
         </Pressable>
-        <Pressable onPress={() => (prev) => !prev} style={styles.btn}>
+        <Pressable
+          onPress={() => setTextOptions((prev) => !prev)}
+          style={styles.btn}
+        >
           <FontAwesome5
             name="text-height"
             style={[styles.white, styles.iconSize]}

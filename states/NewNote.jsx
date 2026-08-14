@@ -8,7 +8,7 @@ import {
   Pressable,
   Animated,
   Keyboard,
-  TouchableWithoutFeedback
+  TouchableWithoutFeedback,
 } from "react-native";
 import { createNewNote, updateNote } from "../utils/api";
 import { FontAwesome5 } from "@expo/vector-icons";
@@ -26,7 +26,7 @@ const NewNote = ({
   db,
   autoSave,
   theme,
-  darkMode
+  darkMode,
 }) => {
   const [title, setTitle] = useState(note ? note.title : "");
   const [closed, setClosed] = useState(false);
@@ -45,12 +45,12 @@ const NewNote = ({
     webviewRef.current?.postMessage(
       JSON.stringify({
         command,
-        value
-      })
+        value,
+      }),
     );
   };
 
-  const handleFormat = format => {
+  const handleFormat = (format) => {
     webviewRef.current?.postMessage(format);
   };
 
@@ -79,12 +79,12 @@ const NewNote = ({
     if (!darkMode) {
       sendEditorCommand("setTheme", {
         baxkgroundColor: "#EEEEEE",
-        color: "#000000"
+        color: "#000000",
       });
     } else {
       sendEditorCommand("setTheme", {
         backgroundColor: "#000000",
-        color: "#FFFFFF"
+        color: "#FFFFFF",
       });
     }
   };
@@ -95,29 +95,29 @@ const NewNote = ({
         delay: 100,
         toValue: 1,
         duration: 300,
-        useNativeDriver: true
+        useNativeDriver: true,
       }),
       Animated.spring(transYAni, {
         delay: 100,
         toValue: 0,
         tension: 150,
         friction: 10,
-        useNativeDriver: true
-      })
+        useNativeDriver: true,
+      }),
     ]).start();
     if (closed) {
       Animated.parallel([
         Animated.timing(opacityAni, {
           toValue: 0,
           duration: 100,
-          useNativeDriver: true
+          useNativeDriver: true,
         }),
         Animated.spring(transYAni, {
           toValue: 500,
           tension: 150,
           friction: 10,
-          useNativeDriver: true
-        })
+          useNativeDriver: true,
+        }),
       ]).start();
     }
   }, [closed]);
@@ -142,14 +142,14 @@ const NewNote = ({
         htmlNotes: content,
         locked: note.locked,
         folderId: folder ? folder.folderid : null,
-        update: new Date()
+        update: new Date(),
       };
       if (close) {
         setNote(null);
         navigate("/");
       }
       updateNote(token, updatedNote)
-        .then(async res => {
+        .then(async (res) => {
           const resNote = res.data.data[0];
           const noteToPush = {
             title: resNote.title,
@@ -158,17 +158,17 @@ const NewNote = ({
             htmlText: resNote.htmlnotes,
             locked: resNote.locked,
             folderId: resNote.folderid,
-            updated: resNote.updated
+            updated: resNote.updated,
           };
           setSaving(false);
-          setAllData(prevUser => {
+          setAllData((prevUser) => {
             const newNotes = prevUser.notes.filter(
-              note => note.noteid !== resNote.notesid
+              (note) => note.noteid !== resNote.notesid,
             );
             newNotes.push(noteToPush);
             const newData = {
               ...prevUser,
-              notes: newNotes
+              notes: newNotes,
             };
             return newData;
           });
@@ -181,11 +181,11 @@ const NewNote = ({
               resNote.locked,
               resNote.folderid,
               resNote.updated,
-              resNote.notesid
-            ]
+              resNote.notesid,
+            ],
           );
         })
-        .catch(err => {
+        .catch((err) => {
           console.log(err);
         });
       return;
@@ -193,10 +193,10 @@ const NewNote = ({
       const newNote = {
         folderId: folder ? folder.folderid : null,
         title: title,
-        htmlNotes: content
+        htmlNotes: content,
       };
       createNewNote(token, newNote)
-        .then(async res => {
+        .then(async (res) => {
           const resNote = res.data.data[0];
           const noteToPush = {
             title: resNote.title,
@@ -204,12 +204,12 @@ const NewNote = ({
             noteid: resNote.notesid,
             htmlText: resNote.htmlnotes,
             folderId: resNote.folderid,
-            updated: resNote.updated
+            updated: resNote.updated,
           };
-          setAllData(prevUser => {
+          setAllData((prevUser) => {
             const newData = {
               ...prevUser,
-              notes: [...prevUser.notes, noteToPush]
+              notes: [...prevUser.notes, noteToPush],
             };
             return newData;
           });
@@ -223,14 +223,14 @@ const NewNote = ({
             resNote.folderid,
             resNote.createdat,
             resNote.updated,
-            resNote.trashed
+            resNote.trashed,
           );
           if (close) {
             navigate("/");
             setNote(null);
           }
         })
-        .catch(err => {
+        .catch((err) => {
           console.log(err);
         });
     }
@@ -243,7 +243,7 @@ const NewNote = ({
       <KeyboardAvoidingView
         style={[
           styles.container,
-          { backgroundColor: darkMode ? "#000" : "#eee" }
+          { backgroundColor: darkMode ? "#000" : "#eee" },
         ]}
         keyboardVerticalOffset={0} // adjust if you have a header
       >
@@ -254,14 +254,14 @@ const NewNote = ({
               placeholder="Title"
               value={title}
               placeholderTextColor="#aaa"
-              onChangeText={titleText => setTitle(titleText)}
+              onChangeText={(titleText) => setTitle(titleText)}
             />
             <Pressable
               style={[
                 styles.save,
-                { backgroundColor: theme.on ? theme.color : "#fcd34d" }
+                { backgroundColor: theme.on ? theme.color : "#fcd34d" },
               ]}
-              onPress={() => sendEditorCommand("html", true)}
+              onPress={() => saveNote(sendEditorCommand("getHTML"), false)}
             >
               {saving ? (
                 <FontAwesome5 name="cloud-upload-alt" />
@@ -278,7 +278,7 @@ const NewNote = ({
           onLoad={() => setWebViewTheme()}
           source={{ html: EditorHTML }}
           onMessage={onMessage}
-          onError={syntheticEvent => {
+          onError={(syntheticEvent) => {
             const { nativeEvent } = syntheticEvent;
             console.error("WebView error: ", nativeEvent);
           }}
@@ -302,34 +302,34 @@ const styles = StyleSheet.create({
     bottom: 0,
     paddingTop: 50,
     paddingBottom: 50,
-    paddingHorizontal: 20
+    paddingHorizontal: 20,
   },
   title: {
     fontSize: 25,
     paddingTop: 0,
     paddingBottom: 10,
     color: "#fff",
-    maxWidth: "75%"
+    maxWidth: "75%",
   },
   saveInputContainer: {
     padding: 5,
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center"
+    alignItems: "center",
   },
   save: {
     padding: 6,
     borderRadius: 2,
-    elevation: 2
+    elevation: 2,
   },
   editor: {
     flex: 1,
-    textAlignVertical: "top"
+    textAlignVertical: "top",
   },
   white: {
     color: "#fff",
-    fontSize: 17
-  }
+    fontSize: 17,
+  },
 });
 
 export default NewNote;
