@@ -1,11 +1,12 @@
 import { StyleSheet, ScrollView, Pressable, View, Text } from "react-native";
 import { FontAwesome5 } from "@expo/vector-icons";
-import { useState } from "react";
+import React, { useState } from "react";
 import ColorPicker from "./ColorPicker";
 import FontSizePicker from "./FontSizePicker";
 
 const Toolbar = ({ webviewRef, darkMode, theme }) => {
   const [selected, setSelected] = useState([]);
+  const [textOptions, setTextOptions] = useState(false);
   const [fontColor, setFontColor] = useState(false);
   const [fontHighlight, setFontHighlight] = useState(false);
   const [fontSize, setFontSize] = useState(false);
@@ -18,12 +19,17 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
   */
 
   const sendEditorCommand = (command, value) => {
-    webViewRef.current?.postMessage(
+    webviewRef.current?.postMessage(
       JSON.stringify({
         command,
         value,
       }),
     );
+  };
+
+  const selectNewFontSize = (newSize) => {
+    setFontSize(false);
+    setFontSizeState(newSize);
   };
 
   return (
@@ -150,7 +156,7 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
       ) : null}
       {fontSize ? (
         <FontSizePicker
-          setFontSize={setSize}
+          setFontSize={selectNewFontSize}
           sendEditorCommand={sendEditorCommand}
         />
       ) : null}

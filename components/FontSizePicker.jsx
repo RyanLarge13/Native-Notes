@@ -13,6 +13,7 @@ const FontSizePicker = ({ setFontSize, sendEditorCommand }) => {
               key={index}
               style={styles.btn}
               onPress={() => {
+                setFontSize(index);
                 sendEditorCommand("font-size", index);
               }}
             >

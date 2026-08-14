@@ -1983,7 +1983,7 @@ const editorHTML = `
 
           case "focus":
             return focusEditor();
-
+          
           case "blur":
             return blurEditor();
 
