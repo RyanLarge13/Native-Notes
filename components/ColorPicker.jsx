@@ -108,7 +108,12 @@ const rgbToHsv = ({ r, g, b }) => {
   };
 };
 
-const ColorPicker = ({ setState, onSelectColor, initialColor = "#FFFFFF" }) => {
+const ColorPicker = ({
+  setState,
+  onSelectColor,
+  initialColor = "#FFFFFF",
+  title = "Text Color",
+}) => {
   const initialHSV = rgbToHsv(
     hexToRgb(initialColor) || {
       r: 255,
@@ -219,7 +224,7 @@ const ColorPicker = ({ setState, onSelectColor, initialColor = "#FFFFFF" }) => {
       {/* HEADER */}
 
       <View style={styles.header}>
-        <Text style={styles.title}>Text Color</Text>
+        <Text style={styles.title}>{title}</Text>
 
         <Pressable onPress={() => setState(false)} hitSlop={15}>
           <Text style={styles.close}>×</Text>

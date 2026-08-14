@@ -161,6 +161,7 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
           onSelectColor={(color) => {
             sendEditorCommand("highlight", color);
           }}
+          title="Text Highlight"
         />
       ) : null}
       <ScrollView
