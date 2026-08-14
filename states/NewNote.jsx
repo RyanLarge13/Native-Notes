@@ -91,7 +91,7 @@ const NewNote = ({
   const setWebViewTheme = () => {
     if (!darkMode) {
       sendEditorCommand("setTheme", {
-        baxkgroundColor: "#EEEEEE",
+        backgroundColor: "#EEEEEE",
         color: "#000000",
       });
     } else {
