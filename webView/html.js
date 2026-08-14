@@ -1256,6 +1256,12 @@ const editorHTML = `
         return editor.innerHTML;
       }
 
+      function saveNote() {
+        post("saveNote", {
+          html: getHTML();
+        });
+      }
+
       function getText() {
         return editor.innerText;
       }
@@ -1834,6 +1840,9 @@ const editorHTML = `
 
           case "getHTML":
             return getHTML();
+
+          case "saveNote":
+            return saveNote();
 
           case "getText":
             return getText();

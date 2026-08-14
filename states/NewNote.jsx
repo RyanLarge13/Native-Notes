@@ -120,8 +120,10 @@ const NewNote = ({
     ]).start();
   }, []);
 
-  const closeNote = () => {
+  const closeNote = async () => {
     if (closed) return;
+
+    await saveNote(sendEditorCommand("saveNote"));
 
     setClosed(true);
 
@@ -148,14 +150,13 @@ const NewNote = ({
     if (receivedData.type === "selectionState") {
       setFormatState(receivedData.payload);
     }
-    //saveNote(receivedData, close);
+    if (receivedData.type === "saveNote") {
+      return receivedData.payload;
+    }
   };
 
-  const saveNote = async (content, close) => {
+  const saveNote = async (content) => {
     setSaving(true);
-    if (close) {
-      closeNote();
-    }
     if (note) {
       const updatedNote = {
         notesId: note.noteid,
@@ -282,7 +283,7 @@ const NewNote = ({
                 styles.save,
                 { backgroundColor: theme.on ? theme.color : "#fcd34d" },
               ]}
-              onPress={() => saveNote(sendEditorCommand("getHTML"), false)}
+              onPress={() => saveNote(sendEditorCommand("saveNote"))}
             >
               {saving ? (
                 <FontAwesome5 name="cloud-upload-alt" />
