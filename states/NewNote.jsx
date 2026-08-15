@@ -62,7 +62,6 @@ const NewNote = ({
       "hardwareBackPress",
       () => {
         closeNote();
-        console.log("Back handler closing note");
         return true;
       },
     );
@@ -81,16 +80,11 @@ const NewNote = ({
   }, [autoSave, note]);
 
   const initializeEditor = () => {
-    console.log("WebView ready");
-
     webviewReady.current = true;
 
     setWebViewTheme();
 
     if (note?.htmlText) {
-      console.log("Loading note HTML:");
-      console.log(note.htmlText);
-
       sendEditorCommand("setHTML", note.htmlText);
     } else {
       sendEditorCommand("setHTML", "");
@@ -98,8 +92,6 @@ const NewNote = ({
   };
 
   const setWebViewTheme = () => {
-    console.log("Setting theme");
-    console.log(darkMode);
     if (!darkMode) {
       sendEditorCommand("setTheme", {
         backgroundColor: "#EEEEEE",
@@ -137,7 +129,6 @@ const NewNote = ({
     setClosed(true);
 
     const htmlToSave = currentHTML.current;
-    console.log(htmlToSave);
 
     Animated.parallel([
       Animated.timing(opacityAni, {
@@ -170,7 +161,6 @@ const NewNote = ({
 
   const onMessage = (event) => {
     const receivedData = JSON.parse(event.nativeEvent.data);
-    console.log("Message sent!");
 
     switch (receivedData.type) {
       case "selectionState":
@@ -178,7 +168,6 @@ const NewNote = ({
         break;
 
       case "contentChanged":
-        console.log("Content changed");
         currentHTML.current = receivedData.payload;
         break;
 
