@@ -1,15 +1,90 @@
-import React from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { View, Text, StyleSheet, Animated } from "react-native";
 import Ripple from "react-native-material-ripple";
-import { RenderHTMLSource } from "react-native-render-html";
+import { RenderHTML } from "react-native-render-html";
 import { useNavigate } from "react-router-native";
 import * as LocalAuthentication from "expo-local-authentication";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import truncate from "html-truncate";
 
 const Note = React.memo(
   ({ note, setOpen, setNote, view, index, width, darkMode, theme }) => {
+    const [contentWidth, setContentWidth] = useState(0);
+
     const navigate = useNavigate();
-    const htmlToRender = note?.htmlText?.slice(0, 200) + " ..." || "";
+
+    const htmlToRender = useMemo(() => {
+      if (!note?.htmlText) return "";
+
+      return truncate(note.htmlText, view ? 100 : 300);
+    }, [note?.htmlText, view]);
+
+    const htmlSource = useMemo(
+      () => ({
+        html: htmlToRender,
+      }),
+      [htmlToRender],
+    );
+
+    const tagStyles = useMemo(() => {
+      ({
+        body: {
+          margin: 0,
+          padding: 0,
+          // color: darkMode ? "#fff" : "#000",
+        },
+
+        p: {
+          marginTop: 0,
+          marginBottom: 6,
+        },
+
+        div: {
+          margin: 0,
+          padding: 0,
+        },
+
+        strong: {
+          fontWeight: "bold",
+        },
+
+        b: {
+          fontWeight: "bold",
+        },
+
+        em: {
+          fontStyle: "italic",
+        },
+
+        i: {
+          fontStyle: "italic",
+        },
+
+        u: {
+          textDecorationLine: "underline",
+        },
+
+        s: {
+          textDecorationLine: "line-through",
+        },
+
+        strike: {
+          textDecorationLine: "line-through",
+        },
+
+        ul: {
+          marginVertical: 4,
+        },
+
+        ol: {
+          marginVertical: 4,
+        },
+
+        li: {
+          marginVertical: 1,
+        },
+      });
+    }, []);
 
     const openNote = () => {
       if (note.locked) {
@@ -77,13 +152,23 @@ const Note = React.memo(
               year: "numeric",
             })}
           </Text>
-          <View>
-            {!note.locked ? (
-              <RenderHTMLSource
-                contentWidth={width}
-                source={{ html: htmlToRender }}
+          <View
+            style={styles.preview}
+            onLayout={(event) => {
+              setContentWidth(event.nativeEvent.layout.width);
+            }}
+          >
+            {!note.locked && (
+              <RenderHTML
+                contentWidth={contentWidth}
+                source={htmlSource}
+                enableCSSInlineProcessing={true}
+                baseStyle={{
+                  color: darkMode ? "#fff" : "#000",
+                }}
+                tagsStyles={tagStyles}
               />
-            ) : null}
+            )}
           </View>
         </Ripple>
         {note.locked ? (
@@ -110,6 +195,10 @@ const Note = React.memo(
 );
 
 const styles = StyleSheet.create({
+  preview: {
+    flex: 1,
+    overflow: "hidden",
+  },
   note: {
     padding: 7,
     borderRadius: 10,

@@ -10,6 +10,7 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   BackHandler,
+  Platform,
 } from "react-native";
 import { createNewNote, updateNote } from "../utils/api";
 import { FontAwesome5 } from "@expo/vector-icons";
@@ -40,6 +41,7 @@ const NewNote = ({
   const webviewRef = useRef();
   const webviewReady = useRef(false);
   const currentHTML = useRef(note?.htmlText ?? "");
+  const currentTitle = useRef(note?.title ?? "");
 
   const opacityAni = useRef(new Animated.Value(0)).current;
   const transYAni = useRef(new Animated.Value(500)).current;
@@ -78,6 +80,11 @@ const NewNote = ({
 
     return () => clearInterval(saveInterval);
   }, [autoSave, note]);
+
+  const handleTitleChange = (newTitle) => {
+    setTitle(newTitle);
+    currentTitle.current = newTitle;
+  };
 
   const initializeEditor = () => {
     webviewReady.current = true;
@@ -186,113 +193,198 @@ const NewNote = ({
 
   const saveNote = async (content) => {
     setSaving(true);
+
+    /*
+     * EXISTING NOTE
+     */
     if (note) {
-      const updatedNote = {
-        notesId: note.noteid,
-        title: title,
-        htmlNotes: content,
-        locked: note.locked,
-        folderId: folder ? folder.folderid : null,
-        update: new Date(),
+      const previousNote = { ...note };
+
+      const optimisticNote = {
+        ...note,
+        title: currentTitle.current,
+        htmlText: content,
+        folderId: folder?.folderid ?? null,
+        updated: new Date().toISOString(),
       };
-      updateNote(token, updatedNote)
-        .then(async (res) => {
-          const resNote = res.data.data[0];
-          const noteToPush = {
-            title: resNote.title,
-            createdAt: resNote.createdat,
-            noteid: resNote.notesid,
-            htmlText: resNote.htmlnotes,
-            locked: resNote.locked,
-            folderId: resNote.folderid,
-            updated: resNote.updated,
-          };
-          setSaving(false);
-          setAllData((prevUser) => {
-            const newNotes = prevUser.notes.filter(
-              (note) => note.noteid !== resNote.notesid,
-            );
-            newNotes.push(noteToPush);
-            const newData = {
-              ...prevUser,
-              notes: newNotes,
-            };
-            return newData;
-          });
-          await db.runAsync(
-            `UPDATE notes SET title = ?, htmlText = ?, locked = ?, folderId = ?,
-      \`updated\` = ? WHERE noteid = ?`,
-            [
-              resNote.title,
-              resNote.htmlnotes,
-              resNote.locked,
-              resNote.folderid,
-              resNote.updated,
-              resNote.notesid,
-            ],
-          );
-        })
-        .catch((err) => {
-          console.log(err);
-        });
-      return;
-    } else {
+
+      // -----------------------------------------
+      // 1. OPTIMISTICALLY UPDATE UI IMMEDIATELY
+      // -----------------------------------------
+
+      setAllData((prev) => ({
+        ...prev,
+        notes: prev.notes.map((item) =>
+          item.noteid === note.noteid ? optimisticNote : item,
+        ),
+      }));
+
+      try {
+        // -----------------------------------------
+        // 2. UPDATE SERVER
+        // -----------------------------------------
+
+        const updatedNote = {
+          notesId: note.noteid,
+          title: currentTitle.current,
+          htmlNotes: content,
+          locked: note.locked,
+          folderId: folder?.folderid ?? null,
+          update: new Date(),
+        };
+
+        const res = await updateNote(token, updatedNote);
+        const resNote = res.data.data[0];
+
+        // -----------------------------------------
+        // 3. SERVER IS SOURCE OF TRUTH
+        // -----------------------------------------
+
+        const savedNote = {
+          title: resNote.title,
+          createdAt: resNote.createdat,
+          noteid: resNote.notesid,
+          htmlText: resNote.htmlnotes,
+          locked: resNote.locked,
+          folderId: resNote.folderid,
+          updated: resNote.updated,
+        };
+
+        setAllData((prev) => ({
+          ...prev,
+          notes: prev.notes.map((item) =>
+            item.noteid === savedNote.noteid ? savedNote : item,
+          ),
+        }));
+
+        // -----------------------------------------
+        // 4. UPDATE LOCAL DATABASE
+        // -----------------------------------------
+
+        await db.runAsync(
+          `UPDATE notes
+         SET title = ?,
+             htmlText = ?,
+             locked = ?,
+             folderId = ?,
+             \`updated\` = ?
+         WHERE noteid = ?`,
+          [
+            savedNote.title,
+            savedNote.htmlText,
+            savedNote.locked,
+            savedNote.folderId,
+            savedNote.updated,
+            savedNote.noteid,
+          ],
+        );
+
+        return savedNote;
+      } catch (err) {
+        console.error("Failed to save note:", err);
+
+        // -----------------------------------------
+        // SERVER FAILED — REVERT OPTIMISTIC UPDATE
+        // -----------------------------------------
+
+        setAllData((prev) => ({
+          ...prev,
+          notes: prev.notes.map((item) =>
+            item.noteid === previousNote.noteid ? previousNote : item,
+          ),
+        }));
+
+        throw err;
+      } finally {
+        setSaving(false);
+      }
+    }
+
+    /*
+     * NEW NOTE
+     */
+    try {
       const newNote = {
-        folderId: folder ? folder.folderid : null,
-        title: title,
+        folderId: folder?.folderid ?? null,
+        title: currentTitle.current,
         htmlNotes: content,
       };
-      createNewNote(token, newNote)
-        .then(async (res) => {
-          const resNote = res.data.data[0];
-          const noteToPush = {
-            title: resNote.title,
-            createdAt: resNote.createdat,
-            noteid: resNote.notesid,
-            htmlText: resNote.htmlnotes,
-            folderId: resNote.folderid,
-            updated: resNote.updated,
-          };
-          setAllData((prevUser) => {
-            const newData = {
-              ...prevUser,
-              notes: [...prevUser.notes, noteToPush],
-            };
-            return newData;
-          });
-          await db.runAsync(
-            `INSERT INTO notes (noteid, title, locked, htmlText, folderId, createdAt,
-    updated, trashed) VALUES (?,?,?,?,?,?,?,?)`,
-            resNote.notesid,
-            resNote.title,
-            resNote.locked,
-            resNote.htmlnotes,
-            resNote.folderid,
-            resNote.createdat,
-            resNote.updated,
-            resNote.trashed,
-          );
-          if (close) {
-            navigate("/");
-            setNote(null);
-          }
-        })
-        .catch((err) => {
-          console.log(err);
-        });
+
+      const res = await createNewNote(token, newNote);
+      const resNote = res.data.data[0];
+
+      const savedNote = {
+        title: resNote.title,
+        createdAt: resNote.createdat,
+        noteid: resNote.notesid,
+        htmlText: resNote.htmlnotes,
+        locked: resNote.locked,
+        folderId: resNote.folderid,
+        updated: resNote.updated,
+      };
+
+      // -----------------------------------------
+      // UPDATE APP STATE
+      // -----------------------------------------
+
+      setAllData((prev) => ({
+        ...prev,
+        notes: [...prev.notes, savedNote],
+      }));
+
+      // -----------------------------------------
+      // UPDATE LOCAL DATABASE
+      // -----------------------------------------
+
+      await db.runAsync(
+        `INSERT INTO notes (
+        noteid,
+        title,
+        locked,
+        htmlText,
+        folderId,
+        createdAt,
+        updated,
+        trashed
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          resNote.notesid,
+          resNote.title,
+          resNote.locked,
+          resNote.htmlnotes,
+          resNote.folderid,
+          resNote.createdat,
+          resNote.updated,
+          resNote.trashed,
+        ],
+      );
+
+      return savedNote;
+    } catch (err) {
+      console.error("Failed to create note:", err);
+      throw err;
+    } finally {
+      setSaving(false);
     }
   };
 
   return (
     <Animated.View
-      style={[styles.container, { opacity: opacityAni, translateY: transYAni }]}
+      style={[
+        styles.container,
+        {
+          opacity: opacityAni,
+          transform: [{ translateY: transYAni }],
+        },
+      ]}
     >
       <KeyboardAvoidingView
         style={[
-          styles.container,
+          styles.keyboardContainer,
           { backgroundColor: darkMode ? "#000" : "#eee" },
         ]}
-        keyboardVerticalOffset={0} // adjust if you have a header
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={0}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
           <View style={styles.saveInputContainer}>
@@ -301,19 +393,37 @@ const NewNote = ({
               placeholder="Title"
               value={title}
               placeholderTextColor="#aaa"
-              onChangeText={(titleText) => setTitle(titleText)}
+              onChangeText={handleTitleChange}
             />
             <Pressable
               style={[
                 styles.save,
-                { backgroundColor: theme.on ? theme.color : "#fcd34d" },
+                {
+                  backgroundColor: theme.on
+                    ? theme.color
+                    : darkMode
+                      ? "#171717"
+                      : "#EEEEE",
+                },
               ]}
               onPress={() => saveNote(currentHTML.current)}
             >
               {saving ? (
-                <FontAwesome5 name="cloud-upload-alt" />
+                <FontAwesome5
+                  name="cloud-upload-alt"
+                  style={[
+                    styles.saveText,
+                    { color: darkMode ? "#f5f5f5" : "#222222" },
+                  ]}
+                />
               ) : (
-                <FontAwesome5 name="save" />
+                <FontAwesome5
+                  name="save"
+                  style={[
+                    styles.saveText,
+                    { color: darkMode ? "#f5f5f5" : "#222222" },
+                  ]}
+                />
               )}
             </Pressable>
           </View>
@@ -341,14 +451,17 @@ const NewNote = ({
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
+  },
+
+  keyboardContainer: {
+    flex: 1,
     paddingTop: 50,
-    paddingBottom: 50,
+    paddingBottom: 25,
     paddingHorizontal: 20,
   },
   title: {
@@ -365,9 +478,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   save: {
-    padding: 6,
-    borderRadius: 2,
+    justifyContent: "center",
+    alignItems: "center",
+    minWidth: 40,
+    minHeight: 40,
+    borderRadius: 10000,
     elevation: 2,
+    outlineWidth: 2,
+    outlineColor: "#343434",
+  },
+  saveText: {
+    fontSize: 18,
   },
   editor: {
     flex: 1,

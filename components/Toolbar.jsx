@@ -5,14 +5,24 @@ import ColorPicker from "./ColorPicker";
 import FontSizePicker from "./FontSizePicker";
 
 const Toolbar = ({ webviewRef, darkMode, theme }) => {
-  const [selected, setSelected] = useState([]);
   const [textOptions, setTextOptions] = useState(false);
   const [fontColor, setFontColor] = useState(false);
   const [fontHighlight, setFontHighlight] = useState(false);
   const [fontSize, setFontSize] = useState(false);
   const [fontSizeState, setFontSizeState] = useState(12);
 
-  const sendEditorCommand = (command, value) => {
+  const accent = theme?.on ? theme.color : "#fcd34d";
+
+  const colors = {
+    background: darkMode ? "#171717" : "#ffffff",
+    secondary: darkMode ? "#262626" : "#f2f2f2",
+    pressed: darkMode ? "#363636" : "#e5e5e5",
+    border: darkMode ? "#343434" : "#dedede",
+    text: darkMode ? "#f5f5f5" : "#222222",
+    muted: darkMode ? "#a3a3a3" : "#737373",
+  };
+
+  const sendEditorCommand = (command, value = null) => {
     webviewRef.current?.postMessage(
       JSON.stringify({
         command,
@@ -21,125 +31,179 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
     );
   };
 
+  const closePanels = (except = null) => {
+    if (except !== "text") setTextOptions(false);
+    if (except !== "color") setFontColor(false);
+    if (except !== "highlight") setFontHighlight(false);
+    if (except !== "size") setFontSize(false);
+  };
+
+  const togglePanel = (panel) => {
+    const setters = {
+      text: [textOptions, setTextOptions],
+      color: [fontColor, setFontColor],
+      highlight: [fontHighlight, setFontHighlight],
+      size: [fontSize, setFontSize],
+    };
+
+    const [currentValue, setter] = setters[panel];
+
+    closePanels(panel);
+    setter(!currentValue);
+  };
+
   const selectNewFontSize = (newSize) => {
     setFontSize(false);
     setFontSizeState(newSize);
   };
 
+  const ToolButton = ({
+    icon,
+    command,
+    value = null,
+    onPress,
+    active = false,
+    label,
+  }) => (
+    <Pressable
+      onPress={onPress || (() => sendEditorCommand(command, value))}
+      hitSlop={5}
+      style={({ pressed }) => [
+        styles.toolButton,
+        {
+          backgroundColor: active
+            ? accent + "25"
+            : pressed
+              ? colors.pressed
+              : "transparent",
+        },
+      ]}
+    >
+      {label ? (
+        <Text
+          style={[
+            styles.buttonLabel,
+            {
+              color: active ? accent : colors.text,
+            },
+          ]}
+        >
+          {label}
+        </Text>
+      ) : null}
+
+      {icon ? (
+        <FontAwesome5
+          name={icon}
+          style={[
+            styles.icon,
+            {
+              color: active ? accent : colors.text,
+            },
+          ]}
+        />
+      ) : null}
+    </Pressable>
+  );
+
+  const Divider = () => (
+    <View
+      style={[
+        styles.divider,
+        {
+          backgroundColor: colors.border,
+        },
+      ]}
+    />
+  );
+
   return (
-    <>
-      {textOptions ? (
-        <View style={[styles.optionsContainer]}>
-          <View style={styles.selectGroup}>
-            <Pressable
-              onPress={() => sendEditorCommand("bold")}
-              style={styles.btn}
-            >
-              <FontAwesome5
-                name="bold"
-                style={[styles.white, styles.iconSize]}
-              />
-            </Pressable>
-            <Pressable
-              onPress={() => sendEditorCommand("italic")}
-              style={styles.btn}
-            >
-              <FontAwesome5
-                name="italic"
-                style={[styles.white, styles.iconSize]}
-              />
-            </Pressable>
-            <Pressable
-              onPress={() => sendEditorCommand("underline")}
-              style={styles.btn}
-            >
-              <FontAwesome5
-                name="underline"
-                style={[styles.white, styles.iconSize]}
-              />
-            </Pressable>
+    <View style={styles.wrapper}>
+      {/* SECONDARY FORMATTING PANEL */}
+
+      {textOptions && (
+        <View
+          style={[
+            styles.optionsContainer,
+            {
+              backgroundColor: colors.background,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <View style={styles.optionSection}>
+            <Text style={[styles.sectionLabel, { color: colors.muted }]}>
+              STYLE
+            </Text>
+
+            <View style={styles.optionRow}>
+              <ToolButton icon="bold" command="bold" />
+              <ToolButton icon="italic" command="italic" />
+              <ToolButton icon="underline" command="underline" />
+            </View>
           </View>
-          <View style={styles.selectGroup}>
-            <Pressable
-              onPress={() => sendEditorCommand("alignLeft")}
-              style={styles.btn}
-            >
-              <FontAwesome5
-                name="align-left"
-                style={[styles.white, styles.iconSize]}
-              />
-            </Pressable>
-            <Pressable
-              onPress={() => sendEditorCommand("alignCenter")}
-              style={styles.btn}
-            >
-              <FontAwesome5
-                name="align-center"
-                style={[styles.white, styles.iconSize]}
-              />
-            </Pressable>
-            <Pressable
-              onPress={() => sendEditorCommand("alignRight")}
-              style={styles.btn}
-            >
-              <FontAwesome5
-                name="align-right"
-                style={[styles.white, styles.iconSize]}
-              />
-            </Pressable>
+
+          <View
+            style={[
+              styles.horizontalDivider,
+              { backgroundColor: colors.border },
+            ]}
+          />
+
+          <View style={styles.optionSection}>
+            <Text style={[styles.sectionLabel, { color: colors.muted }]}>
+              ALIGNMENT
+            </Text>
+
+            <View style={styles.optionRow}>
+              <ToolButton icon="align-left" command="alignLeft" />
+              <ToolButton icon="align-center" command="alignCenter" />
+              <ToolButton icon="align-right" command="alignRight" />
+            </View>
           </View>
-          <View style={styles.selectGroup}>
-            <Pressable
-              onPress={() => sendEditorCommand("ol")}
-              style={styles.btn}
-            >
-              <FontAwesome5
-                name="list-ol"
-                style={[styles.white, styles.iconSize]}
-              />
-            </Pressable>
-            <Pressable
-              onPress={() => sendEditorCommand("ul")}
-              style={styles.btn}
-            >
-              <FontAwesome5
-                name="list-ul"
-                style={[styles.white, styles.iconSize]}
-              />
-            </Pressable>
-            <Pressable
-              onPress={() => sendEditorCommand("check")}
-              style={styles.btn}
-            >
-              <FontAwesome5
-                name="list"
-                style={[styles.white, styles.iconSize]}
-              />
-            </Pressable>
+
+          <View
+            style={[
+              styles.horizontalDivider,
+              { backgroundColor: colors.border },
+            ]}
+          />
+
+          <View style={styles.optionSection}>
+            <Text style={[styles.sectionLabel, { color: colors.muted }]}>
+              LISTS
+            </Text>
+
+            <View style={styles.optionRow}>
+              <ToolButton icon="list-ol" command="ol" />
+              <ToolButton icon="list-ul" command="ul" />
+              <ToolButton icon="tasks" command="check" />
+            </View>
           </View>
-          <View style={styles.selectGroup}>
-            <Pressable
-              onPress={() => sendEditorCommand("indent")}
-              style={styles.btn}
-            >
-              <FontAwesome5
-                name="indent"
-                style={[styles.white, styles.iconSize]}
-              />
-            </Pressable>
-            <Pressable
-              onPress={() => sendEditorCommand("outdent")}
-              style={styles.btn}
-            >
-              <FontAwesome5
-                name="outdent"
-                style={[styles.white, styles.iconSize]}
-              />
-            </Pressable>
+
+          <View
+            style={[
+              styles.horizontalDivider,
+              { backgroundColor: colors.border },
+            ]}
+          />
+
+          <View style={styles.optionSection}>
+            <Text style={[styles.sectionLabel, { color: colors.muted }]}>
+              INDENT
+            </Text>
+
+            <View style={styles.optionRow}>
+              <ToolButton icon="outdent" command="outdent" />
+              <ToolButton icon="indent" command="indent" />
+            </View>
           </View>
         </View>
-      ) : null}
-      {fontColor ? (
+      )}
+
+      {/* COLOR PICKER */}
+
+      {fontColor && (
         <ColorPicker
           setState={setFontColor}
           initialColor="#FFFFFF"
@@ -147,14 +211,11 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
             sendEditorCommand("color", color);
           }}
         />
-      ) : null}
-      {fontSize ? (
-        <FontSizePicker
-          setFontSize={selectNewFontSize}
-          sendEditorCommand={sendEditorCommand}
-        />
-      ) : null}
-      {fontHighlight ? (
+      )}
+
+      {/* HIGHLIGHT PICKER */}
+
+      {fontHighlight && (
         <ColorPicker
           setState={setFontHighlight}
           initialColor="#FFFFFF"
@@ -163,104 +224,224 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
           }}
           title="Text Highlight"
         />
-      ) : null}
-      <ScrollView
-        horizontal={true}
+      )}
+
+      {/* FONT SIZE PICKER */}
+
+      {fontSize && (
+        <FontSizePicker
+          setFontSize={selectNewFontSize}
+          sendEditorCommand={sendEditorCommand}
+        />
+      )}
+
+      {/* MAIN TOOLBAR */}
+
+      <View
         style={[
-          styles.container,
-          { backgroundColor: darkMode ? "#000" : "#eee" },
+          styles.toolbar,
+          {
+            backgroundColor: colors.background,
+            borderColor: colors.border,
+          },
         ]}
       >
-        <Pressable
-          onPress={() => sendEditorCommand("undo", null)}
-          style={styles.btn}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="always"
         >
-          <FontAwesome5 name="undo" style={[styles.white, styles.iconSize]} />
-        </Pressable>
-        <Pressable
-          onPress={() => sendEditorCommand("redo", null)}
-          style={styles.btn}
-        >
-          <FontAwesome5 name="redo" style={[styles.white, styles.iconSize]} />
-        </Pressable>
-        <Pressable
-          onPress={() => setTextOptions((prev) => !prev)}
-          style={styles.btn}
-        >
-          <FontAwesome5
-            name="text-height"
-            style={[styles.white, styles.iconSize]}
-          />
-        </Pressable>
-        <Pressable
-          onPress={() => setFontColor((prev) => !prev)}
-          style={styles.btn}
-        >
-          <FontAwesome5 name="font" style={[styles.white, styles.iconSize]} />
-        </Pressable>
-        <Pressable
-          onPress={() => setFontHighlight((prev) => !prev)}
-          style={styles.btn}
-        >
-          <FontAwesome5
-            name="highlighter"
-            style={[styles.white, styles.iconSize]}
-          />
-        </Pressable>
-        <Pressable
-          onPress={() => setFontSize((prev) => !prev)}
-          style={[styles.btn, styles.row]}
-        >
-          <Text style={styles.white}>{fontSizeState}</Text>
-          <FontAwesome5
-            name="angle-down"
-            style={[styles.white, styles.iconSize]}
-          />
-        </Pressable>
-      </ScrollView>
-    </>
+          {/* History */}
+
+          <View style={styles.group}>
+            <ToolButton icon="undo" command="undo" />
+            <ToolButton icon="redo" command="redo" />
+          </View>
+
+          <Divider />
+
+          {/* Formatting */}
+
+          <View style={styles.group}>
+            <ToolButton
+              icon="text-height"
+              active={textOptions}
+              onPress={() => togglePanel("text")}
+            />
+
+            <ToolButton
+              icon="font"
+              active={fontColor}
+              onPress={() => togglePanel("color")}
+            />
+
+            <ToolButton
+              icon="highlighter"
+              active={fontHighlight}
+              onPress={() => togglePanel("highlight")}
+            />
+          </View>
+
+          <Divider />
+
+          {/* Font Size */}
+
+          <Pressable
+            onPress={() => togglePanel("size")}
+            style={({ pressed }) => [
+              styles.fontSizeButton,
+              {
+                backgroundColor: fontSize
+                  ? accent + "25"
+                  : pressed
+                    ? colors.pressed
+                    : colors.secondary,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.fontSizeText,
+                {
+                  color: fontSize ? accent : colors.text,
+                },
+              ]}
+            >
+              {fontSizeState}
+            </Text>
+
+            <FontAwesome5
+              name="chevron-down"
+              size={10}
+              color={fontSize ? accent : colors.muted}
+            />
+          </Pressable>
+        </ScrollView>
+      </View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    position: "absolute",
-    flex: 1,
-    bottom: 0,
-    right: 0,
-    left: 0,
-    flexDirection: "row",
-    gap: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
+  wrapper: {
+    width: "100%",
+    position: "relative",
   },
+
+  toolbar: {
+    height: 52,
+    borderWidth: 1,
+    borderRadius: 16,
+    elevation: 6,
+
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+  },
+
+  scrollContent: {
+    paddingHorizontal: 6,
+    alignItems: "center",
+  },
+
+  group: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  toolButton: {
+    width: 42,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    flexDirection: "row",
+  },
+
+  icon: {
+    fontSize: 17,
+  },
+
+  buttonLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  divider: {
+    width: 1,
+    height: 25,
+    marginHorizontal: 5,
+  },
+
+  fontSizeButton: {
+    minWidth: 58,
+    height: 36,
+    paddingHorizontal: 11,
+    marginHorizontal: 3,
+    borderRadius: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+  },
+
+  fontSizeText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
   optionsContainer: {
     position: "absolute",
-    bottom: 50,
+    bottom: 60,
     left: 0,
-    padding: 10,
-    backgroundColor: "#222",
-    elevation: 5,
-    borderRadius: 10,
+
+    minWidth: 190,
+
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+
+    borderWidth: 1,
+    borderRadius: 16,
+
+    elevation: 10,
+
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+
+    zIndex: 100,
   },
-  selectGroup: {
+
+  optionSection: {
+    paddingVertical: 4,
+  },
+
+  sectionLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    marginLeft: 7,
+    marginBottom: 3,
+  },
+
+  optionRow: {
     flexDirection: "row",
-    gap: 10,
-    borderRadius: 10,
-    backgroundColor: "#444",
+    alignItems: "center",
   },
-  row: {
-    flexDirection: "row",
-  },
-  white: {
-    color: "#fff",
-  },
-  iconSize: {
-    fontSize: 18,
-    marginHorizontal: 10,
-  },
-  btn: {
-    padding: 10,
+
+  horizontalDivider: {
+    height: 1,
+    marginHorizontal: 6,
+    marginVertical: 3,
   },
 });
 
