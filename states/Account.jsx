@@ -67,6 +67,9 @@ const Account = ({
   const { width } = useWindowDimensions();
 
   const nestedGoBack = () => {
+    if (location.pathname === "/newnote") {
+      return false;
+    }
     if (location.pathname !== "/") {
       navigate("/");
       return true;

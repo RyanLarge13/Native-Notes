@@ -1256,12 +1256,6 @@ const editorHTML = `
         return editor.innerHTML;
       }
 
-      function saveNote() {
-        post("saveNote", {
-          html: getHTML();
-        });
-      }
-
       function getText() {
         return editor.innerText;
       }
@@ -2062,6 +2056,8 @@ const editorHTML = `
       editor.addEventListener(
         "input",
         function () {
+          post("contentChanged",
+              editor.innerHTML)
           saveSelection();
           scheduleChange();
           scheduleStateUpdate();
@@ -2156,6 +2152,12 @@ const editorHTML = `
       ========================================================= */
 
       emitReady();
+
+      window.ReactNativeWebView.postMessage(
+        JSON.stringify({
+          type: "ready",
+      }),
+);
 
     })();
   </script>

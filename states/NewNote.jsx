@@ -38,6 +38,8 @@ const NewNote = ({
 
   const navigate = useNavigate();
   const webviewRef = useRef();
+  const webviewReady = useRef(false);
+  const currentHTML = useRef(note?.htmlText ?? "");
 
   const opacityAni = useRef(new Animated.Value(0)).current;
   const transYAni = useRef(new Animated.Value(500)).current;
@@ -60,6 +62,7 @@ const NewNote = ({
       "hardwareBackPress",
       () => {
         closeNote();
+        console.log("Back handler closing note");
         return true;
       },
     );
@@ -68,27 +71,35 @@ const NewNote = ({
   }, [closed]);
 
   useEffect(() => {
-    if (note && webviewRef.current) {
-      sendEditorCommand("setHTML", note.htmlText);
-    }
-  }, [note]);
+    if (!autoSave || !note) return;
 
-  useEffect(() => {
-    let saveInterval = null;
-    if (autoSave && note) {
-      saveInterval = setInterval(() => {
-        sendEditorCommand("setHTML", sendEditorCommand("getHTML"));
-      }, 10000);
-    }
-    if (!autoSave || !note) {
-      if (saveInterval !== null) {
-        clearInterval(saveInterval);
-      }
-    }
+    const saveInterval = setInterval(() => {
+      saveNote(currentHTML.current);
+    }, 10000);
+
     return () => clearInterval(saveInterval);
-  }, [autoSave]);
+  }, [autoSave, note]);
+
+  const initializeEditor = () => {
+    console.log("WebView ready");
+
+    webviewReady.current = true;
+
+    setWebViewTheme();
+
+    if (note?.htmlText) {
+      console.log("Loading note HTML:");
+      console.log(note.htmlText);
+
+      sendEditorCommand("setHTML", note.htmlText);
+    } else {
+      sendEditorCommand("setHTML", "");
+    }
+  };
 
   const setWebViewTheme = () => {
+    console.log("Setting theme");
+    console.log(darkMode);
     if (!darkMode) {
       sendEditorCommand("setTheme", {
         backgroundColor: "#EEEEEE",
@@ -120,12 +131,13 @@ const NewNote = ({
     ]).start();
   }, []);
 
-  const closeNote = async () => {
+  const closeNote = () => {
     if (closed) return;
 
-    await saveNote(sendEditorCommand("saveNote"));
-
     setClosed(true);
+
+    const htmlToSave = currentHTML.current;
+    console.log(htmlToSave);
 
     Animated.parallel([
       Animated.timing(opacityAni, {
@@ -139,19 +151,47 @@ const NewNote = ({
         friction: 10,
         useNativeDriver: true,
       }),
-    ]).start(() => {
+    ]).start(async () => {
+      await saveNote(htmlToSave);
+
       setNote(null);
-      navigate(-1);
+      navigate("/");
     });
   };
 
-  const onMessage = (event, close) => {
+  useEffect(() => {
+    if (!webviewReady.current) return;
+
+    sendEditorCommand("setTheme", {
+      backgroundColor: darkMode ? "#000000" : "#EEEEEE",
+      color: darkMode ? "#FFFFFF" : "#000000",
+    });
+  }, [darkMode]);
+
+  const onMessage = (event) => {
     const receivedData = JSON.parse(event.nativeEvent.data);
-    if (receivedData.type === "selectionState") {
-      setFormatState(receivedData.payload);
-    }
-    if (receivedData.type === "saveNote") {
-      return receivedData.payload;
+    console.log("Message sent!");
+
+    switch (receivedData.type) {
+      case "selectionState":
+        setFormatState(receivedData.payload);
+        break;
+
+      case "contentChanged":
+        console.log("Content changed");
+        currentHTML.current = receivedData.payload;
+        break;
+
+      case "ready":
+        webviewReady.current = true;
+
+        sendEditorCommand("setTheme", {
+          backgroundColor: darkMode ? "#000000" : "#EEEEEE",
+          color: darkMode ? "#FFFFFF" : "#000000",
+        });
+
+        sendEditorCommand("setHTML", note?.htmlText ?? "");
+        break;
     }
   };
 
@@ -166,10 +206,6 @@ const NewNote = ({
         folderId: folder ? folder.folderid : null,
         update: new Date(),
       };
-      if (close) {
-        setNote(null);
-        navigate("/");
-      }
       updateNote(token, updatedNote)
         .then(async (res) => {
           const resNote = res.data.data[0];
@@ -283,7 +319,7 @@ const NewNote = ({
                 styles.save,
                 { backgroundColor: theme.on ? theme.color : "#fcd34d" },
               ]}
-              onPress={() => saveNote(sendEditorCommand("saveNote"))}
+              onPress={() => saveNote(currentHTML.current)}
             >
               {saving ? (
                 <FontAwesome5 name="cloud-upload-alt" />
@@ -297,8 +333,8 @@ const NewNote = ({
           ref={webviewRef}
           style={[styles.editor, { color: darkMode ? "#fff" : "#000" }]}
           javaScriptEnabled={true}
-          onLoad={() => setWebViewTheme()}
           source={{ html: EditorHTML }}
+          onLoad={() => initializeEditor()}
           onMessage={onMessage}
           onError={(syntheticEvent) => {
             const { nativeEvent } = syntheticEvent;
