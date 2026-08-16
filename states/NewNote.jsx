@@ -63,7 +63,7 @@ const NewNote = ({
     const subscription = BackHandler.addEventListener(
       "hardwareBackPress",
       () => {
-        if (closed) {
+        if (!note) {
           return false;
         }
         closeNote();
@@ -72,7 +72,7 @@ const NewNote = ({
     );
 
     return () => subscription.remove();
-  }, [closed]);
+  }, [closed, note]);
 
   useEffect(() => {
     if (!autoSave || !note) return;

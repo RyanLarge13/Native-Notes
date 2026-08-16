@@ -16,7 +16,7 @@ const Note = React.memo(
     const htmlToRender = useMemo(() => {
       if (!note?.htmlText) return "";
 
-      return truncate(note.htmlText, view ? 100 : 300);
+      return truncate(note.htmlText, view ? 10 : 30);
     }, [note?.htmlText, view]);
 
     const htmlSource = useMemo(
