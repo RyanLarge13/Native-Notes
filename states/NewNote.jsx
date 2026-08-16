@@ -63,6 +63,9 @@ const NewNote = ({
     const subscription = BackHandler.addEventListener(
       "hardwareBackPress",
       () => {
+        if (closed) {
+          return false;
+        }
         closeNote();
         return true;
       },
@@ -150,10 +153,9 @@ const NewNote = ({
         useNativeDriver: true,
       }),
     ]).start(async () => {
-      await saveNote(htmlToSave);
-
       setNote(null);
       navigate("/");
+      await saveNote(htmlToSave);
     });
   };
 
