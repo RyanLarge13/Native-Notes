@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import ColorPicker from "./ColorPicker";
 import FontSizePicker from "./FontSizePicker";
 import LinkDialog from "./Toolbar/LinkDialog";
-import BlockTypeDialog from "./Toolbar/blockTypeDialog";
+import BlockTypeDialog from "./Toolbar/BlockTypeDialog";
 import FontFamilyDialog from "./Toolbar/FontFamilyDialog";
 
 const Toolbar = ({ webviewRef, darkMode, theme, formatState }) => {
@@ -69,12 +69,14 @@ const Toolbar = ({ webviewRef, darkMode, theme, formatState }) => {
     onPress,
     active = false,
     label,
+    customStyles = {},
   }) => (
     <Pressable
       onPress={onPress || (() => sendEditorCommand(command, value))}
       hitSlop={5}
       style={({ pressed }) => [
         styles.toolButton,
+        customStyles,
         {
           backgroundColor: active
             ? accent + "25"
@@ -86,10 +88,15 @@ const Toolbar = ({ webviewRef, darkMode, theme, formatState }) => {
     >
       {label ? (
         <Text
+          numberOfLines={1}
           style={[
             styles.buttonLabel,
             {
-              color: active ? accent : colors.text,
+              color: customStyles.backgroundColor
+                ? customStyles.backgroundColor
+                : active
+                  ? accent
+                  : colors.text,
             },
           ]}
         >
@@ -103,7 +110,11 @@ const Toolbar = ({ webviewRef, darkMode, theme, formatState }) => {
           style={[
             styles.icon,
             {
-              color: active ? accent : colors.text,
+              color: customStyles.backgroundColor
+                ? customStyles.backgroundColor
+                : active
+                  ? accent
+                  : colors.text,
             },
           ]}
         />
@@ -413,6 +424,9 @@ const Toolbar = ({ webviewRef, darkMode, theme, formatState }) => {
               icon="font"
               active={fontColor}
               onPress={() => togglePanel("color")}
+              customStyles={{
+                backgroundColor: formatState.color,
+              }}
             />
 
             <ToolButton
@@ -429,6 +443,7 @@ const Toolbar = ({ webviewRef, darkMode, theme, formatState }) => {
             label={mapBlockTypeToString(formatState.blockType) || "Normal"}
             active={blockTypeDialogOpen}
             onPress={() => setBlockTypeDialogOpen((prev) => !prev)}
+            customStyles={{ width: 120 }}
           />
           <ToolButton
             label={"H1"}
@@ -453,6 +468,7 @@ const Toolbar = ({ webviewRef, darkMode, theme, formatState }) => {
             label={formatState.fontName}
             active={fontFamilyDialogOpen}
             onPress={() => setFontFamilyDialogOpen((prev) => !prev)}
+            customStyles={{ width: 180 }}
           />
 
           <Divider />
