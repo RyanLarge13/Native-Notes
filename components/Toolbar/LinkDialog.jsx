@@ -76,7 +76,7 @@ const LinkDialog = ({
      *   }
      * }
      */
-    sendEditorCommand("create-link", {
+    sendEditorCommand("createLink", {
       text: cleanText || cleanURL,
       url: cleanURL,
       hadSelection,

@@ -1,54 +1,63 @@
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
 import React from "react";
 import { FontAwesome5 } from "@expo/vector-icons";
 
-const BLOCK_TYPES = [
+const FONT_FAMILIES = [
   {
-    label: "Title",
-    value: "h1",
-    type: "heading",
-    description: "Main note heading",
-    fontSize: 22,
-    fontWeight: "700",
+    label: "Default",
+    value: "sans-serif",
+    fontFamily: undefined,
   },
   {
-    label: "Normal",
-    value: "p",
-    type: "paragraph",
-    description: "Regular body text",
-    fontSize: 15,
-    fontWeight: "400",
+    label: "Arial",
+    value: "Arial, sans-serif",
+    fontFamily: "Arial",
   },
   {
-    label: "Heading 1",
-    value: "h2",
-    type: "heading",
-    description: "Primary section",
-    fontSize: 19,
-    fontWeight: "700",
+    label: "Helvetica",
+    value: "Helvetica, Arial, sans-serif",
+    fontFamily: "Helvetica",
   },
   {
-    label: "Heading 2",
-    value: "h3",
-    type: "heading",
-    description: "Secondary section",
-    fontSize: 17,
-    fontWeight: "600",
+    label: "Georgia",
+    value: "Georgia, serif",
+    fontFamily: "Georgia",
   },
   {
-    label: "Heading 3",
-    value: "h4",
-    type: "heading",
-    description: "Small section",
-    fontSize: 15,
-    fontWeight: "600",
+    label: "Times New Roman",
+    value: "'Times New Roman', Times, serif",
+    fontFamily: "Times New Roman",
+  },
+  {
+    label: "Verdana",
+    value: "Verdana, sans-serif",
+    fontFamily: "Verdana",
+  },
+  {
+    label: "Trebuchet",
+    value: "'Trebuchet MS', sans-serif",
+    fontFamily: "Trebuchet MS",
+  },
+  {
+    label: "Courier New",
+    value: "'Courier New', monospace",
+    fontFamily: "Courier New",
+  },
+  {
+    label: "Monospace",
+    value: "monospace",
+    fontFamily: "monospace",
+  },
+  {
+    label: "Serif",
+    value: "serif",
+    fontFamily: "serif",
   },
 ];
 
-const BlockTypeDialog = ({
-  setBlockTypeDialogOpen,
+const FontFamilyDialog = ({
+  setFontFamilyDialogOpen,
   formatState,
-  mapBlockTypeToString,
   sendEditorCommand,
   darkMode,
   theme,
@@ -69,15 +78,39 @@ const BlockTypeDialog = ({
     muted: darkMode ? "#a3a3a3" : "#737373",
   };
 
-  const currentBlock = formatState?.blockType ?? "p";
+  /*
+   * Browsers sometimes report fonts with quotes,
+   * different casing, or just the primary family.
+   *
+   * This gives us a reasonably forgiving comparison.
+   */
+  const normalizeFont = (font) => {
+    if (!font) return "";
 
-  const currentLabel = mapBlockTypeToString(currentBlock);
-
-  const selectBlockType = (type, value) => {
-    sendEditorCommand(type, value);
-
-    setBlockTypeDialogOpen(false);
+    return font.replace(/['"]/g, "").split(",")[0].trim().toLowerCase();
   };
+
+  const currentFont = normalizeFont(formatState);
+
+  const getSelected = (font) => {
+    if (font.label === "Default" && !currentFont) {
+      return true;
+    }
+
+    return (
+      normalizeFont(font.value) === currentFont ||
+      normalizeFont(font.fontFamily) === currentFont
+    );
+  };
+
+  const selectFont = (font) => {
+    sendEditorCommand("fontFamily", font.value);
+
+    setFontFamilyDialogOpen(false);
+  };
+
+  const currentLabel =
+    FONT_FAMILIES.find(getSelected)?.label ?? formatState ?? "Default";
 
   return (
     <View
@@ -92,7 +125,14 @@ const BlockTypeDialog = ({
     >
       {/* HEADER */}
 
-      <View style={styles.header}>
+      <View
+        style={[
+          styles.header,
+          {
+            borderBottomColor: colors.border,
+          },
+        ]}
+      >
         <View>
           <Text
             style={[
@@ -102,12 +142,13 @@ const BlockTypeDialog = ({
               },
             ]}
           >
-            TEXT STYLE
+            FONT FAMILY
           </Text>
 
           <Text
+            numberOfLines={1}
             style={[
-              styles.currentStyle,
+              styles.currentFont,
               {
                 color: colors.text,
               },
@@ -119,7 +160,7 @@ const BlockTypeDialog = ({
 
         <Pressable
           hitSlop={8}
-          onPress={() => setBlockTypeDialogOpen(false)}
+          onPress={() => setFontFamilyDialogOpen(false)}
           style={({ pressed }) => [
             styles.closeButton,
             {
@@ -131,18 +172,22 @@ const BlockTypeDialog = ({
         </Pressable>
       </View>
 
-      {/* OPTIONS */}
+      {/* FONT LIST */}
 
-      <View style={styles.options}>
-        {BLOCK_TYPES.map((item) => {
-          const selected = currentBlock === item.value;
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.fontList}
+        showsVerticalScrollIndicator={false}
+      >
+        {FONT_FAMILIES.map((font) => {
+          const selected = getSelected(font);
 
           return (
             <Pressable
-              key={item.value}
-              onPress={() => selectBlockType(item.type, item.value)}
+              key={font.label}
+              onPress={() => selectFont(font)}
               style={({ pressed }) => [
-                styles.option,
+                styles.fontOption,
                 {
                   backgroundColor: selected
                     ? accent + "18"
@@ -154,31 +199,33 @@ const BlockTypeDialog = ({
                 },
               ]}
             >
-              {/* TEXT PREVIEW */}
-
-              <View style={styles.optionContent}>
+              <View style={styles.fontContent}>
                 <Text
                   numberOfLines={1}
-                  style={{
-                    color: selected ? accent : colors.text,
-
-                    fontSize: item.fontSize,
-
-                    fontWeight: item.fontWeight,
-                  }}
-                >
-                  {item.label}
-                </Text>
-
-                <Text
                   style={[
-                    styles.description,
+                    styles.fontName,
                     {
-                      color: colors.muted,
+                      color: selected ? accent : colors.text,
+
+                      fontFamily: font.fontFamily,
                     },
                   ]}
                 >
-                  {item.description}
+                  {font.label}
+                </Text>
+
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    styles.preview,
+                    {
+                      color: colors.muted,
+
+                      fontFamily: font.fontFamily,
+                    },
+                  ]}
+                >
+                  The quick brown fox
                 </Text>
               </View>
 
@@ -206,7 +253,7 @@ const BlockTypeDialog = ({
             </Pressable>
           );
         })}
-      </View>
+      </ScrollView>
     </View>
   );
 };
@@ -219,6 +266,7 @@ const styles = StyleSheet.create({
     right: 0,
 
     width: 285,
+    maxHeight: 410,
 
     padding: 12,
 
@@ -248,9 +296,7 @@ const styles = StyleSheet.create({
 
     borderBottomWidth: StyleSheet.hairlineWidth,
 
-    borderBottomColor: "rgba(128,128,128,0.25)",
-
-    marginBottom: 6,
+    marginBottom: 5,
   },
 
   headerLabel: {
@@ -261,9 +307,11 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
 
-  currentStyle: {
+  currentFont: {
     fontSize: 14,
     fontWeight: "600",
+
+    maxWidth: 200,
   },
 
   closeButton: {
@@ -276,12 +324,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
 
-  options: {
-    gap: 3,
+  scrollView: {
+    flexGrow: 0,
   },
 
-  option: {
-    minHeight: 58,
+  fontList: {
+    gap: 3,
+    paddingBottom: 2,
+  },
+
+  fontOption: {
+    minHeight: 60,
 
     flexDirection: "row",
     alignItems: "center",
@@ -293,14 +346,18 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
 
-  optionContent: {
+  fontContent: {
     flex: 1,
     justifyContent: "center",
   },
 
-  description: {
+  fontName: {
+    fontSize: 15,
+  },
+
+  preview: {
     fontSize: 10,
-    marginTop: 2,
+    marginTop: 3,
   },
 
   radio: {
@@ -324,4 +381,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default BlockTypeDialog;
+export default FontFamilyDialog;

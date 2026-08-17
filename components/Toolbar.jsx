@@ -5,6 +5,7 @@ import ColorPicker from "./ColorPicker";
 import FontSizePicker from "./FontSizePicker";
 import LinkDialog from "./Toolbar/LinkDialog";
 import BlockTypeDialog from "./Toolbar/blockTypeDialog";
+import FontFamilyDialog from "./Toolbar/FontFamilyDialog";
 
 const Toolbar = ({ webviewRef, darkMode, theme, formatState }) => {
   const [fontColor, setFontColor] = useState(false);
@@ -16,6 +17,7 @@ const Toolbar = ({ webviewRef, darkMode, theme, formatState }) => {
   const [textOptions, setTextOptions] = useState(false);
   const [linkDialogShow, setLinkDialogShow] = useState(false);
   const [blockTypeDialogOpen, setBlockTypeDialogOpen] = useState(false);
+  const [fontFamilyDialogOpen, setFontFamilyDialogOpen] = useState(false);
 
   const accent = theme?.on ? theme.color : "#fcd34d";
 
@@ -360,6 +362,18 @@ const Toolbar = ({ webviewRef, darkMode, theme, formatState }) => {
         />
       ) : null}
 
+      {/* FONT FAMILY DIALOG */}
+
+      {fontFamilyDialogOpen ? (
+        <FontFamilyDialog
+          setFontFamilyDialogOpen={setFontFamilyDialogOpen}
+          formatState={formatState.fontName}
+          sendEditorCommand={sendEditorCommand}
+          darkMode={darkMode}
+          theme={theme}
+        />
+      ) : null}
+
       {/* MAIN TOOLBAR */}
 
       <View
@@ -430,6 +444,15 @@ const Toolbar = ({ webviewRef, darkMode, theme, formatState }) => {
             label={"H3"}
             active={formatState.blockType === "h4"}
             onPress={() => sendEditorCommand("heading", "h4")}
+          />
+
+          <Divider />
+
+          {/* Font Family */}
+          <ToolButton
+            label={formatState.fontName}
+            active={fontFamilyDialogOpen}
+            onPress={() => setFontFamilyDialogOpen((prev) => !prev)}
           />
 
           <Divider />
