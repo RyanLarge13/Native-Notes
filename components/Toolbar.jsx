@@ -3,6 +3,7 @@ import { FontAwesome5 } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import ColorPicker from "./ColorPicker";
 import FontSizePicker from "./FontSizePicker";
+import LinkDialog from "./Toolbar/LinkDialog";
 
 const Toolbar = ({ webviewRef, darkMode, theme, formatState }) => {
   const [fontColor, setFontColor] = useState(false);
@@ -12,6 +13,7 @@ const Toolbar = ({ webviewRef, darkMode, theme, formatState }) => {
   const [insertOptions, setInsertOptions] = useState(false);
   const [fontSize, setFontSize] = useState(false);
   const [textOptions, setTextOptions] = useState(false);
+  const [linkDialogShow, setLinkDialogShow] = useState(false);
 
   const accent = theme?.on ? theme.color : "#fcd34d";
 
@@ -286,8 +288,8 @@ const Toolbar = ({ webviewRef, darkMode, theme, formatState }) => {
           <View style={styles.optionRow}>
             <ToolButton
               icon="link"
-              command="link"
-              active={formatState.blockType === "link"}
+              command="createLink"
+              active={linkDialogShow}
             />
             <ToolButton
               icon="quote-right"
@@ -314,6 +316,17 @@ const Toolbar = ({ webviewRef, darkMode, theme, formatState }) => {
           theme={theme}
         />
       )}
+
+      {/* Link Dialog */}
+      {linkDialogShow ? (
+        <LinkDialog
+          setLinkDialogShow={setLinkDialogShow}
+          formatState={formatState}
+          sendEditorCommand={sendEditorCommand}
+          darkMode={darkMode}
+          theme={theme}
+        />
+      ) : null}
 
       {/* MAIN TOOLBAR */}
 
