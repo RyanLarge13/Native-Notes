@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import ColorPicker from "./ColorPicker";
 import FontSizePicker from "./FontSizePicker";
 import LinkDialog from "./Toolbar/LinkDialog";
+import BlockTypeDialog from "./Toolbar/blockTypeDialog";
 
 const Toolbar = ({ webviewRef, darkMode, theme, formatState }) => {
   const [fontColor, setFontColor] = useState(false);
@@ -14,6 +15,7 @@ const Toolbar = ({ webviewRef, darkMode, theme, formatState }) => {
   const [fontSize, setFontSize] = useState(false);
   const [textOptions, setTextOptions] = useState(false);
   const [linkDialogShow, setLinkDialogShow] = useState(false);
+  const [blockTypeDialogOpen, setBlockTypeDialogOpen] = useState(false);
 
   const accent = theme?.on ? theme.color : "#fcd34d";
 
@@ -117,6 +119,23 @@ const Toolbar = ({ webviewRef, darkMode, theme, formatState }) => {
       ]}
     />
   );
+
+  const mapBlockTypeToString = (blockType) => {
+    switch (blockType) {
+      case "p":
+        return "Normal";
+      case "h1":
+        return "Title";
+      case "h2":
+        return "H2";
+      case "h3":
+        return "H3";
+      case "h4":
+        return "H4";
+      default:
+        blockType;
+    }
+  };
 
   return (
     <View style={styles.wrapper}>
@@ -317,11 +336,24 @@ const Toolbar = ({ webviewRef, darkMode, theme, formatState }) => {
         />
       )}
 
-      {/* Link Dialog */}
+      {/* LINK DIALOG */}
       {linkDialogShow ? (
         <LinkDialog
           setLinkDialogShow={setLinkDialogShow}
           formatState={formatState}
+          sendEditorCommand={sendEditorCommand}
+          darkMode={darkMode}
+          theme={theme}
+        />
+      ) : null}
+
+      {/* BLOCK TYPE DIALOG */}
+
+      {blockTypeDialogOpen ? (
+        <BlockTypeDialog
+          setBlockTypeDialogOpen={setBlockTypeDialogOpen}
+          formatState={formatState}
+          mapBlockTypeToString={mapBlockTypeToString}
           sendEditorCommand={sendEditorCommand}
           darkMode={darkMode}
           theme={theme}
@@ -380,14 +412,9 @@ const Toolbar = ({ webviewRef, darkMode, theme, formatState }) => {
 
           {/* Headings and block information */}
           <ToolButton
-            label={"Title"}
-            active={formatState.blockType === "h1"}
-            onPress={() => sendEditorCommand("heading", "h1")}
-          />
-          <ToolButton
-            label={"Normal"}
-            active={formatState.blockType === "p"}
-            onPress={() => sendEditorCommand("paragraph", "p")}
+            label={mapBlockTypeToString(formatState.blockType) || "Normal"}
+            active={blockTypeDialogOpen}
+            onPress={() => setBlockTypeDialogOpen((prev) => !prev)}
           />
           <ToolButton
             label={"H1"}
