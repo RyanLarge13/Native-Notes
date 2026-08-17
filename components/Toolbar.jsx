@@ -378,6 +378,35 @@ const Toolbar = ({ webviewRef, darkMode, theme, formatState }) => {
 
           <Divider />
 
+          {/* Headings and block information */}
+          <ToolButton
+            label={"Title"}
+            active={formatState.blockType === "h1"}
+            onPress={() => sendEditorCommand("heading", "h1")}
+          />
+          <ToolButton
+            label={"Normal"}
+            active={formatState.blockType === "p"}
+            onPress={() => sendEditorCommand("paragraph", "p")}
+          />
+          <ToolButton
+            label={"H1"}
+            active={formatState.blockType === "h2"}
+            onPress={() => sendEditorCommand("heading", "h2")}
+          />
+          <ToolButton
+            label={"H2"}
+            active={formatState.blockType === "h3"}
+            onPress={() => sendEditorCommand("heading", "h3")}
+          />
+          <ToolButton
+            label={"H3"}
+            active={formatState.blockType === "h4"}
+            onPress={() => sendEditorCommand("heading", "h4")}
+          />
+
+          <Divider />
+
           {/* Font Size */}
 
           <Pressable
