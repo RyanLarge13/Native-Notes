@@ -1,15 +1,17 @@
 import { StyleSheet, ScrollView, Pressable, View, Text } from "react-native";
 import { FontAwesome5 } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import ColorPicker from "./ColorPicker";
 import FontSizePicker from "./FontSizePicker";
 
-const Toolbar = ({ webviewRef, darkMode, theme }) => {
-  const [textOptions, setTextOptions] = useState(false);
+const Toolbar = ({ webviewRef, darkMode, theme, formatState }) => {
   const [fontColor, setFontColor] = useState(false);
   const [fontHighlight, setFontHighlight] = useState(false);
+
+  // UI Pop ups
+  const [insertOptions, setInsertOptions] = useState(false);
   const [fontSize, setFontSize] = useState(false);
-  const [fontSizeState, setFontSizeState] = useState(12);
+  const [textOptions, setTextOptions] = useState(false);
 
   const accent = theme?.on ? theme.color : "#fcd34d";
 
@@ -36,6 +38,7 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
     if (except !== "color") setFontColor(false);
     if (except !== "highlight") setFontHighlight(false);
     if (except !== "size") setFontSize(false);
+    if (except !== "insert") setInsertOptions(false);
   };
 
   const togglePanel = (panel) => {
@@ -44,17 +47,13 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
       color: [fontColor, setFontColor],
       highlight: [fontHighlight, setFontHighlight],
       size: [fontSize, setFontSize],
+      insert: [insertOptions, setInsertOptions],
     };
 
     const [currentValue, setter] = setters[panel];
 
     closePanels(panel);
     setter(!currentValue);
-  };
-
-  const selectNewFontSize = (newSize) => {
-    setFontSize(false);
-    setFontSizeState(newSize);
   };
 
   const ToolButton = ({
@@ -137,9 +136,27 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
             </Text>
 
             <View style={styles.optionRow}>
-              <ToolButton icon="bold" command="bold" />
-              <ToolButton icon="italic" command="italic" />
-              <ToolButton icon="underline" command="underline" />
+              <ToolButton
+                icon="bold"
+                command="bold"
+                active={formatState.bold}
+              />
+              <ToolButton
+                icon="italic"
+                command="italic"
+                active={formatState.italic}
+              />
+              <ToolButton
+                icon="underline"
+                command="underline"
+                active={formatState.underline}
+              />
+              <ToolButton
+                icon="strikethrough"
+                command="strikeThrough"
+                active={formatState.strikethrough}
+              />
+              <ToolButton icon="eraser" command="clearFormatting" />
             </View>
           </View>
 
@@ -156,9 +173,21 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
             </Text>
 
             <View style={styles.optionRow}>
-              <ToolButton icon="align-left" command="alignLeft" />
-              <ToolButton icon="align-center" command="alignCenter" />
-              <ToolButton icon="align-right" command="alignRight" />
+              <ToolButton
+                icon="align-left"
+                command="alignLeft"
+                active={formatState.alignLeft}
+              />
+              <ToolButton
+                icon="align-center"
+                command="alignCenter"
+                active={formatState.alignCenter}
+              />
+              <ToolButton
+                icon="align-right"
+                command="alignRight"
+                active={formatState.alignRight}
+              />
             </View>
           </View>
 
@@ -175,9 +204,21 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
             </Text>
 
             <View style={styles.optionRow}>
-              <ToolButton icon="list-ol" command="ol" />
-              <ToolButton icon="list-ul" command="ul" />
-              <ToolButton icon="tasks" command="check" />
+              <ToolButton
+                icon="list-ol"
+                command="ol"
+                active={formatState.orderedList}
+              />
+              <ToolButton
+                icon="list-ul"
+                command="ul"
+                active={formatState.unorderedList}
+              />
+              <ToolButton
+                icon="tasks"
+                command="check"
+                active={formatState.checkList}
+              />
             </View>
           </View>
 
@@ -226,12 +267,51 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
         />
       )}
 
+      {/* INSERT OPTIONS */}
+
+      {insertOptions && (
+        <View
+          style={[
+            styles.optionsContainer,
+            {
+              backgroundColor: colors.background,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <Text style={[styles.sectionLabel, { color: colors.muted }]}>
+            INSERT
+          </Text>
+
+          <View style={styles.optionRow}>
+            <ToolButton
+              icon="link"
+              command="link"
+              active={formatState.blockType === "link"}
+            />
+            <ToolButton
+              icon="quote-right"
+              command="blockquote"
+              active={formatState.blockType === "blockquote"}
+            />
+            <ToolButton
+              icon="code"
+              command="codeBlock"
+              active={formatState.blockType === "code"}
+            />
+            <ToolButton icon="minus" command="horizontalRule" />
+          </View>
+        </View>
+      )}
+
       {/* FONT SIZE PICKER */}
 
       {fontSize && (
         <FontSizePicker
-          setFontSize={selectNewFontSize}
+          fontSize={formatState.fontSize}
           sendEditorCommand={sendEditorCommand}
+          darkMode={darkMode}
+          theme={theme}
         />
       )}
 
@@ -308,7 +388,7 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
                 },
               ]}
             >
-              {fontSizeState}
+              {formatState.fontSize}
             </Text>
 
             <FontAwesome5
@@ -317,6 +397,16 @@ const Toolbar = ({ webviewRef, darkMode, theme }) => {
               color={fontSize ? accent : colors.muted}
             />
           </Pressable>
+
+          <Divider />
+
+          <ToolButton
+            icon="plus"
+            active={insertOptions}
+            onPress={() => togglePanel("insert")}
+          />
+
+          <ToolButton icon="eraser" command="clearFormatting" />
         </ScrollView>
       </View>
     </View>

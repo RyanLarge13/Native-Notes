@@ -50,9 +50,13 @@ const editorHTML = `
     body {
       min-height: 100%;
       overflow-wrap: anywhere;
+      -webkit-text-size-adjust: none;
+      text-size-adjust: none;
     }
 
     #editor {
+      -webkit-text-size-adjust: none;
+      text-size-adjust: none;
       width: 100%;
       min-height: 100vh;
       padding: var(--editor-padding);
@@ -564,9 +568,7 @@ const editorHTML = `
        * generated <font> nodes with CSS spans.
        */
       function setFontSize(size) {
-        if (
-          typeof size === "number"
-        ) {
+        if (typeof size === "number") {
           size = size + "px";
         }
 
@@ -576,6 +578,56 @@ const editorHTML = `
 
         restoreSelection();
 
+        const selection = window.getSelection();
+
+        if (!selection || selection.rangeCount === 0) {
+          return false;
+        }
+
+        const range = selection.getRangeAt(0);
+
+        /*
+        * CARET ONLY
+        *
+        * No text is selected.
+        * Create a styled span at the caret and place
+        * the cursor inside it.
+        */
+        if (range.collapsed) {
+          const span = document.createElement("span");
+
+          span.style.fontSize = size;
+
+          // Zero-width space gives the caret somewhere
+          // to live inside the span.
+          const textNode = document.createTextNode("\u200B");
+
+          span.appendChild(textNode);
+
+          range.insertNode(span);
+
+          // Move caret AFTER the zero-width character,
+          // but still inside our styled span.
+          const newRange = document.createRange();
+
+          newRange.setStart(textNode, 1);
+          newRange.collapse(true);
+
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+
+          saveSelection();
+          scheduleChange();
+          scheduleStateUpdate();
+
+          return true;
+        }
+
+        /*
+        * ACTUAL TEXT SELECTION
+        *
+        * Keep your execCommand workaround here.
+        */
         try {
           document.execCommand(
             "styleWithCSS",
@@ -589,15 +641,13 @@ const editorHTML = `
             "7"
           );
 
-          var fonts =
-            editor.querySelectorAll(
-              'font[size="7"]'
-            );
+          const fonts =
+            editor.querySelectorAll('font[size="7"]');
 
           Array.prototype.forEach.call(
             fonts,
             function (font) {
-              var span =
+              const span =
                 document.createElement("span");
 
               span.style.fontSize = size;

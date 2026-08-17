@@ -16,7 +16,6 @@ import { createNewNote, updateNote } from "../utils/api";
 import { FontAwesome5 } from "@expo/vector-icons";
 import WebView from "react-native-webview";
 import EditorHTML from "../webView/html.js";
-import renderEditor from "../webView/editHTML";
 import Toolbar from "../components/Toolbar.jsx";
 
 const NewNote = ({
@@ -280,8 +279,6 @@ const NewNote = ({
             savedNote.noteid,
           ],
         );
-
-        return savedNote;
       } catch (err) {
         console.error("Failed to save note:", err);
 
@@ -300,6 +297,8 @@ const NewNote = ({
       } finally {
         setSaving(false);
       }
+
+      return;
     }
 
     /*
@@ -360,8 +359,6 @@ const NewNote = ({
           resNote.trashed,
         ],
       );
-
-      return savedNote;
     } catch (err) {
       console.error("Failed to create note:", err);
       throw err;
@@ -444,8 +441,14 @@ const NewNote = ({
           originWhitelist={["*"]}
           javaScriptEnabled
           domStorageEnabled
+          textZoom={100}
         />
-        <Toolbar webviewRef={webviewRef} darkMode={darkMode} theme={theme} />
+        <Toolbar
+          webviewRef={webviewRef}
+          darkMode={darkMode}
+          theme={theme}
+          formatState={formatState}
+        />
       </KeyboardAvoidingView>
     </Animated.View>
   );
