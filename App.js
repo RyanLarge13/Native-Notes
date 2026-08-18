@@ -277,6 +277,10 @@ const App = () => {
     setFolder(theFolder[0] ? theFolder[0] : null);
     setFolders(subfolders);
     setMainTitle(theFolder[0] ? theFolder[0].title : "Folders");
+
+    if (saveLocation) {
+      setNewLocation(theFolder[0] ? theFolder[0].folderid : null);
+    }
   };
 
   const getLocked = () => {
@@ -414,10 +418,9 @@ const App = () => {
   };
 
   const goBack = () => {
-    if (note) {
-      setNote(null);
-      return true;
-    }
+    // DO NOT NEED TO CHECK IF NOTE EXISTS IN THIS METHOD. /states/NewNote.js already handles "goBack"
+
+    // CLOSING ALL MODALS BEFORE (IF ANY) FOLDER NAVIGATION LOGIC
     if (userSettingsOpen) {
       setUserSettingsOpen(false);
       return true;
@@ -443,37 +446,38 @@ const App = () => {
       setOpen({ show: false });
       return true;
     }
-    const parentId = folder ? folder.parentFolderId : null;
-    if (parentId === null && systemFolder !== "main") {
+
+    if (systemFolder !== "main") {
       setSystemFolder("main");
-      setMainTitle("Folders");
-      setFolder(null);
-      if (saveLocation) {
-        setNewLocation(null);
-      }
       return true;
     }
+
+    // ALL MODALS ARE NOW CLOSED AND USER IS HOME
+    const parentId = folder ? folder.parentFolderId : null;
+
+    // CLOSE THE APPLICATION IF USER IS ALL THE WAY HOME AND REQUESTING BACK HANDLER
     if (parentId === null && folder === null) {
       return false;
     }
+
+    // USER IS NAVIGATING BACK TO MAIN ENTRY
+    if (parentId === null) {
+      setLocation(null);
+      setNewLocation(null);
+      setFolder(null);
+      return true;
+    }
+
+    // USER IS NAVIGATING BACK TO CUSTOM FOLDER
     if (parentId !== null) {
       const parentFolder = allData.folders.filter(
         (fold) => fold.folderid === parentId,
       )[0];
+      setLocation(parentFolder.folderid);
+      setNewLocation(parentFolder.folderid);
       setFolder(parentFolder);
-      if (saveLocation) {
-        setNewLocation(parentFolder.id);
-      }
       return true;
     }
-    if (parentId === null) {
-      setFolder(null);
-      return true;
-    }
-  };
-
-  const saveNewLocation = () => {
-    setPickFolder(false);
   };
 
   return (
@@ -689,7 +693,7 @@ const App = () => {
                       <Text style={styles.white}>Send to top level</Text>
                     </Pressable>
                     <Pressable
-                      onPress={() => saveNewLocation()}
+                      onPress={() => setPickFolder(false)}
                       style={[
                         styles.saveFolder,
                         {
