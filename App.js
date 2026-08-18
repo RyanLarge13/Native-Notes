@@ -3,7 +3,7 @@ import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, Pressable, ScrollView, View } from "react-native";
 import {
   TRenderEngineProvider,
-  RenderHTMLConfigProvider
+  RenderHTMLConfigProvider,
 } from "react-native-render-html";
 import Spinner from "react-native-loading-spinner-overlay";
 import { NativeRouter, Routes, Route } from "react-router-native";
@@ -23,16 +23,22 @@ import Tree from "./components/Tree";
 import SystemNotif from "./components/SystemNotif";
 import UserSettings from "./components/UserSettings";
 import { v4 as uuidv4 } from "uuid";
+import {
+  initializeSQLiteTables,
+  openDB,
+  storeDataInLocalDb,
+} from "./utils/sqLite";
+import { getToken } from "./utils/asyncStorage";
 
 const customStyles = {
-  body: { color: "#fff", fontSize: 12 }
+  body: { color: "#fff", fontSize: 12 },
 };
 
 const App = () => {
   const [allData, setAllData] = useState({
     user: { username: "", email: "", userId: "", createdAt: "" },
     folders: [],
-    notes: []
+    notes: [],
   });
   const [user, setUser] = useState(null);
   const [systemNotifs, setSystemNotifs] = useState([]);
@@ -58,257 +64,125 @@ const App = () => {
   const [autoSave, setAutoSave] = useState(false);
   const [appLock, setAppLock] = useState(false);
   const [sort, setSort] = useState("Title");
-  const [saveLocation, setSaveLocation] = useState(false);
+  const [saveLocation, setSaveLocation] = useState(true);
   const [location, setLocation] = useState(null);
   const [db, setDb] = useState(null);
   const [tries, setTries] = useState(0);
 
+  // HANDLE REQUESTS TO SPECIAL SYSTEM LEVEL FOLDER STRUCTURES IN APP -------------
   useEffect(() => {
-    if (!db) {
-      setDatabase();
-    }
-    if (db) {
-      createTables();
-    }
-  }, [db]);
-
-  const generateDb = async () => {
-    const db = await SQLite.openDatabaseAsync("localstore");
-    return db;
-  };
-
-  const setDatabase = async store => {
-    const myStore = await SQLite.openDatabaseAsync("localstore");
-    setDb(myStore);
-  };
-
-  useEffect(() => {
+    // RESET FOLDERS TO NOTHING FOR ALL INSTANCES
     setFolders([]);
-    if (systemFolder === "main") {
-      findChildNotes();
-    }
-    if (systemFolder === "locked") {
-      getLocked();
-    }
-    if (systemFolder === "all") {
-      getAll();
-    }
-    if (systemFolder === "trash") {
-      getTrash();
+
+    switch (systemFolder) {
+      case "main":
+        findLastFolderLocationAndRoute();
+        return;
+      case "locked":
+        getLocked();
+        return;
+      case "all":
+        getAll();
+        return;
+      case "trash":
+        getTrash();
+        return;
+      default:
+        return;
     }
   }, [systemFolder]);
 
+  // INITIALIZE ENTIRE APPLICATION -----------
   useEffect(() => {
-    if (allData) {
-      if (location && saveLocation) {
-        fetchLocation();
-      } else {
-        findChildNotes();
-      }
-    }
-  }, [folder, allData]);
+    const openDatabase = async () => {
+      // OPEN DATABASE -----------
+      const db = await openDB();
 
-  const fetchLocation = () => {
-    /*TODO:
-      1. Possibly uncomment out a few of these comments to create faster responsiveness
-    */
-    setLocation(null);
-    const theFolder = allData.folders.filter(
-      fold => fold.folderid === location
-    );
-    // const subfolders = allData.folders.filter(
-    //   (fold) => fold.parentFolderId === location
-    // );
-    // const nestedNotes = allData.notes.filter(
-    //   (aNote) => aNote.folderId === location
-    // );
-    // setNotes(nestedNotes);
-    setFolder(theFolder[0] ? theFolder[0] : null);
-    // setFolders(subfolders);
-    // setMainTitle(theFolder[0] ? theFolder[0].title : "Folders");
-  };
-
-  const findChildNotes = () => {
-    if (!folder && allData.folders.length > 0 && allData.notes.length > 0) {
-      const topFolders = allData.folders.filter(
-        fold => fold.parentFolderId === null
-      );
-      const topNotes = allData.notes.filter(aNote => !aNote.folderId);
-      setNotes(topNotes);
-      setFolders(topFolders);
-      setMainTitle("Folders");
-      return;
-    }
-    if (folder) {
-      const subfolders = allData.folders.filter(
-        fold => fold.parentFolderId === folder.folderid
-      );
-      const nestedNotes = allData.notes.filter(
-        aNote => aNote.folderId === folder.folderid
-      );
-      setNotes(nestedNotes);
-      setFolders(subfolders);
-      setMainTitle(folder.title);
-    }
-  };
-
-  useEffect(() => {
-    if (token && db) {
-      grabFromDb();
-    }
-    if (!token) {
-      getToken();
-    }
-  }, [token, db]);
-
-  const getLocked = () => {
-    setNotes(allData.notes.filter(note => note?.locked));
-    setMainTitle("Locked Notes");
-  };
-
-  const getAll = () => {
-    setNotes(allData.notes);
-    setMainTitle("All Notes");
-  };
-
-  const getTrash = () => {
-    setNotes(allData.notes.filter(note => note?.trashed));
-    setMainTitle("Trash");
-  };
-
-  const getToken = async () => {
-    try {
-      const tokenString = await AsyncStorage.getItem("authToken");
-      if (!tokenString) {
+      if (!db) {
+        //  Database must be initialized down the line
+        console.log("Database initialization failed inside useEffect");
         setLoading(false);
+        return;
       }
-      if (tokenString) {
-        setToken(tokenString);
+
+      setDb(db);
+
+      // BUILD TABLES IN DATABASE -----------
+      const SQLiteTableInitializer = await initializeSQLiteTables(db);
+
+      if (!SQLiteTableInitializer) {
+        // Must build new tables down the line
+        console.log("Databse table initilizer failed inside useEffect");
+        setLoading(false);
+        return;
       }
-    } catch (err) {
-      console.log(err);
-    }
+
+      // FIND EXISTING TOKEN ----------------
+      const token = await getToken();
+
+      if (token === null) {
+        // User will login and build new token
+        setLoading(false);
+        return;
+      }
+
+      setToken(token);
+
+      // TOKEN AND DB EXIST AT THIS POINT
+      // GRAB CACHED DATA --------------------
+      const { cachedUser, cachedFolders, cachedNotes } = await grabFromDb(db);
+
+      // IF USER DOES NOT EXIST IN CACHE DELETE TOKEN DATA AND FORCE LOGIN
+      // KEEP DB OPEN
+      if (!cachedUser) {
+        await resetAppStateAndForceLogin();
+        return;
+      }
+
+      // INITIALIZE STALE CACHE DATA TO STATE AND LOAD APP ------------
+      setPreferences(cachedUser);
+      setUser(cachedUser);
+      setFolders(cachedFolders);
+      setNotes(cachedNotes);
+      setLoading(false);
+
+      // GRAB SERVER DATA ---------
+      const serverData = await getFreshServerData(token);
+
+      if (!serverData) {
+        //  WHY WAS THERE NO GOOD SERVER DATA
+        // EITHER ERROR OR DATA FIELD MISSING
+        // WHAT TO DO THEN?????
+        await resetAppStateAndForceLogin();
+        return;
+      }
+
+      // UPDATE STATE WITH FRESH DATA FROM SERVER --------------
+      setAllData(serverData);
+      setFolders(serverData.folders);
+      setUser(serverData.user);
+      setLoading(false);
+
+      // UPDATE CACHE WITH TRUE SERVER DATA FOR NEXT TIME
+      const dataWasStored = await storeDataInLocalDb(serverData, db);
+
+      if (!dataWasStored) {
+        setTimeout(() => {
+          // TRY SAVE ATTEMPT ONE MORE TIME
+        }, 5000);
+      }
+    };
+
+    openDatabase();
+  }, []);
+
+  const resetAppStateAndForceLogin = async () => {
+    await removeToken();
+    setToken(false);
+    setLoading(false);
   };
 
-  const storeToken = async storedToken => {
-    try {
-      await AsyncStorage.setItem("authToken", storedToken);
-      setToken(storedToken);
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
-  const handleSignup = (username, email, password) => {
-    signupUser(username, email, password)
-      .then(res => {
-        const newNotifs = [
-          {
-            id: uuidv4(),
-            color: "#55ff55",
-            title: "Successful Signup!",
-            text: "Welcome, please login to access your account",
-            actions: [{ text: "close", func: () => setSystemNotifs([]) }]
-          }
-        ];
-        setSystemNotifs(newNotifs);
-        return true;
-      })
-      .catch(err => {
-        console.log(err);
-        const newNotifs = [
-          {
-            id: uuidv4(),
-            color: "#ff5555",
-            title: "Error Signing Up",
-            text:
-              err.response.data.message ||
-              "It looks like there might be an issue with your internet connection, please try to sign up again",
-            actions: [{ text: "close", func: () => setSystemNotifs([]) }]
-          }
-        ];
-        setSystemNotifs(newNotifs);
-        return false;
-      });
-  };
-
-  const handleLogin = async (username, email, password) => {
-    await loginUser(username, email, password)
-      .then(res => {
-        const newToken = res.data.data;
-        setToken(newToken);
-        storeToken(newToken);
-        const newNotifs = [
-          {
-            id: uuidv4(),
-            color: "#55ff55",
-            title: "Login Successful",
-            text: "Welcome back!",
-            actions: [{ text: "close", func: () => setSystemNotifs([]) }]
-          }
-        ];
-        setSystemNotifs(newNotifs);
-      })
-      .catch(err => {
-        const newNotifs = [
-          {
-            id: uuidv4(),
-            color: "#ff5555",
-            title: `Error ${type}`,
-            text: err.response.data.message,
-            actions: [{ text: "close", func: () => setSystemNotifs([]) }]
-          }
-        ];
-        setSystemNotifs(newNotifs);
-      });
-  };
-
-  const removeToken = async () => {
-    await AsyncStorage.removeItem("authToken");
-  };
-
-  const deleteDatabase = async () => {
-    try {
-      await db.closeAsync();
-      await SQLite.deleteDatabaseAsync("localstore");
-      console.log("Database deleted successfully.");
-    } catch (error) {
-      console.error("Error deleting database:", error);
-    }
-  };
-
-  const authenticateUser = async () => {
-    LocalAuthentication.authenticateAsync({})
-      .then(res => {
-        if (!res.success) {
-          if (tries > 2) {
-            const newNotifs = [
-              {
-                id: uuidv4(),
-                color: "#fde047",
-                title: "Last Attempt",
-                text: "You have attempted to unlock your notes 3 times. One more failed attempt and the app will close and you will be logged out for your security",
-                actions: [{ text: "close", func: () => setSystemNotifs([]) }]
-              }
-            ];
-            setSystemNotifs(newNotifs);
-          }
-          if (tries > 3) {
-            console.log("kill app");
-          }
-          authenticateUser();
-          setTries(prev => prev + 1);
-        }
-        if (res.success) {
-          return true;
-        }
-      })
-      .catch(err => {
-        console.log(err);
-      });
-  };
-
-  const setPreferences = async dbUser => {
+  const setPreferences = async (dbUser) => {
     const stringPrefs = dbUser?.preferences;
     if (stringPrefs) {
       const preferences = JSON.parse(dbUser.preferences);
@@ -321,7 +195,7 @@ const App = () => {
         on: preferences.theme.on,
         color: preferences.theme.color
           ? preferences.theme.color
-          : "bg-amber-300"
+          : "bg-amber-300",
       });
       if (preferences.view === true) {
         setView(true);
@@ -356,347 +230,166 @@ const App = () => {
     }
   };
 
-  const fetchFromDb = async () => {
+  const getFreshServerData = async (token) => {
     try {
-      const dbUser = await db.getFirstAsync(`SELECT * FROM user`);
-      const dbFolders = await db.getAllAsync(`SELECT * FROM folders`);
-      const dbNotes = await db.getAllAsync(`SELECT * FROM notes`);
+      const response = await getUserData();
 
-      if (!dbUser) {
-        console.log("No user in database");
-        // await deleteDatabase();
-        return { user: null, folders: [], notes: [] };
+      const data = response.data.data;
+
+      if (data) {
+        return data;
       }
 
-      setPreferences(dbUser);
-      const newAllData = { user: dbUser, folders: dbFolders, notes: dbNotes };
-      return newAllData;
+      return null;
     } catch (err) {
-      console.log("selecting data", err);
-      return { user: null, folders: [], notes: [] };
-    }
-  };
-
-  const createTables = async () => {
-    // await deleteDatabase();
-    // return;
-    try {
-      await db.execAsync(`
-        CREATE TABLE IF NOT EXISTS user (
-          userId INTEGER PRIMARY KEY NOT NULL, 
-          username TEXT NOT NULL, 
-          email TEXT NOT NULL, 
-          createdAt TEXT NOT NULL,
-          preferences TEXT NOT NULL
-          );
-        CREATE TABLE IF NOT EXISTS folders (
-          folderid INTEGER PRIMARY KEY NOT NULL, 
-          title TEXT NOT NULL, 
-          color TEXT NOT NULL, 
-          parentFolderId INTEGER
-          );
-        CREATE TABLE IF NOT EXISTS notes (
-          title TEXT NOT NULL, 
-          noteid INTEGER NOT NULL, 
-          locked BOOLEAN DEFAULT FALSE, 
-          htmlText TEXT, 
-          folderId INTEGER, 
-          createdAt TIMESTAMP NOT NULL, 
-          updated TIMESTAMP NOT NULL, 
-          trashed BOOLEAN
-          );
-      `);
-    } catch (err) {
-      console.log("Error creating tables inside sql database");
+      console.log("Error from server when fetching users data: ");
       console.log(err);
+      return null;
     }
   };
 
-  const storeDataInDb = async data => {
-    let tempDb = db;
-    if (!tempDb) {
-      tempDb = await generateDb();
+  const findLastFolderLocationAndRoute = () => {
+    let lastKnownLocation = location;
+
+    // APP HAS NOT OFFICIALLY INITIALIZED QUITE YET
+    if (!allData) {
+      lastKnownLocation = null;
     }
-    try {
-      const userToStore = data.userToStore;
-      const foldersToStore = data.foldersToStore;
-      const notesToStore = data.notesToStore;
-      const notesToRemove = data.notesToRemove;
-      const foldersToRemove = data.foldersToRemove;
-      if (userToStore) {
-        await storeUserInDb(tempDb, userToStore);
-      }
-      if (foldersToStore.length > 0) {
-        await storeFoldersInDb(tempDb, foldersToStore);
-      }
-      if (notesToStore.length > 0) {
-        await storeNotesInDb(tempDb, notesToStore);
-      }
-      if (notesToRemove.length > 0) {
-        removeNotesFromDb(tempDb, notesToRemove);
-      }
-      if (foldersToRemove.length > 0) {
-        removeFoldersFromDb(tempDb, foldersToRemove);
-      }
-    } catch (err) {
-      console.log("Storing new user data error: ", err);
+
+    // IF THE USER HAS OPT OUT OF SAVING LAST KNOWN FOLDER LOCATION THEN SET IT TO HOME/NULL
+    if (!saveLocation) {
+      lastKnownLocation = null;
     }
+
+    // SEARCH AND FIND USERS INFORMATION BASED ON FOLDER LOCATION
+    const theFolder = allData.folders.filter(
+      (fold) => fold.folderid === lastKnownLocation,
+    );
+    const subfolders = allData.folders.filter(
+      (fold) => fold.parentFolderId === location,
+    );
+    const nestedNotes = allData.notes.filter(
+      (aNote) => aNote.folderId === location,
+    );
+
+    // SET CURRENT FOLDER STATE
+    setNotes(nestedNotes);
+    setFolder(theFolder[0] ? theFolder[0] : null);
+    setFolders(subfolders);
+    setMainTitle(theFolder[0] ? theFolder[0].title : "Folders");
   };
 
-  const storeUserInDb = async (db, user) => {
-    console.log(
-      `Attempting to store user in local database. Checking if database exists or not`
-    );
-    console.log(db, user);
-    try {
-      await db.runAsync(
-        `
-    INSERT INTO user (userId, username, email, createdAt, preferences)
-    VALUES (?, ?, ?, ?, ?);
-   `,
-        user.userId,
-        user.username,
-        user.email,
-        user.createdAt,
-        JSON.stringify({
-          darkMode: darkMode,
-          theme: theme,
-          view: view,
-          order: order,
-          autoSave: autoSave,
-          appLock: appLock,
-          sort: sort,
-          saveLocation: true,
-          location: "null"
-        })
-      );
-    } catch (err) {
-      console.log("inserting user", err);
-    }
+  const getLocked = () => {
+    setNotes(allData.notes.filter((note) => note?.locked));
+    setMainTitle("Locked Notes");
   };
 
-  const storeFoldersInDb = async (db, folders) => {
-    try {
-      for (const folder of folders) {
-        await db.runAsync(
-          `
-    INSERT INTO folders (folderid, title, color, parentFolderId)
-    VALUES (?, ?, ?, ?);
-   `,
-          folder.folderid,
-          folder.title,
-          folder.color,
-          folder.parentFolderId
-        );
-      }
-    } catch (err) {
-      console.log("inserting folders", err);
-    }
+  const getAll = () => {
+    setNotes(allData.notes);
+    setMainTitle("All Notes");
   };
 
-  const storeNotesInDb = async (db, notes) => {
-    try {
-      for (const note of notes) {
-        await db.runAsync(
-          `
-    INSERT INTO notes (noteid, title, locked, htmlText, folderId, createdAt,
-    updated, trashed)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-   `,
-          note.noteid,
-          note.title,
-          note.locked || note.locked === 1 ? true : false,
-          note.htmlText,
-          note.folderId,
-          note.createdAt,
-          note.updated,
-          note.trashed
-        );
-      }
-    } catch (err) {
-      console.log("inserting notes", err);
-    }
+  const getTrash = () => {
+    setNotes(allData.notes.filter((note) => note?.trashed));
+    setMainTitle("Trash");
   };
 
-  const removeFoldersFromDb = async (db, foldersToRemove) => {
-    try {
-      foldersToRemove.forEach(async fold => {
-        await db.runAsync(
-          `
-            DELETE FROM folders WHERE folderid = $deleteid
-          `,
-          { $deleteId: fold.folderid }
-        );
-      });
-    } catch (err) {
-      console.log(`Error removing folder from local DB. Error: ${err}`);
-    }
-  };
-
-  const removeNotesFromDb = async (db, notesToRemove) => {
-    try {
-      notesToRemove.forEach(async note => {
-        await db.runAsync(
-          `
-            DELETE FROM notes WHERE noteid = $deleteid
-          `,
-          { $deleteId: note.noteid }
-        );
-      });
-    } catch (err) {
-      console.log(`Errors removing notes from localDB. Error: ${err}`);
-    }
-  };
-
-  const filterData = (
-    serverFolders = [],
-    serverNotes = [],
-    serverUser,
-    storedData
-  ) => {
-    const hasLocal =
-      storedData?.folders && storedData?.notes && storedData?.user;
-
-    if (!hasLocal) {
-      return {
-        foldersToStore: serverFolders,
-        notesToStore: serverNotes,
-        userToStore: serverUser,
-        foldersToRemove: [],
-        notesToRemove: []
-      };
-    }
-
-    const norm = v => String(v);
-
-    const serverFolderById = new Map(
-      serverFolders.map(f => [norm(f.folderid), f])
-    );
-    const serverNoteById = new Map(serverNotes.map(n => [norm(n.noteid), n]));
-
-    const localFolderIds = new Set(
-      storedData.folders.map(f => norm(f.folderid))
-    );
-    const localNoteIds = new Set(storedData.notes.map(n => norm(n.noteid)));
-
-    // Remove: local has it, server does not
-    const foldersToRemove = storedData.folders.filter(
-      f => !serverFolderById.has(norm(f.folderid))
-    );
-
-    const notesToRemove = storedData.notes.filter(
-      n => !serverNoteById.has(norm(n.noteid)) // <-- FIXED
-    );
-
-    // Add: server has it, local does not
-    const foldersToAdd = serverFolders.filter(
-      f => !localFolderIds.has(norm(f.folderid))
-    );
-
-    const notesToAdd = serverNotes.filter(
-      n => !localNoteIds.has(norm(n.noteid))
-    );
-
-    // Update: same ID exists, but changed
-    const foldersToUpdate = storedData.folders
-      .map(local => {
-        const server = serverFolderById.get(norm(local.folderid));
-        if (!server) return null;
-
-        // Prefer updatedAt/version if you have it
-        if (
-          server.updatedAt &&
-          local.updatedAt &&
-          server.updatedAt !== local.updatedAt
-        )
-          return server;
-
-        // Fallback: cheap stringify compare (ok for small objects)
-        if (JSON.stringify(server) !== JSON.stringify(local)) return server;
-
-        return null;
+  const handleSignup = (username, email, password) => {
+    signupUser(username, email, password)
+      .then((res) => {
+        const newNotifs = [
+          {
+            id: uuidv4(),
+            color: "#55ff55",
+            title: "Successful Signup!",
+            text: "Welcome, please login to access your account",
+            actions: [{ text: "close", func: () => setSystemNotifs([]) }],
+          },
+        ];
+        setSystemNotifs(newNotifs);
+        return true;
       })
-      .filter(Boolean);
-
-    const notesToUpdate = storedData.notes
-      .map(local => {
-        const server = serverNoteById.get(norm(local.noteid));
-        if (!server) return null;
-
-        if (
-          server.updatedAt &&
-          local.updatedAt &&
-          server.updatedAt !== local.updatedAt
-        )
-          return server;
-        if (JSON.stringify(server) !== JSON.stringify(local)) return server;
-
-        return null;
-      })
-      .filter(Boolean);
-
-    const foldersToStore = [...foldersToAdd, ...foldersToUpdate];
-    const notesToStore = [...notesToAdd, ...notesToUpdate];
-
-    const userToStore =
-      serverUser?.userId === storedData.user?.userId ? null : serverUser;
-
-    return {
-      foldersToStore,
-      notesToStore,
-      userToStore,
-      foldersToRemove,
-      notesToRemove
-    };
-  };
-
-  const grabFromDb = async () => {
-    // const storedData = await fetchFromDb();
-    // if (
-    //   storedData.user &&
-    //   storedData.folders.length > 0 &&
-    //   storedData.notes.length > 0
-    // ) {
-    //   setAllData(storedData);
-    //   setUser(storedData.user);
-    //   setLoading(false);
-    // } else {
-    //   console.log(
-    //     "Missing user and folders and notes. Something went wrong when pulling from the local sqlite db",
-    //   );
-    // }
-    // getData(storedData);
-    getData(null);
-  };
-
-  const getData = (storedData = null) => {
-    getUserData(token)
-      .then(async response => {
-        const data = response.data.data;
-        // const dataToStore = filterData(
-        //   data.folders,
-        //   data.notes,
-        //   data.user,
-        //   storedData,
-        // );
-        setAllData(data);
-        setFolders(data.folders);
-        setUser(data.user);
-        setLoading(false);
-        // await storeDataInDb(dataToStore);
-      })
-      .catch(err => {
+      .catch((err) => {
         console.log(err);
-        setToken(null);
-        setUser(null);
-        setLoading(false);
-        if (err.response?.status === 401) {
-          removeToken();
-        }
+        const newNotifs = [
+          {
+            id: uuidv4(),
+            color: "#ff5555",
+            title: "Error Signing Up",
+            text:
+              err.response.data.message ||
+              "It looks like there might be an issue with your internet connection, please try to sign up again",
+            actions: [{ text: "close", func: () => setSystemNotifs([]) }],
+          },
+        ];
+        setSystemNotifs(newNotifs);
+        return false;
       });
   };
 
-  const setNewLocation = id => {
+  const handleLogin = async (username, email, password) => {
+    await loginUser(username, email, password)
+      .then((res) => {
+        const newToken = res.data.data;
+        setToken(newToken);
+        storeToken(newToken);
+        const newNotifs = [
+          {
+            id: uuidv4(),
+            color: "#55ff55",
+            title: "Login Successful",
+            text: "Welcome back!",
+            actions: [{ text: "close", func: () => setSystemNotifs([]) }],
+          },
+        ];
+        setSystemNotifs(newNotifs);
+      })
+      .catch((err) => {
+        const newNotifs = [
+          {
+            id: uuidv4(),
+            color: "#ff5555",
+            title: `Error ${type}`,
+            text: err.response.data.message,
+            actions: [{ text: "close", func: () => setSystemNotifs([]) }],
+          },
+        ];
+        setSystemNotifs(newNotifs);
+      });
+  };
+
+  const authenticateUser = async () => {
+    LocalAuthentication.authenticateAsync({})
+      .then((res) => {
+        if (!res.success) {
+          if (tries > 2) {
+            const newNotifs = [
+              {
+                id: uuidv4(),
+                color: "#fde047",
+                title: "Last Attempt",
+                text: "You have attempted to unlock your notes 3 times. One more failed attempt and the app will close and you will be logged out for your security",
+                actions: [{ text: "close", func: () => setSystemNotifs([]) }],
+              },
+            ];
+            setSystemNotifs(newNotifs);
+          }
+          if (tries > 3) {
+            console.log("kill app");
+          }
+          authenticateUser();
+          setTries((prev) => prev + 1);
+        }
+        if (res.success) {
+          return true;
+        }
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  };
+
+  const setNewLocation = (id) => {
     const newPreferences = {
       order: order,
       appLock: appLock,
@@ -706,14 +399,14 @@ const App = () => {
       view: view,
       sort: sort,
       saveLocation: saveLocation,
-      location: id
+      location: id,
     };
     try {
       db.runAsync(
         `
         UPDATE user SET preferences = ? WHERE userId = ?
         `,
-        [JSON.stringify(newPreferences), user.userId]
+        [JSON.stringify(newPreferences), user.userId],
       );
     } catch (err) {
       console.log(err);
@@ -765,7 +458,7 @@ const App = () => {
     }
     if (parentId !== null) {
       const parentFolder = allData.folders.filter(
-        fold => fold.folderid === parentId
+        (fold) => fold.folderid === parentId,
       )[0];
       setFolder(parentFolder);
       if (saveLocation) {
@@ -790,7 +483,7 @@ const App = () => {
           <View
             style={[
               styles.container,
-              { backgroundColor: darkMode ? "#000" : "#eee" }
+              { backgroundColor: darkMode ? "#000" : "#eee" },
             ]}
           >
             <StatusBar style={darkMode ? "light" : "dark"} />
@@ -928,7 +621,6 @@ const App = () => {
                   setMenuOpen={setMenuOpen}
                   setAllData={setAllData}
                   setUser={setUser}
-                  deleteDatabase={deleteDatabase}
                   view={view}
                   setView={setView}
                   order={order}
@@ -960,7 +652,7 @@ const App = () => {
                 <ScrollView
                   style={[
                     styles.pickFolder,
-                    { backgroundColor: darkMode ? "#222" : "#eee" }
+                    { backgroundColor: darkMode ? "#222" : "#eee" },
                   ]}
                 >
                   <View style={styles.tree}>
@@ -979,7 +671,7 @@ const App = () => {
                     <Text
                       style={[
                         darkMode ? styles.white : styles.black,
-                        { marginTop: 10 }
+                        { marginTop: 10 },
                       ]}
                     >
                       {open.item.title} &rarr;{" "}
@@ -990,7 +682,7 @@ const App = () => {
                       onPress={() => {
                         setSelectedFolder({
                           folderid: null,
-                          title: "Top level"
+                          title: "Top level",
                         });
                       }}
                     >
@@ -1001,8 +693,8 @@ const App = () => {
                       style={[
                         styles.saveFolder,
                         {
-                          backgroundColor: theme.on ? theme.color : "#fcd34d"
-                        }
+                          backgroundColor: theme.on ? theme.color : "#fcd34d",
+                        },
                       ]}
                     >
                       <Text>Save</Text>
@@ -1031,19 +723,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 25,
-    paddingTop: 25
+    paddingTop: 25,
   },
   text: {
     color: "#fff",
-    textAlign: "center"
+    textAlign: "center",
   },
   white: {
     color: "#fff",
-    textAlign: "center"
+    textAlign: "center",
   },
   black: {
     color: "#000",
-    textAlign: "center"
+    textAlign: "center",
   },
   backdrop: {
     position: "absolute",
@@ -1051,10 +743,10 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
-    backgroundColor: "rgba(0,0,0,0.4)"
+    backgroundColor: "rgba(0,0,0,0.4)",
   },
   tree: {
-    marginTop: 40
+    marginTop: 40,
   },
   pickFolder: {
     position: "absolute",
@@ -1065,7 +757,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     elevation: 2,
     paddingVertical: 0,
-    paddingHorizontal: 10
+    paddingHorizontal: 10,
   },
   topLevel: {
     marginTop: 20,
@@ -1074,14 +766,14 @@ const styles = StyleSheet.create({
     borderColor: "#fff",
     padding: 8,
     borderRadius: 10,
-    elevation: 2
+    elevation: 2,
   },
   saveFolder: {
     marginVertical: 10,
     padding: 8,
     borderRadius: 10,
-    elevation: 2
-  }
+    elevation: 2,
+  },
 });
 
 export default App;
