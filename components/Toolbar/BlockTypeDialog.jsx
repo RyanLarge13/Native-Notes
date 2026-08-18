@@ -5,7 +5,8 @@ import { FontAwesome5 } from "@expo/vector-icons";
 const BLOCK_TYPES = [
   {
     label: "Title",
-    value: "h1",
+    value: 1,
+    name: "h1",
     type: "heading",
     description: "Main note heading",
     fontSize: 22,
@@ -14,6 +15,7 @@ const BLOCK_TYPES = [
   {
     label: "Normal",
     value: "p",
+    name: "p",
     type: "paragraph",
     description: "Regular body text",
     fontSize: 15,
@@ -21,7 +23,8 @@ const BLOCK_TYPES = [
   },
   {
     label: "Heading 1",
-    value: "h2",
+    value: 2,
+    name: "h2",
     type: "heading",
     description: "Primary section",
     fontSize: 19,
@@ -29,7 +32,8 @@ const BLOCK_TYPES = [
   },
   {
     label: "Heading 2",
-    value: "h3",
+    value: 3,
+    name: "h3",
     type: "heading",
     description: "Secondary section",
     fontSize: 17,
@@ -37,7 +41,8 @@ const BLOCK_TYPES = [
   },
   {
     label: "Heading 3",
-    value: "h4",
+    value: 4,
+    name: "h4",
     type: "heading",
     description: "Small section",
     fontSize: 15,
@@ -74,6 +79,7 @@ const BlockTypeDialog = ({
   const currentLabel = mapBlockTypeToString(currentBlock);
 
   const selectBlockType = (type, value) => {
+    console.log(type, value);
     sendEditorCommand(type, value);
 
     setBlockTypeDialogOpen(false);
@@ -135,7 +141,7 @@ const BlockTypeDialog = ({
 
       <View style={styles.options}>
         {BLOCK_TYPES.map((item) => {
-          const selected = currentBlock === item.value;
+          const selected = currentBlock === item.name;
 
           return (
             <Pressable

@@ -4,8 +4,14 @@ import { FontAwesome5 } from "@expo/vector-icons";
 
 const FONT_FAMILIES = [
   {
-    label: "Default",
-    value: "sans-serif",
+    label: "System Default",
+    value: "System Default",
+    fontFamily:
+      "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
+  },
+  {
+    label: "Sans Serif",
+    value: "Sans Serif",
     fontFamily: undefined,
   },
   {

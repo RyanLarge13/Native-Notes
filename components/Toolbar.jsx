@@ -140,11 +140,11 @@ const Toolbar = ({ webviewRef, darkMode, theme, formatState }) => {
       case "h1":
         return "Title";
       case "h2":
-        return "H2";
+        return "H1";
       case "h3":
-        return "H3";
+        return "H2";
       case "h4":
-        return "H4";
+        return "H3";
       default:
         blockType;
     }
@@ -322,6 +322,7 @@ const Toolbar = ({ webviewRef, darkMode, theme, formatState }) => {
               icon="link"
               command="createLink"
               active={linkDialogShow}
+              onPress={() => setLinkDialogShow((prev) => !prev)}
             />
             <ToolButton
               icon="quote-right"
@@ -445,6 +446,11 @@ const Toolbar = ({ webviewRef, darkMode, theme, formatState }) => {
             onPress={() => setBlockTypeDialogOpen((prev) => !prev)}
             customStyles={{ width: 120 }}
           />
+
+          <Divider />
+
+          {/* QUICK HEADING ACTIONS */}
+
           <ToolButton
             label={"H1"}
             active={formatState.blockType === "h2"}
