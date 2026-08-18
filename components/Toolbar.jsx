@@ -188,7 +188,7 @@ const Toolbar = ({ webviewRef, darkMode, theme, formatState }) => {
               <ToolButton
                 icon="strikethrough"
                 command="strikeThrough"
-                active={formatState.strikethrough}
+                active={formatState.strikeThrough}
               />
               <ToolButton icon="eraser" command="clearFormatting" />
             </View>
@@ -434,6 +434,7 @@ const Toolbar = ({ webviewRef, darkMode, theme, formatState }) => {
               icon="highlighter"
               active={fontHighlight}
               onPress={() => togglePanel("highlight")}
+              customStyles={{ backgroundColor: formatState.backgroundColor }}
             />
           </View>
 
