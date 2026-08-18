@@ -248,6 +248,29 @@ const App = () => {
     }
   };
 
+  const updatePageState = (nextFolderState) => {
+    // SEARCH AND FIND USERS INFORMATION BASED ON FOLDER LOCATION
+    const theFolder = allData.folders.filter(
+      (fold) => fold.folderid === nextFolderState,
+    );
+    const subfolders = allData.folders.filter(
+      (fold) => fold.parentFolderId === location,
+    );
+    const nestedNotes = allData.notes.filter(
+      (aNote) => aNote.folderId === location,
+    );
+
+    // SET CURRENT PAGE STATE
+    setNotes(nestedNotes);
+    setFolder(theFolder[0] ? theFolder[0] : null);
+    setFolders(subfolders);
+    setMainTitle(theFolder[0] ? theFolder[0].title : "Folders");
+
+    if (saveLocation) {
+      setNewLocation(theFolder[0] ? theFolder[0].folderid : null);
+    }
+  };
+
   const findLastFolderLocationAndRoute = () => {
     let lastKnownLocation = location;
 
@@ -261,26 +284,7 @@ const App = () => {
       lastKnownLocation = null;
     }
 
-    // SEARCH AND FIND USERS INFORMATION BASED ON FOLDER LOCATION
-    const theFolder = allData.folders.filter(
-      (fold) => fold.folderid === lastKnownLocation,
-    );
-    const subfolders = allData.folders.filter(
-      (fold) => fold.parentFolderId === location,
-    );
-    const nestedNotes = allData.notes.filter(
-      (aNote) => aNote.folderId === location,
-    );
-
-    // SET CURRENT FOLDER STATE
-    setNotes(nestedNotes);
-    setFolder(theFolder[0] ? theFolder[0] : null);
-    setFolders(subfolders);
-    setMainTitle(theFolder[0] ? theFolder[0].title : "Folders");
-
-    if (saveLocation) {
-      setNewLocation(theFolder[0] ? theFolder[0].folderid : null);
-    }
+    updatePageState(lastKnownLocation);
   };
 
   const getLocked = () => {
@@ -406,17 +410,22 @@ const App = () => {
       location: id,
     };
     try {
-      db.runAsync(
-        `
-        UPDATE user SET preferences = ? WHERE userId = ?
-        `,
-        [JSON.stringify(newPreferences), user.userId],
-      );
+      if (db) {
+        db.runAsync(
+          `
+          UPDATE user SET preferences = ? WHERE userId = ?
+          `,
+          [JSON.stringify(newPreferences), user.userId],
+        );
+      }
+
+      setLocation(id);
     } catch (err) {
       console.log(err);
     }
   };
 
+  // HANDLE NAVIGATING BACK IN APP ---------------
   const goBack = () => {
     // DO NOT NEED TO CHECK IF NOTE EXISTS IN THIS METHOD. /states/NewNote.js already handles "goBack"
 
@@ -451,8 +460,8 @@ const App = () => {
       setSystemFolder("main");
       return true;
     }
-
     // ALL MODALS ARE NOW CLOSED AND USER IS HOME
+
     const parentId = folder ? folder.parentFolderId : null;
 
     // CLOSE THE APPLICATION IF USER IS ALL THE WAY HOME AND REQUESTING BACK HANDLER
