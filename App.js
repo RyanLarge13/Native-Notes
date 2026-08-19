@@ -76,7 +76,7 @@ const App = () => {
 
     switch (systemFolder) {
       case "main":
-        findLastFolderLocationAndRoute();
+        findLastFolderLocationAndRoute(location);
         return;
       case "locked":
         getLocked();
@@ -140,10 +140,24 @@ const App = () => {
       }
 
       // INITIALIZE STALE CACHE DATA TO STATE AND LOAD APP ------------
-      setPreferences(cachedUser);
+      const currentPreferences = await setPreferences(cachedUser);
+      const cachedAllData = {
+        user: cachedUser,
+        folders: cachedFolders,
+        notes: cachedNotes,
+      };
+      setAllData(cachedAllData);
       setUser(cachedUser);
       setFolders(cachedFolders);
       setNotes(cachedNotes);
+
+      // MAKE SURE APP LOADS INTO LAST KNOWN LOCATION
+      if (currentPreferences?.location) {
+        findLastFolderLocationAndRoute(
+          currentPreferences.location,
+          cachedAllData,
+        );
+      }
       setLoading(false);
 
       // GRAB SERVER DATA ---------
@@ -153,14 +167,17 @@ const App = () => {
         //  WHY WAS THERE NO GOOD SERVER DATA
         // EITHER ERROR OR DATA FIELD MISSING
         // WHAT TO DO THEN?????
+        // UPDATE RESETAPPSTATEANDFORCELOGIN METHOD
         await resetAppStateAndForceLogin();
         return;
       }
 
       // UPDATE STATE WITH FRESH DATA FROM SERVER --------------
       setAllData(serverData);
-      setFolders(serverData.folders);
       setUser(serverData.user);
+
+      updatePageState(location, serverData);
+
       setLoading(false);
 
       // UPDATE CACHE WITH TRUE SERVER DATA FOR NEXT TIME
@@ -177,62 +194,54 @@ const App = () => {
   }, []);
 
   const resetAppStateAndForceLogin = async () => {
-    await removeToken();
-    setToken(false);
+    // await removeToken();
+    // setToken(false);
     setLoading(false);
   };
 
   const setPreferences = async (dbUser) => {
-    const stringPrefs = dbUser?.preferences;
-    if (stringPrefs) {
-      const preferences = JSON.parse(dbUser.preferences);
-      if (preferences.darkMode !== null || preferences.darkMode !== undefined) {
-        setDarkMode(preferences.darkMode);
-      } else {
-        setDarkMode(true);
-      }
-      setTheme({
-        on: preferences.theme.on,
-        color: preferences.theme.color
-          ? preferences.theme.color
-          : "bg-amber-300",
-      });
-      if (preferences.view === true) {
-        setView(true);
-      } else {
-        setView(false);
-      }
-      if (preferences.autoSave === true) {
-        setAutoSave(preferences.autoSave);
-      } else {
-        setAutoSave(false);
-      }
-      if (preferences.appLock === true) {
-        await authenticateUser();
-        setAppLock(true);
-      } else {
-        setAppLock(false);
-      }
-      if (preferences.order === true) {
-        setOrder(true);
-      } else {
-        setOrder(false);
-      }
-      if (preferences.sort) {
-        setSort(preferences.sort);
-      } else {
-        setSort("Title");
-      }
-      setSaveLocation(preferences.saveLocation);
-      setLocation(preferences?.location);
-    } else {
+    if (!dbUser?.preferences) {
       console.log("No preferences");
+      return null;
+    }
+
+    try {
+      const preferences = JSON.parse(dbUser.preferences);
+
+      setDarkMode(preferences.darkMode ?? true);
+
+      setTheme({
+        on: preferences.theme?.on ?? false,
+        color: preferences.theme?.color ?? "bg-amber-300",
+      });
+
+      setView(preferences.view ?? false);
+      setAutoSave(preferences.autoSave ?? false);
+      setOrder(preferences.order ?? false);
+      setSort(preferences.sort ?? "Title");
+      setSaveLocation(preferences.saveLocation ?? true);
+      setLocation(preferences.location ?? null);
+
+      if (preferences.appLock) {
+        const authenticated = await authenticateUser();
+
+        if (!authenticated) {
+          return null;
+        }
+      }
+
+      setAppLock(preferences.appLock ?? false);
+
+      return preferences;
+    } catch (err) {
+      console.error("Failed to load user preferences:", err);
+      return null;
     }
   };
 
   const getFreshServerData = async (token) => {
     try {
-      const response = await getUserData();
+      const response = await getUserData(token);
 
       const data = response.data.data;
 
@@ -248,17 +257,19 @@ const App = () => {
     }
   };
 
-  const updatePageState = (nextFolderState) => {
+  const updatePageState = (nextFolderState, data) => {
     // SEARCH AND FIND USERS INFORMATION BASED ON FOLDER LOCATION
-    const theFolder = allData.folders.filter(
+    const theFolder = data.folders.filter(
       (fold) => fold.folderid === nextFolderState,
     );
-    const subfolders = allData.folders.filter(
-      (fold) => fold.parentFolderId === location,
+
+    const folderId = folderFound?.folderid ?? null;
+
+    const subfolders = data.folders.filter(
+      (fold) => fold.parentFolderId === folderId,
     );
-    const nestedNotes = allData.notes.filter(
-      (aNote) => aNote.folderId === location,
-    );
+
+    const nestedNotes = data.notes.filter((note) => note.folderId === folderId);
 
     // SET CURRENT PAGE STATE
     setNotes(nestedNotes);
@@ -271,11 +282,11 @@ const App = () => {
     }
   };
 
-  const findLastFolderLocationAndRoute = () => {
-    let lastKnownLocation = location;
+  const findLastFolderLocationAndRoute = (currentLocation, data = allData) => {
+    let lastKnownLocation = currentLocation;
 
     // APP HAS NOT OFFICIALLY INITIALIZED QUITE YET
-    if (!allData) {
+    if (!data) {
       lastKnownLocation = null;
     }
 
@@ -284,7 +295,7 @@ const App = () => {
       lastKnownLocation = null;
     }
 
-    updatePageState(lastKnownLocation);
+    updatePageState(lastKnownLocation, data);
   };
 
   const getLocked = () => {
@@ -357,8 +368,9 @@ const App = () => {
           {
             id: uuidv4(),
             color: "#ff5555",
-            title: `Error ${type}`,
-            text: err.response.data.message,
+            title: "Login Error",
+            text:
+              err.response?.data?.message ?? "Unable to connect to the server.",
             actions: [{ text: "close", func: () => setSystemNotifs([]) }],
           },
         ];
@@ -391,9 +403,11 @@ const App = () => {
         if (res.success) {
           return true;
         }
+        return false;
       })
       .catch((err) => {
         console.log(err);
+        return false;
       });
   };
 
@@ -471,9 +485,7 @@ const App = () => {
 
     // USER IS NAVIGATING BACK TO MAIN ENTRY
     if (parentId === null) {
-      setLocation(null);
-      setNewLocation(null);
-      setFolder(null);
+      updatePageState(null);
       return true;
     }
 
@@ -482,9 +494,7 @@ const App = () => {
       const parentFolder = allData.folders.filter(
         (fold) => fold.folderid === parentId,
       )[0];
-      setLocation(parentFolder.folderid);
-      setNewLocation(parentFolder.folderid);
-      setFolder(parentFolder);
+      updatePageState(parentFolder.folderid);
       return true;
     }
   };
@@ -718,6 +728,7 @@ const App = () => {
             ) : null}
             {systemNotifs.map((notif, index) => (
               <SystemNotif
+                key={notif.id}
                 setSystemNotifs={setSystemNotifs}
                 systemNotifs={systemNotifs}
                 notif={notif}
