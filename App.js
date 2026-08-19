@@ -26,7 +26,7 @@ import { v4 as uuidv4 } from "uuid";
 import {
   initializeSQLiteTables,
   openDB,
-  storeDataInLocalDb,
+  replaceLocalCache,
 } from "./utils/sqLite";
 import { getToken } from "./utils/asyncStorage";
 
@@ -130,7 +130,11 @@ const App = () => {
 
       // TOKEN AND DB EXIST AT THIS POINT
       // GRAB CACHED DATA --------------------
-      const { cachedUser, cachedFolders, cachedNotes } = await grabFromDb(db);
+      const {
+        cachedUser,
+        cachedFolders = [],
+        cachedNotes = [],
+      } = await grabFromDb(db);
 
       // IF USER DOES NOT EXIST IN CACHE DELETE TOKEN DATA AND FORCE LOGIN
       // KEEP DB OPEN
@@ -181,7 +185,11 @@ const App = () => {
       setLoading(false);
 
       // UPDATE CACHE WITH TRUE SERVER DATA FOR NEXT TIME
-      const dataWasStored = await storeDataInLocalDb(serverData, db);
+      const dataWasStored = await replaceLocalCache(
+        serverData,
+        db,
+        cachedUser.preferences,
+      );
 
       if (!dataWasStored) {
         setTimeout(() => {

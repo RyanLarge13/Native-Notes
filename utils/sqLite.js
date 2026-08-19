@@ -1,6 +1,20 @@
 import * as SQLite from "expo-sqlite";
 
 const STORE_NAME = "localstore";
+const DEFAULT_PREFERENCES = {
+  darkMode: true,
+  theme: {
+    on: false,
+    color: "bg-amber-300",
+  },
+  view: false,
+  order: false,
+  autoSave: false,
+  appLock: false,
+  sort: "Title",
+  saveLocation: true,
+  location: null,
+};
 
 export const openDB = async () => {
   try {
@@ -35,7 +49,7 @@ export const initializeSQLiteTables = async (db) => {
           );
         CREATE TABLE IF NOT EXISTS notes (
           title TEXT NOT NULL, 
-          noteid INTEGER NOT NULL, 
+          noteid INTEGER PRIMARY KEY NOT NULL, 
           locked BOOLEAN DEFAULT FALSE, 
           htmlText TEXT, 
           folderId INTEGER, 
@@ -81,25 +95,39 @@ export const grabFromDatabase = async (db) => {
   }
 };
 
-export const storeDataInLocalDb = async (data, db) => {
-  try {
-    const { user, folders, notes } = data;
+export const replaceLocalCache = async (
+  data,
+  db,
+  cachedPreferences = DEFAULT_PREFERENCES,
+) => {
+  if (!db || !data?.user) {
+    console.log("Invalid database or server data");
+    return false;
+  }
 
-    await storeUserInDb(db, user);
-    await storeFoldersInDb(db, folders);
-    await storeNotesInDb(db, notesToStore);
+  const { user, folders = [], notes = [] } = data;
+
+  try {
+    await db.withTransactionAsync(async () => {
+      // Remove old cached snapshot
+      await db.runAsync("DELETE FROM notes");
+      await db.runAsync("DELETE FROM folders");
+      await db.runAsync("DELETE FROM user");
+
+      // Store fresh server snapshot
+      await storeUserInDb(db, user, cachedPreferences);
+      await storeFoldersInDb(db, folders);
+      await storeNotesInDb(db, notes);
+    });
 
     return true;
   } catch (err) {
-    console.log(
-      "Error storing user, folder, or notes in local SQLite db inside StoreDataInDb: ",
-    );
-    console.log(err);
+    console.log("Error replacing local SQLite cache:", err);
     return false;
   }
 };
 
-const storeUserInDb = async (db, user) => {
+const storeUserInDb = async (db, user, cachedPreferences) => {
   try {
     await db.runAsync(
       `
@@ -110,17 +138,7 @@ const storeUserInDb = async (db, user) => {
       user.username,
       user.email,
       user.createdAt,
-      JSON.stringify({
-        darkMode: darkMode,
-        theme: theme,
-        view: view,
-        order: order,
-        autoSave: autoSave,
-        appLock: appLock,
-        sort: sort,
-        saveLocation: true,
-        location: "null",
-      }),
+      JSON.stringify(cachedPreferences),
     );
   } catch (err) {
     console.log("inserting user", err);
@@ -200,7 +218,7 @@ export const removeNotesFromDb = async (db, notesToRemove) => {
   }
 };
 
-export const deleteDatabase = async () => {
+export const deleteDatabase = async (db) => {
   try {
     await db.closeAsync();
     await SQLite.deleteDatabaseAsync("localstore");
