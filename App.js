@@ -140,7 +140,7 @@ const App = () => {
       }
 
       // INITIALIZE STALE CACHE DATA TO STATE AND LOAD APP ------------
-      const currentPreferences = await setPreferences(cachedUser);
+      const currentPreferences = await applyPreferences(cachedUser);
       const cachedAllData = {
         user: cachedUser,
         folders: cachedFolders,
@@ -199,7 +199,7 @@ const App = () => {
     setLoading(false);
   };
 
-  const setPreferences = async (dbUser) => {
+  const applyPreferences = async (dbUser) => {
     if (!dbUser?.preferences) {
       console.log("No preferences");
       return null;
