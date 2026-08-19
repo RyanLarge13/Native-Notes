@@ -10,8 +10,16 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import Spinner from "react-native-loading-spinner-overlay";
 import { useNavigate } from "react-router-native";
+import { loginUser } from "../utils/api";
+import { storeToken } from "../utils/asyncStorage";
+import { v4 as uuidv4 } from "uuid";
 
-const Login = ({ handleLogin }) => {
+const Login = ({
+  setLoading,
+  setToken,
+  setSystemNotifs,
+  findLastFolderLocationAndRoute,
+}) => {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,6 +27,46 @@ const Login = ({ handleLogin }) => {
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
+
+  const handleLogin = async () => {
+    // DO NOT NEED TO UPDATE CACHE HERE
+    try {
+      setLoading(true);
+      const response = await loginUser(username, email, password);
+
+      const newToken = response.data.data;
+      setToken(newToken);
+      storeToken(newToken);
+      const newNotifs = [
+        {
+          id: uuidv4(),
+          color: "#55ff55",
+          title: "Login Successful",
+          text: "Welcome back!",
+          actions: [{ text: "close", func: () => setSystemNotifs([]) }],
+        },
+      ];
+      setSystemNotifs(newNotifs);
+
+      findLastFolderLocationAndRoute(null);
+    } catch (err) {
+      const newNotifs = [
+        {
+          id: uuidv4(),
+          color: "#ff5555",
+          title: "Login Error",
+          text:
+            err.response?.data?.message ?? "Unable to connect to the server.",
+          actions: [{ text: "close", func: () => setSystemNotifs([]) }],
+        },
+      ];
+      setSystemNotifs(newNotifs);
+      console.log("Error logging in user inside handleLogin: ");
+      console.log(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <>

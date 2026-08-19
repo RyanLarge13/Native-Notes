@@ -11,8 +11,10 @@ import {
 import { useNavigate } from "react-router-native";
 import { Ionicons } from "@expo/vector-icons";
 import Spinner from "react-native-loading-spinner-overlay";
+import { signupUser } from "../utils/api";
+import { v4 as uuidv4 } from "uuid";
 
-const Signup = ({ handleSignup }) => {
+const Signup = ({ setLoading, setSystemNotifs }) => {
   const [loading, setLoading] = useState(false);
   const [passwordShow, setPasswordShow] = useState(true);
   const [username, setUsername] = useState("");
@@ -21,6 +23,43 @@ const Signup = ({ handleSignup }) => {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const navigate = useNavigate();
+
+  const handleSignup = async () => {
+    try {
+      setLoading(true);
+      await signupUser(username, email, password);
+
+      const newNotifs = [
+        {
+          id: uuidv4(),
+          color: "#55ff55",
+          title: "Successful Signup!",
+          text: "Welcome, please login to access your account",
+          actions: [{ text: "close", func: () => setSystemNotifs([]) }],
+        },
+      ];
+      setSystemNotifs(newNotifs);
+
+      navigate("/");
+    } catch (err) {
+      const newNotifs = [
+        {
+          id: uuidv4(),
+          color: "#ff5555",
+          title: "Error Signing Up",
+          text:
+            err.response.data.message ||
+            "It looks like there might be an issue with your internet connection, please try to sign up again",
+          actions: [{ text: "close", func: () => setSystemNotifs([]) }],
+        },
+      ];
+      setSystemNotifs(newNotifs);
+      console.log("Error signing up user inside handleSignup: ");
+      console.log(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <>
