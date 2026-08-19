@@ -15,10 +15,11 @@ import { storeToken } from "../utils/asyncStorage";
 import { v4 as uuidv4 } from "uuid";
 
 const Login = ({
-  setLoading,
   setToken,
+  setUser,
   setSystemNotifs,
   findLastFolderLocationAndRoute,
+  continueServerWork,
 }) => {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -36,7 +37,10 @@ const Login = ({
 
       const newToken = response.data.data;
       setToken(newToken);
-      storeToken(newToken);
+      await storeToken(newToken);
+
+      continueServerWork(newToken);
+
       const newNotifs = [
         {
           id: uuidv4(),

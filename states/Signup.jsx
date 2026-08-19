@@ -14,7 +14,7 @@ import Spinner from "react-native-loading-spinner-overlay";
 import { signupUser } from "../utils/api";
 import { v4 as uuidv4 } from "uuid";
 
-const Signup = ({ setLoading, setSystemNotifs }) => {
+const Signup = ({ setSystemNotifs }) => {
   const [loading, setLoading] = useState(false);
   const [passwordShow, setPasswordShow] = useState(true);
   const [username, setUsername] = useState("");
