@@ -152,8 +152,6 @@ const App = () => {
       };
       setAllData(cachedAllData);
       setUser(cachedUser);
-      setFolders(cachedFolders);
-      setNotes(cachedNotes);
 
       // MAKE SURE APP LOADS INTO LAST KNOWN LOCATION
       if (currentPreferences?.location) {
@@ -165,11 +163,16 @@ const App = () => {
       setLoading(false);
 
       // GRAB SERVER DATA ---------
+      console.log("Grabbing server data");
       continueServerWork(token, cachedUser.preferences);
     };
 
     openDatabase();
   }, []);
+
+  useEffect(() => {
+    updatePageState();
+  }, [folder, allData]);
 
   const resetAppStateAndForceLogin = async () => {
     // CHANGE IN FUTURE FOR OFFLINE SUPPORT
@@ -219,7 +222,11 @@ const App = () => {
   };
 
   const continueServerWork = async (token, preferences = null) => {
+    console.log("Getting server data");
+    console.log(token);
     const serverData = await getFreshServerData(token);
+
+    console.log("Fetched fresh server data");
 
     if (!serverData) {
       //  WHY WAS THERE NO GOOD SERVER DATA
@@ -227,6 +234,8 @@ const App = () => {
       // WHAT TO DO THEN?????
       // UPDATE RESETAPPSTATEANDFORCELOGIN METHOD
       // await //resetAppStateAndForceLogin();
+      console.log("No server data");
+      setLoading(false);
       return;
     }
 
@@ -234,14 +243,7 @@ const App = () => {
     setAllData(serverData);
     setUser(serverData.user);
 
-    // IF PREFERENCES ARE NON EXISTANT TRY SERVER FOR THEM IF NOT CONTINUE AND DEFAULT PREFERENCES WILL PREVAIL
-    if (preferences === null) {
-      if (serverData.user.preferences) {
-        preferences = serverData.user.preferences;
-      }
-    }
-
-    updatePageState(location, serverData);
+    findLastFolderLocationAndRoute(preferences?.location, serverData);
 
     setLoading(false);
 
@@ -257,14 +259,18 @@ const App = () => {
 
   const getFreshServerData = async (token) => {
     try {
+      console.log("Right before getUserData call");
       const response = await getUserData(token);
+      console.log("Right after getUserData call");
 
       const data = response.data.data;
 
       if (data) {
+        console.log("Data exits from get User Data");
         return data;
       }
 
+      console.log("Returning null. No server data exists");
       return null;
     } catch (err) {
       console.log("Error from server when fetching users data: ");
@@ -273,13 +279,9 @@ const App = () => {
     }
   };
 
-  const updatePageState = (nextFolderState, data) => {
+  const updatePageState = (data = allData) => {
     // SEARCH AND FIND USERS INFORMATION BASED ON FOLDER LOCATION
-    const theFolder = data.folders.filter(
-      (fold) => fold.folderid === nextFolderState,
-    );
-
-    const folderId = theFolder?.folderid ?? null;
+    const folderId = folder?.folderid ?? null;
 
     const subfolders = data.folders.filter(
       (fold) => fold.parentFolderId === folderId,
@@ -289,12 +291,11 @@ const App = () => {
 
     // SET CURRENT PAGE STATE
     setNotes(nestedNotes);
-    setFolder(theFolder[0] ? theFolder[0] : null);
     setFolders(subfolders);
-    setMainTitle(theFolder[0] ? theFolder[0].title : "Folders");
+    setMainTitle(folder ? folder.title : "Folders");
 
     if (saveLocation) {
-      setNewLocation(theFolder[0] ? theFolder[0].folderid : null);
+      setNewLocation(folder ? folder.folderid : null);
     }
   };
 
@@ -311,7 +312,11 @@ const App = () => {
       lastKnownLocation = null;
     }
 
-    updatePageState(lastKnownLocation, data);
+    const folderFound = allData?.folders
+      ? allData.folders.find((f) => f.folderid === lastKnownLocation)
+      : null;
+
+    setFolder(folderFound);
   };
 
   const getLocked = () => {
@@ -330,7 +335,7 @@ const App = () => {
   };
 
   const authenticateUser = async () => {
-    LocalAuthentication.authenticateAsync({})
+    return LocalAuthentication.authenticateAsync({})
       .then((res) => {
         if (!res.success) {
           if (tries > 2) {
@@ -436,16 +441,15 @@ const App = () => {
 
     // USER IS NAVIGATING BACK TO MAIN ENTRY
     if (parentId === null) {
-      updatePageState(null);
+      setFolder(null);
       return true;
     }
 
     // USER IS NAVIGATING BACK TO CUSTOM FOLDER
     if (parentId !== null) {
-      const parentFolder = allData.folders.filter(
-        (fold) => fold.folderid === parentId,
-      )[0];
-      updatePageState(parentFolder.folderid);
+      const parentFolder =
+        allData.folders.find((fold) => fold.folderid === parentId) ?? null;
+      setFolder(parentFolder);
       return true;
     }
   };
