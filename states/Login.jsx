@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-native";
 import { loginUser } from "../utils/api";
 import { storeToken } from "../utils/asyncStorage";
 import { v4 as uuidv4 } from "uuid";
+import { DEFAULT_PREFERENCES } from "../utils/sqLite";
 
 const Login = ({
   setToken,
@@ -51,8 +52,6 @@ const Login = ({
         },
       ];
       setSystemNotifs(newNotifs);
-
-      findLastFolderLocationAndRoute(null);
     } catch (err) {
       const newNotifs = [
         {

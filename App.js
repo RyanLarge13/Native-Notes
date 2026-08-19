@@ -3,7 +3,7 @@ import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, Pressable, ScrollView, View } from "react-native";
 import {
   TRenderEngineProvider,
-  RenderHTMLConfigProvider
+  RenderHTMLConfigProvider,
 } from "react-native-render-html";
 import Spinner from "react-native-loading-spinner-overlay";
 import { NativeRouter, Routes, Route } from "react-router-native";
@@ -25,19 +25,19 @@ import {
   initializeSQLiteTables,
   openDB,
   replaceLocalCache,
-  grabFromDatabase
+  grabFromDatabase,
 } from "./utils/sqLite";
 import { getToken, removeToken } from "./utils/asyncStorage";
 
 const customStyles = {
-  body: { color: "#fff", fontSize: 12 }
+  body: { color: "#fff", fontSize: 12 },
 };
 
 const App = () => {
   const [allData, setAllData] = useState({
     user: { username: "", email: "", userId: "", createdAt: "" },
     folders: [],
-    notes: []
+    notes: [],
   });
   const [user, setUser] = useState(null);
   const [systemNotifs, setSystemNotifs] = useState([]);
@@ -95,7 +95,6 @@ const App = () => {
   useEffect(() => {
     const openDatabase = async () => {
       // OPEN DATABASE -----------
-      console.log("loading db");
       const db = await openDB();
 
       if (!db) {
@@ -108,7 +107,6 @@ const App = () => {
       setDb(db);
 
       // BUILD TABLES IN DATABASE -----------
-      console.log("building db tables");
       const SQLiteTableInitializer = await initializeSQLiteTables(db);
 
       if (!SQLiteTableInitializer) {
@@ -119,7 +117,6 @@ const App = () => {
       }
 
       // FIND EXISTING TOKEN ----------------
-      console.log("finding token");
       const token = await getToken();
 
       if (token === null) {
@@ -132,13 +129,11 @@ const App = () => {
 
       // TOKEN AND DB EXIST AT THIS POINT
       // GRAB CACHED DATA --------------------
-      console.log("Grabbing cached data");
       const {
         cachedUser,
         cachedFolders = [],
-        cachedNotes = []
+        cachedNotes = [],
       } = await grabFromDatabase(db);
-      console.log("User data retreived from cache");
 
       // IF USER DOES NOT EXIST IN CACHE DELETE TOKEN DATA AND FORCE LOGIN
       // KEEP DB OPEN
@@ -149,12 +144,11 @@ const App = () => {
       }
 
       // INITIALIZE STALE CACHE DATA TO STATE AND LOAD APP ------------
-      console.log("Using cached data to initialize app");
       const currentPreferences = await applyPreferences(cachedUser);
       const cachedAllData = {
         user: cachedUser,
         folders: cachedFolders,
-        notes: cachedNotes
+        notes: cachedNotes,
       };
       setAllData(cachedAllData);
       setUser(cachedUser);
@@ -165,46 +159,13 @@ const App = () => {
       if (currentPreferences?.location) {
         findLastFolderLocationAndRoute(
           currentPreferences.location,
-          cachedAllData
+          cachedAllData,
         );
       }
       setLoading(false);
 
       // GRAB SERVER DATA ---------
-      console.log("Grabbing server data");
-      const serverData = await getFreshServerData(token);
-
-      if (!serverData) {
-        //  WHY WAS THERE NO GOOD SERVER DATA
-        // EITHER ERROR OR DATA FIELD MISSING
-        // WHAT TO DO THEN?????
-        // UPDATE RESETAPPSTATEANDFORCELOGIN METHOD
-        // await //resetAppStateAndForceLogin();
-        console.log("No server data");
-        return;
-      }
-
-      // UPDATE STATE WITH FRESH DATA FROM SERVER --------------
-      console.log("Updating cache with fresh server data");
-      setAllData(serverData);
-      setUser(serverData.user);
-
-      updatePageState(location, serverData);
-
-      setLoading(false);
-
-      // UPDATE CACHE WITH TRUE SERVER DATA FOR NEXT TIME
-      const dataWasStored = await replaceLocalCache(
-        serverData,
-        db,
-        cachedUser.preferences
-      );
-
-      if (!dataWasStored) {
-        setTimeout(() => {
-          // TRY SAVE ATTEMPT ONE MORE TIME
-        }, 5000);
-      }
+      continueServerWork(token, cachedUser.preferences);
     };
 
     openDatabase();
@@ -212,16 +173,14 @@ const App = () => {
 
   const resetAppStateAndForceLogin = async () => {
     // CHANGE IN FUTURE FOR OFFLINE SUPPORT
-    console.log("Resetting app state");
     await removeToken();
     setToken(false);
     setLoading(false);
     return;
   };
 
-  const applyPreferences = async dbUser => {
+  const applyPreferences = async (dbUser) => {
     if (!dbUser?.preferences) {
-      console.log("No preferences");
       return null;
     }
 
@@ -232,7 +191,7 @@ const App = () => {
 
       setTheme({
         on: preferences.theme?.on ?? false,
-        color: preferences.theme?.color ?? "bg-amber-300"
+        color: preferences.theme?.color ?? "bg-amber-300",
       });
 
       setView(preferences.view ?? false);
@@ -259,7 +218,7 @@ const App = () => {
     }
   };
 
-  const continueServerWork = async token => {
+  const continueServerWork = async (token, preferences = null) => {
     const serverData = await getFreshServerData(token);
 
     if (!serverData) {
@@ -268,25 +227,26 @@ const App = () => {
       // WHAT TO DO THEN?????
       // UPDATE RESETAPPSTATEANDFORCELOGIN METHOD
       // await //resetAppStateAndForceLogin();
-      console.log("No server data");
       return;
     }
 
     // UPDATE STATE WITH FRESH DATA FROM SERVER --------------
-    console.log("Updating cache with fresh server data");
     setAllData(serverData);
     setUser(serverData.user);
+
+    // IF PREFERENCES ARE NON EXISTANT TRY SERVER FOR THEM IF NOT CONTINUE AND DEFAULT PREFERENCES WILL PREVAIL
+    if (preferences === null) {
+      if (serverData.user.preferences) {
+        preferences = serverData.user.preferences;
+      }
+    }
 
     updatePageState(location, serverData);
 
     setLoading(false);
 
     // UPDATE CACHE WITH TRUE SERVER DATA FOR NEXT TIME
-    const dataWasStored = await replaceLocalCache(
-      serverData,
-      db,
-      cachedUser.preferences
-    );
+    const dataWasStored = await replaceLocalCache(serverData, db, preferences);
 
     if (!dataWasStored) {
       setTimeout(() => {
@@ -295,7 +255,7 @@ const App = () => {
     }
   };
 
-  const getFreshServerData = async token => {
+  const getFreshServerData = async (token) => {
     try {
       const response = await getUserData(token);
 
@@ -316,16 +276,16 @@ const App = () => {
   const updatePageState = (nextFolderState, data) => {
     // SEARCH AND FIND USERS INFORMATION BASED ON FOLDER LOCATION
     const theFolder = data.folders.filter(
-      fold => fold.folderid === nextFolderState
+      (fold) => fold.folderid === nextFolderState,
     );
 
     const folderId = theFolder?.folderid ?? null;
 
     const subfolders = data.folders.filter(
-      fold => fold.parentFolderId === folderId
+      (fold) => fold.parentFolderId === folderId,
     );
 
-    const nestedNotes = data.notes.filter(note => note.folderId === folderId);
+    const nestedNotes = data.notes.filter((note) => note.folderId === folderId);
 
     // SET CURRENT PAGE STATE
     setNotes(nestedNotes);
@@ -355,7 +315,7 @@ const App = () => {
   };
 
   const getLocked = () => {
-    setNotes(allData.notes.filter(note => note?.locked));
+    setNotes(allData.notes.filter((note) => note?.locked));
     setMainTitle("Locked Notes");
   };
 
@@ -365,13 +325,13 @@ const App = () => {
   };
 
   const getTrash = () => {
-    setNotes(allData.notes.filter(note => note?.trashed));
+    setNotes(allData.notes.filter((note) => note?.trashed));
     setMainTitle("Trash");
   };
 
   const authenticateUser = async () => {
     LocalAuthentication.authenticateAsync({})
-      .then(res => {
+      .then((res) => {
         if (!res.success) {
           if (tries > 2) {
             const newNotifs = [
@@ -380,29 +340,29 @@ const App = () => {
                 color: "#fde047",
                 title: "Last Attempt",
                 text: "You have attempted to unlock your notes 3 times. One more failed attempt and the app will close and you will be logged out for your security",
-                actions: [{ text: "close", func: () => setSystemNotifs([]) }]
-              }
+                actions: [{ text: "close", func: () => setSystemNotifs([]) }],
+              },
             ];
             setSystemNotifs(newNotifs);
           }
           if (tries > 3) {
-            console.log("kill app");
+            console.log("Lockout app");
           }
           authenticateUser();
-          setTries(prev => prev + 1);
+          setTries((prev) => prev + 1);
         }
         if (res.success) {
           return true;
         }
         return false;
       })
-      .catch(err => {
+      .catch((err) => {
         console.log(err);
         return false;
       });
   };
 
-  const setNewLocation = id => {
+  const setNewLocation = (id) => {
     const newPreferences = {
       order: order,
       appLock: appLock,
@@ -412,7 +372,7 @@ const App = () => {
       view: view,
       sort: sort,
       saveLocation: saveLocation,
-      location: id
+      location: id,
     };
     try {
       if (db) {
@@ -420,7 +380,7 @@ const App = () => {
           `
           UPDATE user SET preferences = ? WHERE userId = ?
           `,
-          [JSON.stringify(newPreferences), user.userId]
+          [JSON.stringify(newPreferences), user.userId],
         );
       }
 
@@ -483,7 +443,7 @@ const App = () => {
     // USER IS NAVIGATING BACK TO CUSTOM FOLDER
     if (parentId !== null) {
       const parentFolder = allData.folders.filter(
-        fold => fold.folderid === parentId
+        (fold) => fold.folderid === parentId,
       )[0];
       updatePageState(parentFolder.folderid);
       return true;
@@ -497,7 +457,7 @@ const App = () => {
           <View
             style={[
               styles.container,
-              { backgroundColor: darkMode ? "#000" : "#eee" }
+              { backgroundColor: darkMode ? "#000" : "#eee" },
             ]}
           >
             <StatusBar style={darkMode ? "light" : "dark"} />
@@ -674,7 +634,7 @@ const App = () => {
                 <ScrollView
                   style={[
                     styles.pickFolder,
-                    { backgroundColor: darkMode ? "#222" : "#eee" }
+                    { backgroundColor: darkMode ? "#222" : "#eee" },
                   ]}
                 >
                   <View style={styles.tree}>
@@ -693,7 +653,7 @@ const App = () => {
                     <Text
                       style={[
                         darkMode ? styles.white : styles.black,
-                        { marginTop: 10 }
+                        { marginTop: 10 },
                       ]}
                     >
                       {open.item.title} &rarr;{" "}
@@ -704,7 +664,7 @@ const App = () => {
                       onPress={() => {
                         setSelectedFolder({
                           folderid: null,
-                          title: "Top level"
+                          title: "Top level",
                         });
                       }}
                     >
@@ -715,8 +675,8 @@ const App = () => {
                       style={[
                         styles.saveFolder,
                         {
-                          backgroundColor: theme.on ? theme.color : "#fcd34d"
-                        }
+                          backgroundColor: theme.on ? theme.color : "#fcd34d",
+                        },
                       ]}
                     >
                       <Text>Save</Text>
@@ -746,19 +706,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 25,
-    paddingTop: 25
+    paddingTop: 25,
   },
   text: {
     color: "#fff",
-    textAlign: "center"
+    textAlign: "center",
   },
   white: {
     color: "#fff",
-    textAlign: "center"
+    textAlign: "center",
   },
   black: {
     color: "#000",
-    textAlign: "center"
+    textAlign: "center",
   },
   backdrop: {
     position: "absolute",
@@ -766,10 +726,10 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
-    backgroundColor: "rgba(0,0,0,0.4)"
+    backgroundColor: "rgba(0,0,0,0.4)",
   },
   tree: {
-    marginTop: 40
+    marginTop: 40,
   },
   pickFolder: {
     position: "absolute",
@@ -780,7 +740,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     elevation: 2,
     paddingVertical: 0,
-    paddingHorizontal: 10
+    paddingHorizontal: 10,
   },
   topLevel: {
     marginTop: 20,
@@ -789,14 +749,14 @@ const styles = StyleSheet.create({
     borderColor: "#fff",
     padding: 8,
     borderRadius: 10,
-    elevation: 2
+    elevation: 2,
   },
   saveFolder: {
     marginVertical: 10,
     padding: 8,
     borderRadius: 10,
-    elevation: 2
-  }
+    elevation: 2,
+  },
 });
 
 export default App;
