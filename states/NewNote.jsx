@@ -64,7 +64,7 @@ const NewNote = ({
     if (!autoSave || !note) return;
 
     const saveInterval = setInterval(() => {
-      saveNote(currentHTML.current, title ?? "Untiled Note");
+      saveNote(currentHTML.current);
     }, 10000);
 
     return () => clearInterval(saveInterval);
@@ -134,7 +134,6 @@ const NewNote = ({
     setClosed(true);
 
     const htmlToSave = currentHTML.current;
-    const currentTitle = title ?? "Untitled Note";
 
     // CLOSE NOTE ANIMATION BEFORE LOOSING STATE
     Animated.parallel([
@@ -154,7 +153,7 @@ const NewNote = ({
         setNote(null);
       }
       navigate("/");
-      await saveNote(htmlToSave, currentTitle);
+      await saveNote(htmlToSave);
     });
   };
 
@@ -183,11 +182,7 @@ const NewNote = ({
     }
   };
 
-  const saveNote = async (
-    content,
-    // PASS TITLE INCASE NOTE HAS BEEN SET TO NULL BY BACKHANDLER CLOSENOTE METHOD
-    currentTitle,
-  ) => {
+  const saveNote = async (content) => {
     // TO STOP RACE CONDITIONS WITH AUTOSAVE AND BACKHANDLER LOGIC ETC, CHECK REF
     if (currentlySaving.current === true) {
       return;
@@ -195,6 +190,8 @@ const NewNote = ({
 
     currentlySaving.current = true;
     setSaving(true);
+
+    const titleToSave = currentTitle.current ?? "Untitled Note";
 
     /*
      * EXISTING NOTE
@@ -204,7 +201,7 @@ const NewNote = ({
 
       const optimisticNote = {
         ...note,
-        title: currentTitle.current,
+        title: titleToSave,
         htmlText: content,
         folderId: folder?.folderid ?? null,
         updated: new Date().toISOString(),
@@ -228,7 +225,7 @@ const NewNote = ({
 
         const updatedNote = {
           notesId: note.noteid,
-          title: currentTitle.current,
+          title: titleToSave,
           htmlNotes: content,
           locked: note.locked,
           folderId: folder?.folderid ?? null,
@@ -309,7 +306,7 @@ const NewNote = ({
     try {
       const newNote = {
         folderId: folder?.folderid ?? null,
-        title: currentTitle.current,
+        title: titleToSave,
         htmlNotes: content,
       };
 
@@ -334,6 +331,11 @@ const NewNote = ({
         ...prev,
         notes: [...prev.notes, savedNote],
       }));
+
+      // SET THE NOTE IN STATE SO WE KNOW NOT TO DUPLICATE
+      if (!closed) {
+        setNote(resNote);
+      }
 
       // -----------------------------------------
       // UPDATE LOCAL DATABASE
@@ -408,9 +410,7 @@ const NewNote = ({
                       : "#EEEEE",
                 },
               ]}
-              onPress={() =>
-                saveNote(currentHTML.current, title ?? "Untiled Note")
-              }
+              onPress={() => saveNote(currentHTML.current)}
             >
               {saving ? (
                 <FontAwesome5
