@@ -458,7 +458,7 @@ const UserSettings = ({
               ]}
             >
               <Text style={darkMode ? styles.white : styles.black}>
-                Auto Save Notes
+                Save Note Every 10s While Editing
               </Text>
               <Switch
                 trackColor={{ false: "#fda4af", true: "#6ee7b7" }}

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-native";
 import {
   View,
@@ -41,30 +41,17 @@ const NewNote = ({
   const webviewReady = useRef(false);
   const currentHTML = useRef(note?.htmlText ?? "");
   const currentTitle = useRef(note?.title ?? "");
+  const currentlySaving = useRef(false);
 
   const opacityAni = useRef(new Animated.Value(0)).current;
   const transYAni = useRef(new Animated.Value(500)).current;
 
-  const sendEditorCommand = (command, value) => {
-    webviewRef.current?.postMessage(
-      JSON.stringify({
-        command,
-        value,
-      }),
-    );
-  };
-
-  const handleFormat = (format) => {
-    webviewRef.current?.postMessage(format);
-  };
-
+  // BACKHANDLER TAKES PRIORITY WHILE NOTE IS OPEN AND RETURNS POWER TO MAIN
+  // BACKHANDLER WHEN DONE
   useEffect(() => {
     const subscription = BackHandler.addEventListener(
       "hardwareBackPress",
       () => {
-        if (!note) {
-          return false;
-        }
         closeNote();
         return true;
       },
@@ -77,43 +64,23 @@ const NewNote = ({
     if (!autoSave || !note) return;
 
     const saveInterval = setInterval(() => {
-      saveNote(currentHTML.current);
+      saveNote(currentHTML.current, title ?? "Untiled Note");
     }, 10000);
 
     return () => clearInterval(saveInterval);
   }, [autoSave, note]);
 
-  const handleTitleChange = (newTitle) => {
-    setTitle(newTitle);
-    currentTitle.current = newTitle;
-  };
+  // THIS EXISTS INCASE USER IS CAPABLE OF TRIGGERING DARKMODE WHILE EDITING NOTE POSSIBLY IN FUTURE REALEASES
+  useEffect(() => {
+    if (!webviewReady.current) return;
 
-  const initializeEditor = () => {
-    webviewReady.current = true;
+    sendEditorCommand("setTheme", {
+      backgroundColor: darkMode ? "#000000" : "#EEEEEE",
+      color: darkMode ? "#FFFFFF" : "#000000",
+    });
+  }, [darkMode]);
 
-    setWebViewTheme();
-
-    if (note?.htmlText) {
-      sendEditorCommand("setHTML", note.htmlText);
-    } else {
-      sendEditorCommand("setHTML", "");
-    }
-  };
-
-  const setWebViewTheme = () => {
-    if (!darkMode) {
-      sendEditorCommand("setTheme", {
-        backgroundColor: "#EEEEEE",
-        color: "#000000",
-      });
-    } else {
-      sendEditorCommand("setTheme", {
-        backgroundColor: "#000000",
-        color: "#FFFFFF",
-      });
-    }
-  };
-
+  // OPEN NOTE ANIMATION
   useEffect(() => {
     Animated.parallel([
       Animated.timing(opacityAni, {
@@ -132,13 +99,44 @@ const NewNote = ({
     ]).start();
   }, []);
 
+  const sendEditorCommand = (command, value) => {
+    webviewRef.current?.postMessage(
+      JSON.stringify({
+        command,
+        value,
+      }),
+    );
+  };
+
+  const handleTitleChange = (newTitle) => {
+    setTitle(newTitle);
+    currentTitle.current = newTitle;
+  };
+
+  const initializeEditor = () => {
+    webviewReady.current = true;
+
+    setWebViewTheme();
+
+    sendEditorCommand("setHTML", note?.htmlText ?? "");
+  };
+
+  const setWebViewTheme = () => {
+    sendEditorCommand("setTheme", {
+      backgroundColor: darkMode ? "#000000" : "#FFFFFF",
+      color: darkMode ? "#FFFFFF" : "#000000",
+    });
+  };
+
   const closeNote = () => {
     if (closed) return;
 
     setClosed(true);
 
     const htmlToSave = currentHTML.current;
+    const currentTitle = title ?? "Untitled Note";
 
+    // CLOSE NOTE ANIMATION BEFORE LOOSING STATE
     Animated.parallel([
       Animated.timing(opacityAni, {
         toValue: 0,
@@ -152,20 +150,13 @@ const NewNote = ({
         useNativeDriver: true,
       }),
     ]).start(async () => {
-      setNote(null);
+      if (note !== null) {
+        setNote(null);
+      }
       navigate("/");
-      await saveNote(htmlToSave);
+      await saveNote(htmlToSave, currentTitle);
     });
   };
-
-  useEffect(() => {
-    if (!webviewReady.current) return;
-
-    sendEditorCommand("setTheme", {
-      backgroundColor: darkMode ? "#000000" : "#EEEEEE",
-      color: darkMode ? "#FFFFFF" : "#000000",
-    });
-  }, [darkMode]);
 
   const onMessage = (event) => {
     const receivedData = JSON.parse(event.nativeEvent.data);
@@ -192,13 +183,23 @@ const NewNote = ({
     }
   };
 
-  const saveNote = async (content) => {
+  const saveNote = async (
+    content,
+    // PASS TITLE INCASE NOTE HAS BEEN SET TO NULL BY BACKHANDLER CLOSENOTE METHOD
+    currentTitle,
+  ) => {
+    // TO STOP RACE CONDITIONS WITH AUTOSAVE AND BACKHANDLER LOGIC ETC, CHECK REF
+    if (currentlySaving.current === true) {
+      return;
+    }
+
+    currentlySaving.current = true;
     setSaving(true);
 
     /*
      * EXISTING NOTE
      */
-    if (note) {
+    if (note?.noteid) {
       const previousNote = { ...note };
 
       const optimisticNote = {
@@ -295,6 +296,7 @@ const NewNote = ({
 
         throw err;
       } finally {
+        currentlySaving.current = false;
         setSaving(false);
       }
 
@@ -363,6 +365,7 @@ const NewNote = ({
       console.error("Failed to create note:", err);
       throw err;
     } finally {
+      currentlySaving.current = false;
       setSaving(false);
     }
   };
@@ -405,7 +408,9 @@ const NewNote = ({
                       : "#EEEEE",
                 },
               ]}
-              onPress={() => saveNote(currentHTML.current)}
+              onPress={() =>
+                saveNote(currentHTML.current, title ?? "Untiled Note")
+              }
             >
               {saving ? (
                 <FontAwesome5
@@ -439,7 +444,6 @@ const NewNote = ({
             console.error("WebView error: ", nativeEvent);
           }}
           originWhitelist={["*"]}
-          javaScriptEnabled
           domStorageEnabled
           textZoom={100}
         />
