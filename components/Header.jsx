@@ -1,17 +1,11 @@
 import { useEffect, useState, useRef } from "react";
-import {
-  View,
-  Animated,
-  Text,
-  TextInput,
-  StyleSheet,
-  Pressable,
-} from "react-native";
-import { Feather } from "@expo/vector-icons";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+
+import { View, Animated, Text, TextInput, StyleSheet, Pressable, Keyboard } from "react-native";
+
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+
 import { useNavigate } from "react-router-native";
 
-// use folder for the folder title on scroll in header
 const Header = ({
   folder,
   setFolder,
@@ -28,267 +22,499 @@ const Header = ({
   theme,
 }) => {
   const [search, setSearch] = useState(false);
+
   const [searchText, setSearchText] = useState("");
 
-  const animationOpacity = useRef(new Animated.Value(0)).current;
-  const scaleAni = useRef(new Animated.Value(0)).current;
-  const opacityAni = useRef(new Animated.Value(0)).current;
+  const searchInputRef = useRef(null);
+
+  const menuOpacity = useRef(new Animated.Value(0)).current;
+
+  const menuScale = useRef(new Animated.Value(0.92)).current;
 
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!folder) {
-      if (!searchText) {
-        return setNotes([]);
+  const accent = theme.on ? theme.color : "#f59e0b";
+
+  const colors = darkMode
+    ? {
+        surface: "#18181b",
+        surfacePressed: "#202023",
+
+        text: "#f4f4f5",
+        secondary: "#a1a1aa",
+        muted: "#71717a",
+
+        border: "#27272a",
       }
-      const notesCopy = [...allNotes];
-      showSearchedNotes(notesCopy);
-    }
-    if (folder) {
-      if (!searchText) {
-        const folderNotes = allNotes.filter(
-          (aNote) => aNote.folderId === folder.folderid,
-        );
-        return setNotes(folderNotes);
-      }
-      const notesCopy = [...notes];
-      showSearchedNotes(notesCopy);
-    }
-  }, [searchText]);
+    : {
+        surface: "#ffffff",
+        surfacePressed: "#f4f4f5",
+
+        text: "#18181b",
+        secondary: "#71717a",
+        muted: "#a1a1aa",
+
+        border: "#e4e4e7",
+      };
+
+  /*
+   * SEARCH
+   */
 
   useEffect(() => {
-    if (search) {
-      Animated.spring(animationOpacity, {
-        toValue: 1,
-        tension: 100,
-        friction: 10,
-        useNativeDriver: true,
-      }).start();
+    if (!folder) {
+      if (!searchText.trim()) {
+        setNotes([]);
+        return;
+      }
+
+      showSearchedNotes(allNotes);
+      return;
     }
-    if (!search) {
-      Animated.spring(animationOpacity, {
-        toValue: 0,
-        tension: 100,
-        friction: 10,
-        useNativeDriver: true,
-      }).start();
+
+    const folderNotes = allNotes.filter((note) => note.folderId === folder.folderid);
+
+    if (!searchText.trim()) {
+      setNotes(folderNotes);
+      return;
     }
-  }, [search]);
+
+    showSearchedNotes(folderNotes);
+  }, [searchText, folder, allNotes]);
+
+  /*
+   * OPTIONS MENU ANIMATION
+   */
 
   useEffect(() => {
     if (layoutOptions) {
       Animated.parallel([
-        Animated.timing(opacityAni, {
+        Animated.timing(menuOpacity, {
           toValue: 1,
-          duration: 100,
+          duration: 130,
           useNativeDriver: true,
         }),
-        Animated.spring(scaleAni, {
+
+        Animated.spring(menuScale, {
           toValue: 1,
-          tension: 100,
-          friction: 10,
+          tension: 140,
+          friction: 12,
           useNativeDriver: true,
         }),
       ]).start();
     } else {
       Animated.parallel([
-        Animated.timing(opacityAni, {
+        Animated.timing(menuOpacity, {
           toValue: 0,
           duration: 100,
           useNativeDriver: true,
         }),
-        Animated.spring(scaleAni, {
-          toValue: 0,
-          tension: 100,
-          friction: 10,
+
+        Animated.timing(menuScale, {
+          toValue: 0.92,
+          duration: 100,
           useNativeDriver: true,
         }),
       ]).start();
     }
   }, [layoutOptions]);
 
-  const showSearchedNotes = (copy) => {
-    const notesToSet = copy.filter((aNote) => aNote.title.includes(searchText));
-    setNotes(notesToSet);
+  const showSearchedNotes = (source) => {
+    const query = searchText.trim().toLowerCase();
+
+    const searchedNotes = source.filter((note) => note.title?.toLowerCase().includes(query));
+
+    setNotes(searchedNotes);
   };
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.subContainer}>
-        <Pressable onPress={() => setMenuOpen(true)}>
-          <Feather
-            name="menu"
-            style={{
-              color: theme.on ? theme.color : darkMode ? "#fff" : "#000",
-              fontSize: 20,
-            }}
-          />
-        </Pressable>
-        {folder ? (
-          <>
-            <Pressable style={styles.btn} onPress={() => goBack()}>
-              <Text
-                style={[
-                  styles.back,
-                  {
-                    color: theme.on ? theme.color : darkMode ? "#fff" : "#000",
-                  },
-                ]}
-              >
-                &larr;
-              </Text>
-            </Pressable>
-            <Pressable onPress={() => setFolder(null)}>
-              <Feather
-                name="home"
-                style={[
-                  styles.home,
-                  {
-                    color: theme.on ? theme.color : darkMode ? "#fff" : "#000",
-                  },
-                ]}
-              />
-            </Pressable>
-          </>
-        ) : null}
-      </View>
-      <Animated.View style={{ opacity: animationOpacity }}>
-        <TextInput
-          underlineColorAndroid="transparent"
-          placeholder={
-            !folder ? "Search all notes" : `Search notes in ${folder.title}`
-          }
-          placeholderTextColor="#aaa"
-          value={searchText}
-          onChangeText={(txt) => setSearchText(txt)}
+  const openSearch = () => {
+    setLayoutOptions(false);
+    setSearch(true);
+
+    requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+    });
+  };
+
+  const closeSearch = () => {
+    setSearch(false);
+    setSearchText("");
+
+    Keyboard.dismiss();
+  };
+
+  /*
+   * SEARCH MODE
+   */
+
+  if (search) {
+    return (
+      <View style={styles.container}>
+        <View
           style={[
-            styles.searchInput,
-            { color: theme.on ? theme.color : darkMode ? "#fff" : "#000" },
-          ]}
-        />
-      </Animated.View>
-      <View style={styles.subContainer}>
-        <Pressable
-          onPress={() => setSearch((prev) => !prev)}
-          style={styles.btn}
-        >
-          <Feather
-            name="search"
-            style={[
-              styles.search,
-              { color: theme.on ? theme.color : darkMode ? "#fff" : "#000" },
-            ]}
-          />
-        </Pressable>
-        <Pressable
-          onPress={() => setLayoutOptions((prev) => !prev)}
-          style={styles.btn}
-        >
-          <MaterialCommunityIcons
-            name="dots-vertical"
-            style={[
-              styles.dots,
-              { color: theme.on ? theme.color : darkMode ? "#fff" : "#000" },
-            ]}
-          />
-        </Pressable>
-        <Animated.View
-          style={[
-            styles.layoutOptsContainer,
+            styles.searchBar,
             {
-              backgroundColor: darkMode ? "#111" : "#fff",
-              opacity: opacityAni,
-              scaleX: scaleAni,
-              scaleY: scaleAni,
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
             },
           ]}
         >
           <Pressable
+            onPress={closeSearch}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.iconButton,
+
+              pressed && {
+                backgroundColor: colors.surfacePressed,
+              },
+            ]}
+          >
+            <Feather name="arrow-left" size={19} color={colors.secondary} />
+          </Pressable>
+
+          <Feather name="search" size={17} color={colors.muted} style={styles.searchBarIcon} />
+
+          <TextInput
+            ref={searchInputRef}
+            underlineColorAndroid="transparent"
+            placeholder={folder ? `Search in ${folder.title}` : "Search all notes"}
+            placeholderTextColor={colors.muted}
+            value={searchText}
+            onChangeText={setSearchText}
+            returnKeyType="search"
+            autoCorrect={false}
+            selectionColor={accent}
+            style={[
+              styles.searchInput,
+              {
+                color: colors.text,
+              },
+            ]}
+          />
+
+          {searchText.length > 0 ? (
+            <Pressable
+              onPress={() => setSearchText("")}
+              hitSlop={8}
+              style={({ pressed }) => [
+                styles.clearButton,
+
+                pressed && {
+                  backgroundColor: colors.surfacePressed,
+                },
+              ]}
+            >
+              <Feather name="x" size={15} color={colors.secondary} />
+            </Pressable>
+          ) : null}
+        </View>
+      </View>
+    );
+  }
+
+  /*
+   * NORMAL HEADER
+   */
+
+  return (
+    <View style={styles.container}>
+      {/* LEFT SIDE */}
+
+      <View style={styles.actionGroup}>
+        <HeaderButton
+          icon="menu"
+          onPress={() => setMenuOpen(true)}
+          colors={colors}
+          accent={accent}
+          primary
+        />
+
+        {folder ? (
+          <>
+            <HeaderButton icon="arrow-left" onPress={goBack} colors={colors} />
+
+            <HeaderButton icon="home" onPress={() => setFolder(null)} colors={colors} />
+          </>
+        ) : null}
+      </View>
+
+      {/* RIGHT SIDE */}
+
+      <View style={styles.actionGroup}>
+        <HeaderButton icon="search" onPress={openSearch} colors={colors} />
+
+        <HeaderButton
+          icon="more-vertical"
+          onPress={() => setLayoutOptions((prev) => !prev)}
+          colors={colors}
+        />
+
+        {/* OPTIONS MENU */}
+
+        <Animated.View
+          pointerEvents={layoutOptions ? "auto" : "none"}
+          style={[
+            styles.optionsMenu,
+
+            {
+              backgroundColor: colors.surface,
+
+              borderColor: colors.border,
+
+              opacity: menuOpacity,
+
+              transform: [
+                {
+                  scale: menuScale,
+                },
+              ],
+            },
+          ]}
+        >
+          <MenuItem
+            icon={view ? "list" : "grid"}
+            title={view ? "List view" : "Grid view"}
+            colors={colors}
             onPress={() => {
               setLayoutOptions(false);
+
               setView((prev) => !prev);
             }}
-            style={styles.layoutOptsBtn}
-          >
-            <Text style={darkMode ? styles.white : styles.black}>
-              {view ? "List" : "Grid View"}
-            </Text>
-          </Pressable>
-          <Pressable
-            style={styles.layoutOptsBtn}
+          />
+
+          <View
+            style={[
+              styles.menuDivider,
+              {
+                backgroundColor: colors.border,
+              },
+            ]}
+          />
+
+          <MenuItem
+            icon="folder-plus"
+            title="Create folder"
+            colors={colors}
+            accent={accent}
             onPress={() => {
               setLayoutOptions(false);
+
               navigate("/newfolder");
             }}
-          >
-            <Text style={darkMode ? styles.white : styles.black}>
-              Create Folder
-            </Text>
-          </Pressable>
+          />
         </Animated.View>
       </View>
     </View>
   );
 };
 
+/*
+ * HEADER ICON BUTTON
+ */
+
+const HeaderButton = ({ icon, onPress, colors, accent, primary = false }) => {
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={6}
+      style={({ pressed }) => [
+        styles.iconButton,
+
+        primary && {
+          backgroundColor: `${accent}14`,
+        },
+
+        pressed && {
+          backgroundColor: colors.surfacePressed,
+        },
+      ]}
+    >
+      <Feather name={icon} size={19} color={primary ? accent : colors.secondary} />
+    </Pressable>
+  );
+};
+
+/*
+ * OPTIONS MENU ITEM
+ */
+
+const MenuItem = ({ icon, title, colors, accent, onPress }) => {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.menuItem,
+
+        pressed && {
+          backgroundColor: colors.surfacePressed,
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.menuIcon,
+
+          accent && {
+            backgroundColor: `${accent}14`,
+          },
+        ]}
+      >
+        <Feather name={icon} size={16} color={accent ? accent : colors.secondary} />
+      </View>
+
+      <Text
+        style={[
+          styles.menuItemText,
+          {
+            color: colors.text,
+          },
+        ]}
+      >
+        {title}
+      </Text>
+    </Pressable>
+  );
+};
+
 const styles = StyleSheet.create({
+  /*
+   * HEADER
+   */
+
   container: {
     width: "100%",
+    minHeight: 48,
+
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "space-between",
+
+    paddingHorizontal: 10,
   },
-  subContainer: {
+
+  actionGroup: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    columnGap: 2,
+
+    gap: 2,
+
     position: "relative",
   },
-  back: {
-    marginLeft: 5,
-    fontSize: 12,
+
+  /*
+   * ICON BUTTONS
+   */
+
+  iconButton: {
+    width: 40,
+    height: 40,
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    borderRadius: 12,
   },
-  home: {
-    marginLeft: 5,
-    fontSize: 15,
+
+  /*
+   * SEARCH
+   */
+
+  searchBar: {
+    flex: 1,
+    height: 42,
+
+    flexDirection: "row",
+    alignItems: "center",
+
+    borderRadius: 13,
+
+    borderWidth: StyleSheet.hairlineWidth,
   },
+
+  searchBarIcon: {
+    marginLeft: 2,
+    marginRight: 8,
+  },
+
   searchInput: {
-    maxWidth: 200,
-    fontSize: 12,
-    height: 20,
+    flex: 1,
+    height: "100%",
+
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+
+    fontSize: 14,
   },
-  search: {
-    maxWidth: 200,
-    fontSize: 20,
-    height: 20,
-  },
-  dots: {
-    maxWidth: 200,
-    fontSize: 20,
-    height: 20,
-  },
-  layoutOptsContainer: {
-    position: "absolute",
-    width: 200,
-    right: 0,
-    top: 40,
-    // transform: [{ translateY: 100 }],
+
+  clearButton: {
+    width: 32,
+    height: 32,
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    marginRight: 4,
+
     borderRadius: 10,
-    paddingHorizontal: 15,
   },
-  layoutOptsBtn: {
-    paddingVertical: 20,
-    width: "100%",
+
+  /*
+   * OPTIONS MENU
+   */
+
+  optionsMenu: {
+    position: "absolute",
+
+    width: 210,
+
+    right: 2,
+    top: 46,
+
+    padding: 6,
+
+    borderRadius: 14,
+
+    borderWidth: StyleSheet.hairlineWidth,
+
+    elevation: 12,
+
+    zIndex: 100,
   },
-  white: {
-    color: "#fff",
+
+  menuItem: {
+    minHeight: 48,
+
+    flexDirection: "row",
+    alignItems: "center",
+
+    paddingHorizontal: 8,
+
+    borderRadius: 10,
   },
-  black: {
-    color: "#000",
+
+  menuIcon: {
+    width: 32,
+    height: 32,
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    borderRadius: 9,
   },
-  btn: {
-    padding: 8,
+
+  menuItemText: {
+    marginLeft: 10,
+
+    fontSize: 14,
+    fontWeight: "500",
+  },
+
+  menuDivider: {
+    height: StyleSheet.hairlineWidth,
+
+    marginVertical: 4,
+    marginHorizontal: 8,
   },
 });
 

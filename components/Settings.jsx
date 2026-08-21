@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+
 import {
   View,
   TextInput,
@@ -7,19 +8,22 @@ import {
   StyleSheet,
   Animated,
   Switch,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
-import {
-  deleteAFolder,
-  deleteANote,
-  updateFolder,
-  updateNote,
-} from "../utils/api";
+
+import { deleteAFolder, deleteANote, updateFolder, updateNote } from "../utils/api";
+
 import { unFormatColor, formatColor } from "../utils/helpers/formatColor.js";
+
 import { v4 as uuidv4 } from "uuid";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+
 import Colors from "./Colors";
 
 const Settings = ({
+  pickFolder,
   item,
   type,
   setOpen,
@@ -34,63 +38,180 @@ const Settings = ({
   theme,
 }) => {
   const [newTitle, setNewTitle] = useState("");
-  const [newColor, setNewColor] = useState(formatColor(item.color));
-  const [isLocked, setIsLocked] = useState(
-    item.locked === 1 || item.locked === true ? true : false,
-  );
 
-  const scaleAni = useRef(new Animated.Value(0)).current;
-  const opacityAni = useRef(new Animated.Value(0)).current;
+  const [newColor, setNewColor] = useState(formatColor(item.color));
+
+  const [isLocked, setIsLocked] = useState(item.locked === 1 || item.locked === true);
+
+  /*
+   * ANIMATION
+   */
+
+  const animation = useRef(new Animated.Value(0)).current;
+
+  const pickerAnimation = useRef(
+  new Animated.Value(0)
+).current;
 
   useEffect(() => {
-    Animated.spring(scaleAni, {
+  Animated.spring(pickerAnimation, {
+    toValue: pickFolder ? 1 : 0,
+    tension: 100,
+    friction: 12,
+    useNativeDriver: true,
+  }).start();
+}, [pickFolder]);
+
+  useEffect(() => {
+    Animated.spring(animation, {
       toValue: 1,
-      tension: 100,
-      friction: 10,
-      useNativeDriver: true,
-    }).start();
-    Animated.timing(opacityAni, {
-      toValue: 1,
-      duration: 100,
+      tension: 110,
+      friction: 11,
       useNativeDriver: true,
     }).start();
   }, []);
 
+  const translateY = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [350, 0],
+  });
+
+  const sheetScale = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.97, 1],
+  });
+
+  const backdropOpacity = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  });
+
+  const pickerTranslateY = pickerAnimation.interpolate({
+  inputRange: [0, 1],
+  outputRange: [0, 500],
+});
+
+const pickerOpacity = pickerAnimation.interpolate({
+  inputRange: [0, 0.7, 1],
+  outputRange: [1, 0.5, 0],
+});
+
+  const combinedTranslateY = Animated.add(
+  translateY,
+  pickerTranslateY
+);
+
+  const combinedBackdropOpacity = Animated.multiply(
+  backdropOpacity,
+  pickerOpacity
+);
+
+  /*
+   * COLORS
+   */
+
+  const accent = theme.on ? theme.color : "#f59e0b";
+
+  const colors = darkMode
+    ? {
+        background: "#111113",
+        surface: "#18181b",
+        surfaceSecondary: "#202023",
+        pressed: "#27272a",
+
+        text: "#f4f4f5",
+        secondary: "#a1a1aa",
+        muted: "#71717a",
+
+        border: "#27272a",
+
+        danger: "#f87171",
+        dangerSurface: "rgba(248,113,113,0.10)",
+      }
+    : {
+        background: "#fafafa",
+        surface: "#ffffff",
+        surfaceSecondary: "#f4f4f5",
+        pressed: "#e4e4e7",
+
+        text: "#18181b",
+        secondary: "#71717a",
+        muted: "#a1a1aa",
+
+        border: "#e4e4e7",
+
+        danger: "#dc2626",
+        dangerSurface: "rgba(220,38,38,0.07)",
+      };
+
+  /*
+   * CLOSE
+   *
+   * Let the animation finish BEFORE App.js
+   * removes this component.
+   */
+
+  const closeModal = (callback = null) => {
+    Animated.timing(animation, {
+      toValue: 0,
+      duration: 180,
+      useNativeDriver: true,
+    }).start(() => {
+      setSelectedFolder(null);
+      setOpen({ show: false });
+
+      // callback?.();
+    });
+  };
+
+  /*
+   * FOLDER
+   */
+
   const updateAFolder = async () => {
     const newFolder = {
-      parentFolderId: selectedFolder
-        ? selectedFolder.parentFolderId
-        : item.parentFolderId,
-      title: newTitle ? newTitle : item.title,
+      parentFolderId: selectedFolder ? selectedFolder.folderid : item.parentFolderId,
+
+      title: newTitle.trim() || item.title,
+
       color: unFormatColor(newColor),
+
       folderId: item.folderid,
     };
+
     setAllData((prevData) => {
-      const newFolders = prevData.folders.filter(
-        (fold) => fold.folderid !== newFolder.folderId,
-      );
-      newFolders.push({ ...newFolder, folderid: item.folderid });
-      const newData = {
+      const newFolders = prevData.folders.filter((fold) => fold.folderid !== newFolder.folderId);
+
+      newFolders.push({
+        ...newFolder,
+        folderid: item.folderid,
+      });
+
+      return {
         ...prevData,
         folders: newFolders,
       };
-      return newData;
     });
-    await db.runAsync(
-      `
-      UPDATE folders SET title = ?, color = ?, parentFolderId = ? WHERE folderid = ?
-    `,
-      [
-        newFolder.title,
-        newFolder.color,
-        newFolder.parentFolderId,
-        newFolder.folderId,
-      ],
-    );
-    setOpen({ show: false });
-    setSelectedFolder(null);
+
+    try {
+      await db.runAsync(
+        `
+          UPDATE folders
+          SET title = ?,
+              color = ?,
+              parentFolderId = ?
+          WHERE folderid = ?
+        `,
+        [newFolder.title, newFolder.color, newFolder.parentFolderId, newFolder.folderId]
+      );
+    } catch (err) {
+      console.log("Error updating local folder:", err);
+    }
+
+    closeModal();
+
     updateFolder(token, newFolder)
-      .then(async (res) => {
+      .then(() => {
         console.log("Folder updated");
       })
       .catch((err) => {
@@ -102,13 +223,23 @@ const Settings = ({
     setSystemNotifs([
       {
         id: uuidv4(),
+
         color: "#f33",
+
         title: `Delete Folder ${item.title}`,
+
         text: "Are you sure you want to delete this folder?",
+
         actions: [
-          { text: "close", func: () => setSystemNotifs([]) },
+          {
+            text: "close",
+
+            func: () => setSystemNotifs([]),
+          },
+
           {
             text: "delete",
+
             func: () => {
               setSystemNotifs([]);
               deleteFolder();
@@ -121,43 +252,59 @@ const Settings = ({
 
   const deleteFolder = async () => {
     const folderId = item.folderid;
-    setAllData((prevData) => {
-      const newFolders = prevData.folders.filter(
-        (fold) => fold.folderid !== folderId,
-      );
-      const newData = {
-        ...prevData,
-        folders: newFolders,
-      };
-      return newData;
-    });
+
+    setAllData((prevData) => ({
+      ...prevData,
+
+      folders: prevData.folders.filter((fold) => fold.folderid !== folderId),
+    }));
+
     await db.runAsync(
       `
-      DELETE FROM folders WHERE folderid = $deleteId
-    `,
-      { $deleteId: folderId },
+        DELETE FROM folders
+        WHERE folderid = $deleteId
+      `,
+      {
+        $deleteId: folderId,
+      }
     );
-    setOpen({ show: false });
+
+    closeModal();
+
     deleteAFolder(token, folderId)
-      .then(async (res) => {
-        console.log("response complete");
+      .then(() => {
+        console.log("Folder delete request complete");
       })
       .catch((err) => {
         console.log(err);
       });
   };
 
+  /*
+   * NOTE
+   */
+
   const confirmDeleteNote = () => {
     setSystemNotifs([
       {
         id: uuidv4(),
+
         color: "#f33",
+
         title: `Delete Note ${item.title}`,
+
         text: "Are you sure you want to delete this note?",
+
         actions: [
-          { text: "close", func: () => setSystemNotifs([]) },
+          {
+            text: "close",
+
+            func: () => setSystemNotifs([]),
+          },
+
           {
             text: "delete",
+
             func: () => {
               setSystemNotifs([]);
               deleteNote();
@@ -170,21 +317,28 @@ const Settings = ({
 
   const deleteNote = async () => {
     const noteId = item.noteid;
-    setAllData((prevData) => {
-      const newNotes = prevData.notes.filter((note) => note.noteid !== noteId);
-      const newData = { ...prevData, notes: newNotes };
-      return newData;
-    });
+
+    setAllData((prevData) => ({
+      ...prevData,
+
+      notes: prevData.notes.filter((note) => note.noteid !== noteId),
+    }));
+
     await db.runAsync(
       `
-      DELETE FROM notes WHERE noteid = $deleteId
-    `,
-      { $deleteId: noteId },
+        DELETE FROM notes
+        WHERE noteid = $deleteId
+      `,
+      {
+        $deleteId: noteId,
+      }
     );
-    setOpen({ show: false });
+
+    closeModal();
+
     deleteANote(token, noteId)
-      .then(async (res) => {
-        console.log("request complete");
+      .then(() => {
+        console.log("Note delete request complete");
       })
       .catch((err) => {
         console.log(err);
@@ -194,42 +348,60 @@ const Settings = ({
   const updateNoteTitleOrLocked = async () => {
     const updatedNote = {
       notesId: item.noteid,
-      title: newTitle ? newTitle : item.title,
+
+      title: newTitle.trim() || item.title,
+
       htmlNotes: item.htmlText,
+
       locked: isLocked,
+
       folderId: item.folderId,
+
       updated: new Date(),
     };
+
     updateNote(token, updatedNote)
       .then(async (res) => {
         const resNote = res.data.data[0];
-        console.log(resNote);
+
         const noteToPush = {
           title: resNote.title,
+
           createdAt: resNote.createdat,
+
           noteid: resNote.notesid,
+
           htmlText: resNote.htmlnotes,
+
           locked: resNote.locked,
+
           folderId: resNote.folderid,
+
           updated: resNote.updated,
         };
+
         setAllData((prevUser) => {
-          const newNotes = prevUser.notes.filter(
-            (note) => note.noteid !== resNote.notesid,
-          );
+          const newNotes = prevUser.notes.filter((note) => note.noteid !== resNote.notesid);
+
           newNotes.push(noteToPush);
-          const newData = {
+
+          return {
             ...prevUser,
             notes: newNotes,
           };
-          return newData;
         });
+
         try {
           await db.runAsync(
             `
-      UPDATE notes SET title = ?, locked = ?, htmlText = ?, folderId = ?,
-      updated = ? WHERE noteid = ?
-    `,
+                UPDATE notes
+                SET title = ?,
+                    locked = ?,
+                    htmlText = ?,
+                    folderId = ?,
+                    updated = ?
+                WHERE noteid = ?
+              `,
             [
               resNote.title,
               resNote.locked,
@@ -237,231 +409,926 @@ const Settings = ({
               resNote.folderid,
               resNote.updated,
               resNote.notesid,
-            ],
+            ]
           );
         } catch (err) {
-          console.log("err updating db note");
+          console.log("Error updating local note:", err);
         }
-        setOpen({ show: false });
+
+        closeModal();
       })
       .catch((err) => {
         console.log(err);
       });
   };
 
+  /*
+   * MOVE FOLDER
+   */
+
   const openFolderTree = () => {
     setPickFolder(true);
   };
 
-  return (
+  /*
+   * SHARED SHEET
+   */
+
+  const Sheet = ({ children }) => (
     <>
-      <Animated.View style={[styles.backdrop, { opacity: opacityAni }]}>
-        <Pressable
-          onPress={() => {
-            setSelectedFolder(null);
-            setOpen({ show: false });
-          }}
-          style={{
-            backgroundColor: "transparent",
-            width: "100%",
-            height: "100%",
-          }}
-        ></Pressable>
+      <Animated.View
+  pointerEvents={pickFolder ? "none" : "auto"}
+  style={[
+    styles.backdrop,
+    {
+      opacity: combinedBackdropOpacity,
+    },
+  ]}
+>
+        <Pressable style={StyleSheet.absoluteFill} onPress={closeModal} />
       </Animated.View>
-      {type === "folder" ? (
-        <Animated.View
-          style={[
-            styles.container,
-            {
-              backgroundColor: darkMode ? "#222" : "#fff",
-              scaleX: scaleAni,
-              scaleY: scaleAni,
-            },
-          ]}
-        >
-          <View style={[styles.color, { backgroundColor: newColor }]}></View>
-          <View style={styles.header}>
-            <TextInput
-              style={[styles.white, styles.largeText]}
-              placeholder={item.title}
-              placeholderTextColor="#aaa"
-              value={newTitle}
-              onChangeText={(text) => setNewTitle(text)}
-            />
-            <Pressable onPress={() => confirmDeleteFolder()}>
-              <MaterialCommunityIcons
-                style={[styles.red, styles.largeText]}
-                name="delete"
-              />
-            </Pressable>
-          </View>
-          <View style={styles.info}>
-            <Colors setColor={setNewColor} selectedColor={newColor} />
-          </View>
-          {selectedFolder && (
-            <Text style={darkMode ? styles.white : styles.black}>
-              Moving {item.title} &rarr; {selectedFolder.title}
-            </Text>
-          )}
-          <View style={styles.saveOrMoveContainer}>
-            <Pressable
-              onPress={() => updateAFolder()}
+
+      <KeyboardAvoidingView
+  pointerEvents={pickFolder ? "none" : "box-none"}
+  behavior={
+    Platform.OS === "ios"
+      ? "padding"
+      : undefined
+  }
+  style={styles.keyboardContainer}
+>
+<Animated.View
+  style={[
+    styles.container,
+    {
+      backgroundColor: colors.background,
+      borderColor: colors.border,
+
+      opacity: pickerOpacity,
+
+      transform: [
+        {
+          translateY: combinedTranslateY,
+        },
+        {
+          scale: sheetScale,
+        },
+      ],
+    },
+  ]}
+>
+          <View
+            style={[
+              styles.handle,
+              {
+                backgroundColor: colors.border,
+              },
+            ]}
+          />
+
+          {children}
+        </Animated.View>
+      </KeyboardAvoidingView>
+    </>
+  );
+
+  /*
+   * FOLDER UI
+   */
+
+  if (type === "folder") {
+    return (
+      <Sheet>
+        {/* HEADER */}
+
+        <View style={styles.header}>
+          <View style={styles.headerText}>
+            <Text
               style={[
-                styles.save,
-                { backgroundColor: theme.on ? theme.color : "#fcd34d" },
+                styles.eyebrow,
+
+                {
+                  color: colors.secondary,
+                },
               ]}
             >
-              <Text>Save</Text>
-            </Pressable>
-            <Pressable onPress={() => openFolderTree()} style={styles.move}>
-              <MaterialCommunityIcons
-                style={[
-                  styles.moveBtn,
-                  {
-                    color: theme.on ? theme.color : darkMode ? "#fff" : "#000",
-                  },
-                ]}
-                name="folder-move"
-              />
-            </Pressable>
+              FOLDER
+            </Text>
+
+            <Text
+              style={[
+                styles.heading,
+
+                {
+                  color: colors.text,
+                },
+              ]}
+              numberOfLines={1}
+            >
+              Folder options
+            </Text>
           </View>
-        </Animated.View>
-      ) : (
-        <Animated.View
+
+          <Pressable
+            hitSlop={8}
+            onPress={closeModal}
+            style={({ pressed }) => [
+              styles.closeButton,
+
+              {
+                backgroundColor: pressed ? colors.pressed : colors.surface,
+              },
+            ]}
+          >
+            <Feather name="x" size={18} color={colors.secondary} />
+          </Pressable>
+        </View>
+
+        {/* TITLE */}
+
+        <Text
           style={[
-            styles.container,
+            styles.label,
             {
-              backgroundColor: darkMode ? "#111" : "#fff",
-              scaleX: scaleAni,
-              scaleY: scaleAni,
+              color: colors.secondary,
             },
           ]}
         >
-          <View style={styles.header}>
-            <TextInput
-              style={[styles.title, darkMode ? styles.white : styles.black]}
-              placeholder={item.title}
-              placeholderTextColor="#aaa"
-              value={newTitle}
-              onChangeText={(text) => setNewTitle(text)}
-            />
-            <Pressable onPress={() => confirmDeleteNote()}>
-              <MaterialCommunityIcons
-                style={[styles.red, styles.largeText]}
-                name="delete"
-              />
-            </Pressable>
-          </View>
-          <View style={styles.lock}>
-            <Text style={darkMode ? styles.white : styles.black}>Lock</Text>
-            <Switch
-              trackColor={{ false: "#fda4af", true: "#6ee7b7" }}
-              thumbColor={isLocked ? "#5effa7" : "#ff808d"}
-              ios_backgroundColor="#000000"
-              onValueChange={() => setIsLocked((prev) => !prev)}
-              value={isLocked}
-            />
-          </View>
-          <Text style={styles.gray}>
-            Created On{" "}
-            {new Date(item.createdAt).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-            })}
-          </Text>
-          <Pressable
-            onPress={() => updateNoteTitleOrLocked()}
+          NAME
+        </Text>
+
+        <View
+          style={[
+            styles.inputContainer,
+
+            {
+              backgroundColor: colors.surface,
+
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <Feather name="folder" size={17} color={newColor} />
+
+          <TextInput
             style={[
-              styles.save,
-              { backgroundColor: theme.on ? theme.color : "#fcd34d" },
+              styles.input,
+
+              {
+                color: colors.text,
+              },
+            ]}
+            placeholder={item.title}
+            placeholderTextColor={colors.muted}
+            value={newTitle}
+            onChangeText={setNewTitle}
+            selectionColor={accent}
+          />
+        </View>
+
+        {/* COLOR */}
+
+        <View style={styles.sectionHeader}>
+          <View>
+            <Text
+              style={[
+                styles.sectionTitle,
+
+                {
+                  color: colors.text,
+                },
+              ]}
+            >
+              Folder color
+            </Text>
+
+            <Text
+              style={[
+                styles.sectionDescription,
+
+                {
+                  color: colors.secondary,
+                },
+              ]}
+            >
+              Choose a color to identify this folder
+            </Text>
+          </View>
+
+          <View
+            style={[
+              styles.colorPreview,
+              {
+                backgroundColor: newColor,
+              },
+            ]}
+          />
+        </View>
+
+        <View
+          style={[
+            styles.colorContainer,
+
+            {
+              backgroundColor: colors.surface,
+
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <Colors setColor={setNewColor} selectedColor={newColor} />
+        </View>
+
+        {/* LOCATION */}
+
+        <Text
+          style={[
+            styles.label,
+
+            {
+              color: colors.secondary,
+            },
+          ]}
+        >
+          LOCATION
+        </Text>
+
+        <Pressable
+          onPress={openFolderTree}
+          style={({ pressed }) => [
+            styles.actionRow,
+
+            {
+              backgroundColor: pressed ? colors.pressed : colors.surface,
+
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.actionIcon,
+
+              {
+                backgroundColor: `${accent}14`,
+              },
             ]}
           >
-            <Text>Save</Text>
-          </Pressable>
-        </Animated.View>
-      )}
-    </>
+            <MaterialCommunityIcons name="folder-move-outline" size={20} color={accent} />
+          </View>
+
+          <View style={styles.actionText}>
+            <Text
+              style={[
+                styles.actionTitle,
+
+                {
+                  color: colors.text,
+                },
+              ]}
+            >
+              Move folder
+            </Text>
+
+            <Text
+              style={[
+                styles.actionDescription,
+
+                {
+                  color: selectedFolder ? accent : colors.secondary,
+                },
+              ]}
+              numberOfLines={1}
+            >
+              {selectedFolder
+                ? `${item.title} → ${selectedFolder.title}`
+                : "Choose another folder or top level"}
+            </Text>
+          </View>
+
+          <Feather name="chevron-right" size={18} color={colors.muted} />
+        </Pressable>
+
+        {/* SAVE */}
+
+        <Pressable
+          onPress={updateAFolder}
+          style={({ pressed }) => [
+            styles.saveButton,
+
+            {
+              backgroundColor: accent,
+
+              opacity: pressed ? 0.8 : 1,
+            },
+          ]}
+        >
+          <Feather name="check" size={18} color="#18181b" />
+
+          <Text style={styles.saveButtonText}>Save changes</Text>
+        </Pressable>
+
+        {/* DELETE */}
+
+        <Pressable
+          onPress={confirmDeleteFolder}
+          style={({ pressed }) => [
+            styles.deleteButton,
+
+            {
+              backgroundColor: pressed ? colors.dangerSurface : "transparent",
+            },
+          ]}
+        >
+          <Feather name="trash-2" size={16} color={colors.danger} />
+
+          <Text
+            style={[
+              styles.deleteText,
+
+              {
+                color: colors.danger,
+              },
+            ]}
+          >
+            Delete folder
+          </Text>
+        </Pressable>
+      </Sheet>
+    );
+  }
+
+  /*
+   * NOTE UI
+   */
+
+  return (
+    <Sheet>
+      {/* HEADER */}
+
+      <View style={styles.header}>
+        <View style={styles.headerText}>
+          <Text
+            style={[
+              styles.eyebrow,
+
+              {
+                color: colors.secondary,
+              },
+            ]}
+          >
+            NOTE
+          </Text>
+
+          <Text
+            style={[
+              styles.heading,
+
+              {
+                color: colors.text,
+              },
+            ]}
+          >
+            Note options
+          </Text>
+        </View>
+
+        <Pressable
+          hitSlop={8}
+          onPress={closeModal}
+          style={({ pressed }) => [
+            styles.closeButton,
+
+            {
+              backgroundColor: pressed ? colors.pressed : colors.surface,
+            },
+          ]}
+        >
+          <Feather name="x" size={18} color={colors.secondary} />
+        </Pressable>
+      </View>
+
+      {/* TITLE */}
+
+      <Text
+        style={[
+          styles.label,
+
+          {
+            color: colors.secondary,
+          },
+        ]}
+      >
+        TITLE
+      </Text>
+
+      <View
+        style={[
+          styles.inputContainer,
+
+          {
+            backgroundColor: colors.surface,
+
+            borderColor: colors.border,
+          },
+        ]}
+      >
+        <Feather name="file-text" size={17} color={colors.muted} />
+
+        <TextInput
+          style={[
+            styles.input,
+
+            {
+              color: colors.text,
+            },
+          ]}
+          placeholder={item.title}
+          placeholderTextColor={colors.muted}
+          value={newTitle}
+          onChangeText={setNewTitle}
+          selectionColor={accent}
+        />
+      </View>
+
+      {/* SECURITY */}
+
+      <Text
+        style={[
+          styles.label,
+
+          {
+            color: colors.secondary,
+          },
+        ]}
+      >
+        PRIVACY
+      </Text>
+
+      <View
+        style={[
+          styles.lockContainer,
+
+          {
+            backgroundColor: colors.surface,
+
+            borderColor: colors.border,
+          },
+        ]}
+      >
+        <View
+          style={[
+            styles.actionIcon,
+
+            {
+              backgroundColor: isLocked ? `${accent}14` : colors.surfaceSecondary,
+            },
+          ]}
+        >
+          <Feather name="lock" size={17} color={isLocked ? accent : colors.secondary} />
+        </View>
+
+        <View style={styles.actionText}>
+          <Text
+            style={[
+              styles.actionTitle,
+
+              {
+                color: colors.text,
+              },
+            ]}
+          >
+            Lock note
+          </Text>
+
+          <Text
+            style={[
+              styles.actionDescription,
+
+              {
+                color: colors.secondary,
+              },
+            ]}
+          >
+            Require authentication before opening
+          </Text>
+        </View>
+
+        <Switch
+          value={isLocked}
+          onValueChange={setIsLocked}
+          trackColor={{
+            false: colors.border,
+            true: accent,
+          }}
+          thumbColor="#ffffff"
+          ios_backgroundColor={colors.border}
+        />
+      </View>
+
+      {/* METADATA */}
+
+      <View
+        style={[
+          styles.metadata,
+
+          {
+            borderColor: colors.border,
+          },
+        ]}
+      >
+        <Feather name="calendar" size={14} color={colors.muted} />
+
+        <Text
+          style={[
+            styles.metadataText,
+
+            {
+              color: colors.secondary,
+            },
+          ]}
+        >
+          Created{" "}
+          {new Date(item.createdAt).toLocaleDateString("en-US", {
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          })}
+        </Text>
+      </View>
+
+      {/* SAVE */}
+
+      <Pressable
+        onPress={updateNoteTitleOrLocked}
+        style={({ pressed }) => [
+          styles.saveButton,
+
+          {
+            backgroundColor: accent,
+
+            opacity: pressed ? 0.8 : 1,
+          },
+        ]}
+      >
+        <Feather name="check" size={18} color="#18181b" />
+
+        <Text style={styles.saveButtonText}>Save changes</Text>
+      </Pressable>
+
+      {/* DELETE */}
+
+      <Pressable
+        onPress={confirmDeleteNote}
+        style={({ pressed }) => [
+          styles.deleteButton,
+
+          {
+            backgroundColor: pressed ? colors.dangerSurface : "transparent",
+          },
+        ]}
+      >
+        <Feather name="trash-2" size={16} color={colors.danger} />
+
+        <Text
+          style={[
+            styles.deleteText,
+
+            {
+              color: colors.danger,
+            },
+          ]}
+        >
+          Delete note
+        </Text>
+      </Pressable>
+    </Sheet>
   );
 };
 
 const styles = StyleSheet.create({
+  /*
+   * BACKDROP
+   */
+
   backdrop: {
+    ...StyleSheet.absoluteFillObject,
+
+    backgroundColor: "rgba(0,0,0,0.55)",
+
+    zIndex: 200,
+  },
+
+  /*
+   * POSITIONING
+   */
+
+  keyboardContainer: {
     position: "absolute",
+
     top: 0,
     right: 0,
-    left: 0,
     bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    left: 0,
+
+    justifyContent: "flex-end",
+
+    pointerEvents: "box-none",
+
+    zIndex: 201,
   },
-  title: {
-    fontSize: 20,
-  },
-  largeText: {
-    fontSize: 20,
-  },
+
   container: {
-    position: "absolute",
-    bottom: 50,
-    right: 25,
-    left: 25,
+    width: "100%",
+
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 24,
+
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+
+    borderWidth: StyleSheet.hairlineWidth,
+
+    elevation: 24,
+  },
+
+  /*
+   * HANDLE
+   */
+
+  handle: {
+    width: 38,
+    height: 4,
+
+    alignSelf: "center",
+
     borderRadius: 10,
-    elevation: 2,
-    padding: 10,
-    paddingTop: 15,
+
+    marginBottom: 16,
   },
-  color: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    width: "50%",
-    height: 10,
-    borderBottomLeftRadius: 10,
-    borderTopRightRadius: 10,
-  },
+
+  /*
+   * HEADER
+   */
+
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "space-between",
+
+    marginBottom: 22,
   },
-  info: {
-    marginTop: 15,
-  },
-  white: {
-    color: "#fff",
-  },
-  black: {
-    color: "#000",
-  },
-  red: {
-    color: "#faa",
-  },
-  gray: {
-    color: "#aaa",
-  },
-  save: {
-    padding: 10,
-    borderRadius: 10,
-    elevation: 2,
-    marginTop: 15,
+
+  headerText: {
     flex: 1,
   },
-  lock: {
-    marginTop: 8,
+
+  eyebrow: {
+    fontSize: 9,
+    fontWeight: "700",
+
+    letterSpacing: 1.2,
+
+    marginBottom: 3,
+  },
+
+  heading: {
+    fontSize: 22,
+    fontWeight: "700",
+
+    letterSpacing: -0.4,
+  },
+
+  closeButton: {
+    width: 40,
+    height: 40,
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    borderRadius: 12,
+  },
+
+  /*
+   * INPUT
+   */
+
+  label: {
+    marginLeft: 2,
+    marginBottom: 7,
+    marginTop: 5,
+
+    fontSize: 9,
+    fontWeight: "700",
+
+    letterSpacing: 0.8,
+  },
+
+  inputContainer: {
+    minHeight: 52,
+
+    flexDirection: "row",
+    alignItems: "center",
+
+    paddingHorizontal: 14,
+
+    borderRadius: 14,
+
+    borderWidth: StyleSheet.hairlineWidth,
+
+    marginBottom: 20,
+  },
+
+  input: {
+    flex: 1,
+
+    height: 50,
+
+    marginLeft: 11,
+
+    paddingVertical: 0,
+
+    fontSize: 14,
+    fontWeight: "500",
+  },
+
+  /*
+   * COLOR
+   */
+
+  sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+
+    marginBottom: 10,
   },
-  saveOrMoveContainer: {
+
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  sectionDescription: {
+    marginTop: 3,
+
+    fontSize: 10,
+  },
+
+  colorPreview: {
+    width: 30,
+    height: 30,
+
+    borderRadius: 9,
+  },
+
+  colorContainer: {
+    paddingHorizontal: 10,
+    paddingVertical: 12,
+
+    borderRadius: 14,
+
+    borderWidth: StyleSheet.hairlineWidth,
+
+    marginBottom: 20,
+  },
+
+  /*
+   * ACTION ROW
+   */
+
+  actionRow: {
+    minHeight: 68,
+
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    gap: 10,
+    alignItems: "center",
+
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+
+    borderRadius: 14,
+
+    borderWidth: StyleSheet.hairlineWidth,
+
+    marginBottom: 20,
   },
-  move: {
-    padding: 10,
+
+  actionIcon: {
+    width: 38,
+    height: 38,
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    borderRadius: 11,
   },
-  moveBtn: {
-    fontSize: 20,
+
+  actionText: {
+    flex: 1,
+
+    marginLeft: 11,
+    marginRight: 8,
+  },
+
+  actionTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  actionDescription: {
+    marginTop: 3,
+
+    fontSize: 10,
+    lineHeight: 14,
+  },
+
+  /*
+   * LOCK
+   */
+
+  lockContainer: {
+    minHeight: 68,
+
+    flexDirection: "row",
+    alignItems: "center",
+
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+
+    borderRadius: 14,
+
+    borderWidth: StyleSheet.hairlineWidth,
+
+    marginBottom: 14,
+  },
+
+  /*
+   * METADATA
+   */
+
+  metadata: {
+    flexDirection: "row",
+    alignItems: "center",
+
+    gap: 7,
+
+    paddingTop: 12,
+    marginBottom: 20,
+
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+
+  metadataText: {
+    fontSize: 10,
+  },
+
+  /*
+   * SAVE
+   */
+
+  saveButton: {
+    minHeight: 52,
+
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+
+    gap: 8,
+
+    borderRadius: 14,
+
+    elevation: 3,
+  },
+
+  saveButtonText: {
+    color: "#18181b",
+
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
+  /*
+   * DELETE
+   */
+
+  deleteButton: {
+    minHeight: 46,
+
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+
+    gap: 7,
+
+    marginTop: 8,
+
+    borderRadius: 12,
+  },
+
+  deleteText: {
+    fontSize: 12,
+    fontWeight: "600",
   },
 });
 

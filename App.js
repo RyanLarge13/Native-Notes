@@ -1,10 +1,7 @@
 import { useState, useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, Pressable, ScrollView, View } from "react-native";
-import {
-  TRenderEngineProvider,
-  RenderHTMLConfigProvider,
-} from "react-native-render-html";
+import { TRenderEngineProvider, RenderHTMLConfigProvider } from "react-native-render-html";
 import Spinner from "react-native-loading-spinner-overlay";
 import { NativeRouter, Routes, Route } from "react-router-native";
 import { getUserData } from "./utils/api";
@@ -28,6 +25,7 @@ import {
   grabFromDatabase,
 } from "./utils/sqLite";
 import { getToken, removeToken } from "./utils/asyncStorage";
+import { Feather } from "@expo/vector-icons";
 
 const customStyles = {
   body: { color: "#fff", fontSize: 12 },
@@ -129,11 +127,7 @@ const App = () => {
 
       // TOKEN AND DB EXIST AT THIS POINT
       // GRAB CACHED DATA --------------------
-      const {
-        cachedUser,
-        cachedFolders = [],
-        cachedNotes = [],
-      } = await grabFromDatabase(db);
+      const { cachedUser, cachedFolders = [], cachedNotes = [] } = await grabFromDatabase(db);
 
       // IF USER DOES NOT EXIST IN CACHE DELETE TOKEN DATA AND FORCE LOGIN
       // KEEP DB OPEN
@@ -155,10 +149,7 @@ const App = () => {
 
       // MAKE SURE APP LOADS INTO LAST KNOWN LOCATION
       if (currentPreferences?.location) {
-        findLastFolderLocationAndRoute(
-          currentPreferences.location,
-          cachedAllData,
-        );
+        findLastFolderLocationAndRoute(currentPreferences.location, cachedAllData);
       }
       setLoading(false);
 
@@ -283,9 +274,7 @@ const App = () => {
     // SEARCH AND FIND USERS INFORMATION BASED ON FOLDER LOCATION
     const folderId = folder?.folderid ?? null;
 
-    const subfolders = data.folders.filter(
-      (fold) => fold.parentFolderId === folderId,
-    );
+    const subfolders = data.folders.filter((fold) => fold.parentFolderId === folderId);
 
     const nestedNotes = data.notes.filter((note) => note.folderId === folderId);
 
@@ -302,19 +291,16 @@ const App = () => {
   const findLastFolderLocationAndRoute = (currentLocation, data = allData) => {
     let lastKnownLocation = currentLocation;
 
-    // APP HAS NOT OFFICIALLY INITIALIZED QUITE YET
     if (!data) {
       lastKnownLocation = null;
     }
 
-    // IF THE USER HAS OPT OUT OF SAVING LAST KNOWN FOLDER LOCATION THEN SET IT TO HOME/NULL
     if (!saveLocation) {
       lastKnownLocation = null;
     }
 
-    const folderFound = allData?.folders
-      ? allData.folders.find((f) => f.folderid === lastKnownLocation)
-      : null;
+    const folderFound =
+      data?.folders?.find((folder) => folder.folderid === lastKnownLocation) ?? null;
 
     setFolder(folderFound);
   };
@@ -385,7 +371,7 @@ const App = () => {
           `
           UPDATE user SET preferences = ? WHERE userId = ?
           `,
-          [JSON.stringify(newPreferences), user.userId],
+          [JSON.stringify(newPreferences), user.userId]
         );
       }
 
@@ -447,8 +433,7 @@ const App = () => {
 
     // USER IS NAVIGATING BACK TO CUSTOM FOLDER
     if (parentId !== null) {
-      const parentFolder =
-        allData.folders.find((fold) => fold.folderid === parentId) ?? null;
+      const parentFolder = allData.folders.find((fold) => fold.folderid === parentId) ?? null;
       setFolder(parentFolder);
       return true;
     }
@@ -461,16 +446,15 @@ const App = () => {
           <View
             style={[
               styles.container,
-              { backgroundColor: darkMode ? "#000" : "#eee" },
+              {
+                backgroundColor: darkMode ? "#111113" : "#fafafa",
+              },
             ]}
           >
             <StatusBar style={darkMode ? "light" : "dark"} />
             <Spinner visible={loading} />
             <Routes>
-              <Route
-                path="/signup"
-                element={<Signup setSystemNotifs={setSystemNotifs} />}
-              />
+              <Route path="/signup" element={<Signup setSystemNotifs={setSystemNotifs} />} />
               <Route
                 path="/"
                 element={
@@ -482,9 +466,7 @@ const App = () => {
                         setToken={setToken}
                         setUser={setUser}
                         setSystemNotifs={setSystemNotifs}
-                        findLastFolderLocationAndRoute={
-                          findLastFolderLocationAndRoute
-                        }
+                        findLastFolderLocationAndRoute={findLastFolderLocationAndRoute}
                         continueServerWork={continueServerWork}
                       />
                     )
@@ -569,6 +551,7 @@ const App = () => {
             ) : null}
             {open.show ? (
               <Settings
+                pickFolder={pickFolder}
                 item={open.item}
                 type={open.type}
                 setOpen={setOpen}
@@ -627,78 +610,18 @@ const App = () => {
               </>
             ) : null}
             {pickFolder ? (
-              <>
-                <Pressable
-                  onPress={() => {
-                    setSelectedFolder(null);
-                    setPickFolder(false);
-                  }}
-                  style={styles.backdrop}
-                ></Pressable>
-                <ScrollView
-                  style={[
-                    styles.pickFolder,
-                    { backgroundColor: darkMode ? "#222" : "#eee" },
-                  ]}
-                >
-                  <View style={styles.tree}>
-                    <Tree
-                      moving={true}
-                      setPickFolder={setPickFolder}
-                      setSelectedFolder={setSelectedFolder}
-                      setFolder={setFolder}
-                      folders={allData.folders}
-                      parentId={null}
-                      level={1}
-                      open={open}
-                      setMenuOpen={setMenuOpen}
-                      darkMode={darkMode}
-                    />
-                    <Text
-                      style={[
-                        darkMode ? styles.white : styles.black,
-                        { marginTop: 10 },
-                      ]}
-                    >
-                      {open.item.title} &rarr;{" "}
-                      {selectedFolder ? selectedFolder.title : ""}
-                    </Text>
-                    <Pressable
-                      style={styles.topLevel}
-                      onPress={() => {
-                        setSelectedFolder({
-                          folderid: null,
-                          title: "Top level",
-                        });
-                      }}
-                    >
-                      <Text style={styles.white}>Send to top level</Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => setPickFolder(false)}
-                      style={[
-                        styles.saveFolder,
-                        {
-                          backgroundColor: theme.on ? theme.color : "#fcd34d",
-                        },
-                      ]}
-                    >
-                      <Text>Save</Text>
-                    </Pressable>
-                  </View>
-                </ScrollView>
-              </>
-            ) : null}
-            {systemNotifs.map((notif, index) => (
-              <SystemNotif
-                key={notif.id}
-                setSystemNotifs={setSystemNotifs}
-                systemNotifs={systemNotifs}
-                notif={notif}
-                index={index}
+              <MoveFolderModal
+                open={open}
+                folders={allData.folders}
+                selectedFolder={selectedFolder}
+                setSelectedFolder={setSelectedFolder}
+                setPickFolder={setPickFolder}
+                setFolder={setFolder}
+                setMenuOpen={setMenuOpen}
                 darkMode={darkMode}
+                theme={theme}
               />
-            ))}
+            ) : null}
           </View>
         </RenderHTMLConfigProvider>
       </TRenderEngineProvider>
@@ -706,60 +629,564 @@ const App = () => {
   );
 };
 
+const MoveFolderModal = ({
+  open,
+  folders,
+  selectedFolder,
+  setSelectedFolder,
+  setPickFolder,
+  setFolder,
+  setMenuOpen,
+  darkMode,
+  theme,
+}) => {
+  const accent = theme.on ? theme.color : "#f59e0b";
+
+  const colors = darkMode
+    ? {
+        surface: "#18181b",
+        surfaceSecondary: "#202023",
+        pressed: "#27272a",
+
+        text: "#f4f4f5",
+        secondary: "#a1a1aa",
+        muted: "#71717a",
+
+        border: "#27272a",
+      }
+    : {
+        surface: "#ffffff",
+        surfaceSecondary: "#f4f4f5",
+        pressed: "#e4e4e7",
+
+        text: "#18181b",
+        secondary: "#71717a",
+        muted: "#a1a1aa",
+
+        border: "#e4e4e7",
+      };
+
+  const close = () => {
+    setSelectedFolder(null);
+    setPickFolder(false);
+  };
+
+  const sourceTitle = open?.item?.title || "Item";
+
+  return (
+    <View style={styles.modalLayer}>
+      <Pressable style={styles.modalBackdrop} onPress={close} />
+
+      <View
+        style={[
+          styles.moveModal,
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+          },
+        ]}
+      >
+        {/* HANDLE */}
+
+        <View
+          style={[
+            styles.modalHandle,
+            {
+              backgroundColor: colors.muted,
+            },
+          ]}
+        />
+
+        {/* HEADER */}
+
+        <View style={styles.moveHeader}>
+          <View style={styles.moveHeaderText}>
+            <Text
+              style={[
+                styles.moveTitle,
+                {
+                  color: colors.text,
+                },
+              ]}
+            >
+              Move to folder
+            </Text>
+
+            <Text
+              numberOfLines={1}
+              style={[
+                styles.moveSubtitle,
+                {
+                  color: colors.secondary,
+                },
+              ]}
+            >
+              Choose a destination for {sourceTitle}
+            </Text>
+          </View>
+
+          <Pressable
+            onPress={close}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.modalClose,
+
+              pressed && {
+                backgroundColor: colors.surfaceSecondary,
+              },
+            ]}
+          >
+            <Feather name="x" size={19} color={colors.secondary} />
+          </Pressable>
+        </View>
+
+        {/* TREE */}
+
+        <ScrollView
+          style={styles.treeScroll}
+          contentContainerStyle={styles.treeContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* TOP LEVEL */}
+
+          <Pressable
+            onPress={() => {
+              setSelectedFolder({
+                folderid: null,
+                title: "Top level",
+              });
+            }}
+            style={({ pressed }) => [
+              styles.topLevelRow,
+
+              {
+                backgroundColor: selectedFolder?.folderid === null ? `${accent}14` : "transparent",
+              },
+
+              pressed && {
+                backgroundColor: colors.surfaceSecondary,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.topLevelIcon,
+                {
+                  backgroundColor: `${accent}18`,
+                },
+              ]}
+            >
+              <Feather name="home" size={16} color={accent} />
+            </View>
+
+            <View style={styles.topLevelText}>
+              <Text
+                style={[
+                  styles.destinationTitle,
+                  {
+                    color: colors.text,
+                  },
+                ]}
+              >
+                Top level
+              </Text>
+
+              <Text
+                style={[
+                  styles.destinationDescription,
+                  {
+                    color: colors.secondary,
+                  },
+                ]}
+              >
+                Move outside all folders
+              </Text>
+            </View>
+
+            {selectedFolder?.folderid === null ? (
+              <Feather name="check" size={17} color={accent} />
+            ) : null}
+          </Pressable>
+
+          <View
+            style={[
+              styles.treeDivider,
+              {
+                backgroundColor: colors.border,
+              },
+            ]}
+          />
+
+          <Tree
+            moving
+            setPickFolder={setPickFolder}
+            setSelectedFolder={setSelectedFolder}
+            setFolder={setFolder}
+            folders={folders}
+            parentId={null}
+            level={0}
+            open={open}
+            setMenuOpen={setMenuOpen}
+            darkMode={darkMode}
+          />
+        </ScrollView>
+
+        {/* CURRENT DESTINATION */}
+
+        <View
+          style={[
+            styles.destination,
+            {
+              backgroundColor: colors.surfaceSecondary,
+            },
+          ]}
+        >
+          <View style={styles.destinationInfo}>
+            <Text
+              style={[
+                styles.destinationLabel,
+                {
+                  color: colors.muted,
+                },
+              ]}
+            >
+              DESTINATION
+            </Text>
+
+            <Text
+              numberOfLines={1}
+              style={[
+                styles.selectedDestination,
+                {
+                  color: colors.text,
+                },
+              ]}
+            >
+              {selectedFolder ? selectedFolder.title : "Choose a folder"}
+            </Text>
+          </View>
+
+          {selectedFolder ? (
+            <View
+              style={[
+                styles.selectedCheck,
+                {
+                  backgroundColor: `${accent}18`,
+                },
+              ]}
+            >
+              <Feather name="check" size={15} color={accent} />
+            </View>
+          ) : null}
+        </View>
+
+        {/* ACTIONS */}
+
+        <View style={styles.moveActions}>
+          <Pressable
+            onPress={close}
+            style={({ pressed }) => [
+              styles.cancelButton,
+
+              {
+                borderColor: colors.border,
+              },
+
+              pressed && {
+                backgroundColor: colors.surfaceSecondary,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.cancelText,
+                {
+                  color: colors.text,
+                },
+              ]}
+            >
+              Cancel
+            </Text>
+          </Pressable>
+
+          <Pressable
+            disabled={!selectedFolder}
+            onPress={() => setPickFolder(false)}
+            style={({ pressed }) => [
+              styles.moveButton,
+
+              {
+                backgroundColor: accent,
+              },
+
+              !selectedFolder && styles.moveButtonDisabled,
+
+              pressed && selectedFolder && styles.moveButtonPressed,
+            ]}
+          >
+            <Text style={styles.moveButtonText}>Move here</Text>
+
+            <Feather name="arrow-right" size={15} color="#fff" />
+          </Pressable>
+        </View>
+      </View>
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 25,
-    paddingTop: 25,
   },
-  text: {
-    color: "#fff",
-    textAlign: "center",
+
+  /*
+   * MOVE FOLDER MODAL
+   */
+
+  modalLayer: {
+    ...StyleSheet.absoluteFillObject,
+
+    justifyContent: "flex-end",
+
+    zIndex: 200,
   },
-  white: {
-    color: "#fff",
-    textAlign: "center",
+
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
-  black: {
-    color: "#000",
-    textAlign: "center",
+
+  moveModal: {
+    maxHeight: "82%",
+    minHeight: "55%",
+
+    paddingTop: 8,
+
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+
+    borderWidth: StyleSheet.hairlineWidth,
+
+    elevation: 20,
   },
-  backdrop: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    backgroundColor: "rgba(0,0,0,0.4)",
+
+  modalHandle: {
+    width: 38,
+    height: 4,
+
+    alignSelf: "center",
+
+    marginBottom: 8,
+
+    borderRadius: 2,
+
+    opacity: 0.45,
   },
-  tree: {
-    marginTop: 40,
+
+  moveHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+
+    paddingHorizontal: 18,
+    paddingVertical: 12,
   },
-  pickFolder: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    borderRadius: 10,
-    elevation: 2,
-    paddingVertical: 0,
+
+  moveHeaderText: {
+    flex: 1,
+  },
+
+  moveTitle: {
+    fontSize: 19,
+    fontWeight: "700",
+  },
+
+  moveSubtitle: {
+    marginTop: 3,
+
+    fontSize: 12,
+  },
+
+  modalClose: {
+    width: 38,
+    height: 38,
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    marginLeft: 10,
+
+    borderRadius: 19,
+  },
+
+  /*
+   * TREE
+   */
+
+  treeScroll: {
+    flex: 1,
+  },
+
+  treeContent: {
+    paddingHorizontal: 12,
+    paddingBottom: 15,
+  },
+
+  topLevelRow: {
+    minHeight: 58,
+
+    flexDirection: "row",
+    alignItems: "center",
+
     paddingHorizontal: 10,
+
+    borderRadius: 12,
   },
-  topLevel: {
-    marginTop: 20,
-    backgroundColor: "#222",
-    borderWidth: 1,
-    borderColor: "#fff",
-    padding: 8,
+
+  topLevelIcon: {
+    width: 36,
+    height: 36,
+
+    alignItems: "center",
+    justifyContent: "center",
+
     borderRadius: 10,
+  },
+
+  topLevelText: {
+    flex: 1,
+
+    marginLeft: 11,
+  },
+
+  destinationTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  destinationDescription: {
+    marginTop: 2,
+
+    fontSize: 10,
+  },
+
+  treeDivider: {
+    height: StyleSheet.hairlineWidth,
+
+    marginVertical: 9,
+    marginHorizontal: 8,
+  },
+
+  /*
+   * DESTINATION
+   */
+
+  destination: {
+    flexDirection: "row",
+    alignItems: "center",
+
+    marginHorizontal: 16,
+    marginTop: 8,
+    paddingHorizontal: 13,
+    paddingVertical: 10,
+
+    borderRadius: 12,
+  },
+
+  destinationInfo: {
+    flex: 1,
+  },
+
+  destinationLabel: {
+    fontSize: 9,
+    fontWeight: "700",
+
+    letterSpacing: 0.7,
+  },
+
+  selectedDestination: {
+    marginTop: 3,
+
+    fontSize: 13,
+    fontWeight: "500",
+  },
+
+  selectedCheck: {
+    width: 30,
+    height: 30,
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    borderRadius: 9,
+  },
+
+  /*
+   * BUTTONS
+   */
+
+  moveActions: {
+    flexDirection: "row",
+
+    gap: 10,
+
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 18,
+  },
+
+  cancelButton: {
+    height: 48,
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    paddingHorizontal: 20,
+
+    borderRadius: 13,
+
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+
+  cancelText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  moveButton: {
+    flex: 1,
+    height: 48,
+
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+
+    gap: 8,
+
+    borderRadius: 13,
+
     elevation: 2,
   },
-  saveFolder: {
-    marginVertical: 10,
-    padding: 8,
-    borderRadius: 10,
-    elevation: 2,
+
+  moveButtonDisabled: {
+    opacity: 0.35,
+  },
+
+  moveButtonPressed: {
+    opacity: 0.85,
+
+    transform: [
+      {
+        scale: 0.98,
+      },
+    ],
+  },
+
+  moveButtonText: {
+    color: "#fff",
+
+    fontSize: 14,
+    fontWeight: "700",
   },
 });
 
