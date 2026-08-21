@@ -1,35 +1,24 @@
-import { useState, useEffect, useRef } from "react";
-import { View, Text, Pressable, Animated, StyleSheet } from "react-native";
-import formatColor from "../utils/helpers/formatColor";
+import { useState } from "react";
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  LayoutAnimation,
+  Platform,
+  UIManager,
+} from "react-native";
+
 import { FontAwesome5 } from "@expo/vector-icons";
 
-const NestedFolder = ({
-  moving,
-  setPickFolder,
-  setSelectedFolder,
-  setFolder,
-  childFolders,
-  parentId,
-  level,
-  open,
-  setMenuOpen,
-  darkMode,
-}) => {
-  return (
-    <Tree
-      moving={moving}
-      setPickFolder={setPickFolder}
-      setSelectedFolder={setSelectedFolder}
-      setFolder={setFolder}
-      folders={childFolders}
-      parentId={parentId}
-      level={level}
-      open={open}
-      setMenuOpen={setMenuOpen}
-      darkMode={darkMode}
-    />
-  );
-};
+import formatColor from "../utils/helpers/formatColor";
+
+if (
+  Platform.OS === "android" &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 const Tree = ({
   moving,
@@ -38,168 +27,212 @@ const Tree = ({
   setFolder,
   folders,
   parentId,
-  level,
+  level = 0,
   open,
   setMenuOpen,
   darkMode,
 }) => {
-  const childFolders = folders.filter(
-    (fold) => fold.parentFolderId !== parentId,
-  );
-  const topFolders = folders.filter((fold) => fold.parentFolderId === parentId);
-
   const [folderStates, setFolderStates] = useState({});
 
-  const transXAni = useRef(new Animated.Value(15)).current;
-  const opacAni = useRef(new Animated.Value(0)).current;
+  const topFolders = folders.filter(
+    (folder) => folder.parentFolderId === parentId,
+  );
 
-  useEffect(() => {
-    Animated.parallel([
-      Animated.spring(transXAni, {
-        toValue: 0,
-        tension: 100,
-        friction: 10,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacAni, {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [folderStates]);
+  const colors = darkMode
+    ? {
+        text: "#f5f5f5",
+        muted: "#8e8e93",
+        rowPressed: "#ffffff0d",
+        selected: "#ffffff12",
+        selectedPressed: "#ffffff18",
+      }
+    : {
+        text: "#18181b",
+        muted: "#8a8a8e",
+        rowPressed: "#00000008",
+        selected: "#0000000a",
+        selectedPressed: "#00000010",
+      };
 
   const toggleNested = (folderId) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+
     setFolderStates((prev) => ({
       ...prev,
       [folderId]: !prev[folderId],
     }));
   };
 
+  const handleFolderPress = (folder) => {
+    if (moving) {
+      if (open?.item?.folderid !== folder.folderid) {
+        setSelectedFolder(folder);
+      }
+
+      return;
+    }
+
+    setFolder(folder);
+    setMenuOpen(false);
+  };
+
   return (
-    <>
-      {topFolders.length > 0 ? (
-        <>
-          {topFolders.map((fold) => (
-            <Animated.View
-              key={fold.folderid}
-              style={[
-                styles.folder,
+    <View>
+      {topFolders.map((folder) => {
+        const expanded = !!folderStates[folder.folderid];
+
+        const selected = open?.item?.folderid === folder.folderid;
+
+        const hasChildren = folders.some(
+          (item) => item.parentFolderId === folder.folderid,
+        );
+
+        const folderColor = formatColor(folder.color);
+
+        return (
+          <View key={folder.folderid}>
+            <Pressable
+              onPress={() => handleFolderPress(folder)}
+              disabled={moving && selected}
+              style={({ pressed }) => [
+                styles.folderRow,
+
                 {
-                  translateX: transXAni,
-                  opacity: opacAni,
-                  backgroundColor: darkMode ? "#111" : "#fff",
+                  marginLeft: level * 14,
+
+                  backgroundColor: selected
+                    ? colors.selected
+                    : pressed
+                      ? colors.rowPressed
+                      : "transparent",
                 },
+
+                pressed &&
+                  selected && {
+                    backgroundColor: colors.selectedPressed,
+                  },
+
+                moving && selected && styles.disabled,
               ]}
             >
-              <Pressable
-                key={fold.folderid}
-                style={[styles.folder, { marginLeft: 5 * level }]}
-                onPress={() => {
-                  if (moving) {
-                    open.item.title === fold.title
-                      ? null
-                      : setSelectedFolder(fold);
-                    return;
-                  }
-                  setFolder(fold);
-                  setMenuOpen(false);
-                }}
+              <View style={styles.folderIconContainer}>
+                <FontAwesome5
+                  name={expanded ? "folder-open" : "folder"}
+                  size={18}
+                  color={folderColor}
+                  solid
+                />
+              </View>
+
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={[
+                  styles.folderTitle,
+                  {
+                    color: colors.text,
+                    fontWeight: selected ? "600" : "400",
+                  },
+                ]}
               >
-                <View
-                  style={[
-                    styles.folderColor,
-                    { backgroundColor: `${formatColor(fold.color)}` },
-                    open.item.title === fold.title
-                      ? { opacity: 0.3 }
-                      : { opacity: 1 },
+                {folder.title}
+              </Text>
+
+              {hasChildren && !selected ? (
+                <Pressable
+                  hitSlop={10}
+                  onPress={(event) => {
+                    event.stopPropagation?.();
+                    toggleNested(folder.folderid);
+                  }}
+                  style={({ pressed }) => [
+                    styles.chevronButton,
+                    pressed && styles.chevronPressed,
                   ]}
-                ></View>
-                <View style={styles.titleAndArrow}>
-                  <Text style={darkMode ? styles.white : styles.black}>
-                    {fold.title}
-                  </Text>
-                  {open.item.title !== fold.title && (
-                    <Pressable
-                      style={styles.dropDown}
-                      onPress={() => toggleNested(fold.folderid)}
-                    >
-                      {folderStates[fold.folderid] ? (
-                        <FontAwesome5
-                          style={darkMode ? styles.white : styles.black}
-                          name="arrow-down"
-                        />
-                      ) : (
-                        <FontAwesome5
-                          style={darkMode ? styles.white : styles.black}
-                          name="arrow-right"
-                        />
-                      )}
-                    </Pressable>
-                  )}
-                </View>
-                <View style={styles.nestContainer}>
-                  {folderStates[fold.folderid] ? (
-                    <NestedFolder
-                      moving={moving}
-                      setPickFolder={setPickFolder}
-                      setSelectedFolder={setSelectedFolder}
-                      setFolder={setFolder}
-                      childFolders={childFolders}
-                      parentId={fold.folderid}
-                      level={level + 1}
-                      open={open}
-                      setMenuOpen={setMenuOpen}
-                      darkMode={darkMode}
-                    />
-                  ) : null}
-                </View>
-              </Pressable>
-            </Animated.View>
-          ))}
-        </>
-      ) : null}
-    </>
+                >
+                  <FontAwesome5
+                    name={expanded ? "chevron-down" : "chevron-right"}
+                    size={12}
+                    color={colors.muted}
+                  />
+                </Pressable>
+              ) : (
+                <View style={styles.chevronPlaceholder} />
+              )}
+            </Pressable>
+
+            {expanded && hasChildren ? (
+              <Tree
+                moving={moving}
+                setPickFolder={setPickFolder}
+                setSelectedFolder={setSelectedFolder}
+                setFolder={setFolder}
+                folders={folders}
+                parentId={folder.folderid}
+                level={level + 1}
+                open={open}
+                setMenuOpen={setMenuOpen}
+                darkMode={darkMode}
+              />
+            ) : null}
+          </View>
+        );
+      })}
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  folder: {
-    marginVertical: 2.5,
-    maxWidth: "100%",
-    paddingVertical: 5,
-    paddingRight: 10,
-    paddingLeft: 15,
-    borderRadius: 10,
-    position: "relative",
-  },
-  folderColor: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    bottom: 0,
-    width: 4,
-    borderRadius: 10,
-  },
-  titleAndArrow: {
+  folderRow: {
+    minHeight: 46,
+
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+
+    marginHorizontal: 6,
+    marginVertical: 1,
+
+    paddingLeft: 10,
+    paddingRight: 6,
+
+    borderRadius: 10,
   },
-  dropDown: {
-    padding: 10,
+
+  folderIconContainer: {
+    width: 30,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  nestContainer: {
-    flexDirection: "column",
+
+  folderTitle: {
+    flex: 1,
+
+    marginLeft: 5,
+
+    fontSize: 15,
+    lineHeight: 20,
   },
-  white: {
-    color: "#fff",
+
+  chevronButton: {
+    width: 36,
+    height: 36,
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    borderRadius: 18,
   },
-  black: {
-    color: "#000",
+
+  chevronPressed: {
+    opacity: 0.5,
   },
-  slate: {
-    color: "#aaa",
+
+  chevronPlaceholder: {
+    width: 36,
+  },
+
+  disabled: {
+    opacity: 0.4,
   },
 });
 
