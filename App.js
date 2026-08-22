@@ -109,7 +109,6 @@ const App = () => {
 
       if (!SQLiteTableInitializer) {
         // Must build new tables down the line
-        console.log("Databse table initilizer failed inside useEffect");
         setLoading(false);
         return;
       }
@@ -132,7 +131,6 @@ const App = () => {
       // IF USER DOES NOT EXIST IN CACHE DELETE TOKEN DATA AND FORCE LOGIN
       // KEEP DB OPEN
       if (!cachedUser) {
-        console.log("User cache data does not exist");
         await resetAppStateAndForceLogin();
         return;
       }
@@ -153,8 +151,7 @@ const App = () => {
       }
       setLoading(false);
 
-      // GRAB SERVER DATA ---------
-      console.log("Grabbing server data");
+      // GRAB SERVER DATA --------
       continueServerWork(token, cachedUser.preferences);
     };
 
@@ -213,11 +210,7 @@ const App = () => {
   };
 
   const continueServerWork = async (token, preferences = null) => {
-    console.log("Getting server data");
-    console.log(token);
     const serverData = await getFreshServerData(token);
-
-    console.log("Fetched fresh server data");
 
     if (!serverData) {
       //  WHY WAS THERE NO GOOD SERVER DATA
@@ -225,7 +218,6 @@ const App = () => {
       // WHAT TO DO THEN?????
       // UPDATE RESETAPPSTATEANDFORCELOGIN METHOD
       // await //resetAppStateAndForceLogin();
-      console.log("No server data");
       setLoading(false);
       return;
     }
@@ -250,18 +242,13 @@ const App = () => {
 
   const getFreshServerData = async (token) => {
     try {
-      console.log("Right before getUserData call");
       const response = await getUserData(token);
-      console.log("Right after getUserData call");
 
       const data = response.data.data;
 
       if (data) {
-        console.log("Data exits from get User Data");
         return data;
       }
-
-      console.log("Returning null. No server data exists");
       return null;
     } catch (err) {
       console.log("Error from server when fetching users data: ");
@@ -622,6 +609,10 @@ const App = () => {
                 theme={theme}
               />
             ) : null}
+            {/* SYSTEM NOTIFICATIONS */}
+            {systemNotifs.map((notif, index) => (
+              <SystemNotif key={notif.id} notif={notif} index={index} darkMode={darkMode} />
+            ))}
           </View>
         </RenderHTMLConfigProvider>
       </TRenderEngineProvider>
