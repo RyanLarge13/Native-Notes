@@ -493,6 +493,54 @@ const editorHTML = `
         return result;
       }
 
+      function handleLinkClick(event) {
+  var link = closestElement(
+    event.target,
+    "a"
+  );
+
+  if (!link) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  /*
+   * Put the caret/selection inside the link so commands such
+   * as unlink know exactly which anchor we're working with.
+   */
+  var range =
+    document.createRange();
+
+  range.selectNodeContents(link);
+
+  var selection =
+    window.getSelection();
+
+  selection.removeAllRanges();
+  selection.addRange(range);
+
+  savedRange =
+    range.cloneRange();
+
+  post(
+    "linkClick",
+    {
+      href:
+        link.getAttribute("href") || "",
+
+      text:
+        link.textContent || "",
+
+      target:
+        link.getAttribute("target") || null
+    }
+  );
+
+  scheduleStateUpdate();
+}
+
       /* =========================================================
          INLINE FORMATTING
       ========================================================= */
@@ -2102,6 +2150,10 @@ const editorHTML = `
       /* =========================================================
          EDITOR EVENTS
       ========================================================= */
+      editor.addEventListener(
+        "click",
+        handleLinkClick
+      );
 
       editor.addEventListener(
         "input",
