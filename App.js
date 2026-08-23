@@ -152,7 +152,7 @@ const App = () => {
       setLoading(false);
 
       // GRAB SERVER DATA --------
-      continueServerWork(token, cachedUser.preferences);
+      continueServerWork(token, JSON.parse(cachedUser.preferences));
     };
 
     openDatabase();
@@ -528,14 +528,13 @@ const App = () => {
                 />
               </Route>
             </Routes>
-            {!note ? (
-              <Options
-                setOptions={setOptions}
-                options={options}
-                darkMode={darkMode}
-                theme={theme.color}
-              />
-            ) : null}
+            <Options
+              isNoteClosed={note === null}
+              setOptions={setOptions}
+              options={options}
+              darkMode={darkMode}
+              theme={theme.color}
+            />
             {open.show ? (
               <Settings
                 pickFolder={pickFolder}

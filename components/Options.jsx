@@ -5,7 +5,7 @@ import { StyleSheet, Text, Animated, Pressable, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useNavigate } from "react-router-native";
 
-const Options = ({ setOptions, options, darkMode, theme }) => {
+const Options = ({ isNoteClosed, setOptions, options, darkMode, theme }) => {
   const navigate = useNavigate();
 
   const animation = useRef(new Animated.Value(0)).current;
@@ -85,6 +85,8 @@ const Options = ({ setOptions, options, darkMode, theme }) => {
         {
           backgroundColor: colors.surface,
           borderColor: colors.border,
+
+          display: isNoteClosed ? "flex" : "none",
 
           opacity,
 
