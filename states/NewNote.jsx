@@ -18,7 +18,17 @@ import WebView from "react-native-webview";
 import EditorHTML from "../webView/html.js";
 import Toolbar from "../components/Toolbar.jsx";
 
-const NewNote = ({ folder, token, setAllData, note, setNote, db, autoSave, theme, darkMode }) => {
+const NewNote = ({
+  folder,
+  token,
+  setAllData,
+  note,
+  setNote,
+  db,
+  autoSave,
+  theme,
+  darkMode,
+}) => {
   const [title, setTitle] = useState(note ? note.title : "");
   const [closed, setClosed] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -30,7 +40,9 @@ const NewNote = ({ folder, token, setAllData, note, setNote, db, autoSave, theme
   const webviewRef = useRef();
   const webviewReady = useRef(false);
   const currentHTML = useRef(note?.htmlText ?? "");
+  const lastSavedHTML = useRef(note?.htmlText ?? "");
   const currentTitle = useRef(note?.title ?? "");
+  const currentNote = useRef(note ?? null);
   const currentlySaving = useRef(false);
 
   const opacityAni = useRef(new Animated.Value(0)).current;
@@ -39,10 +51,13 @@ const NewNote = ({ folder, token, setAllData, note, setNote, db, autoSave, theme
   // BACKHANDLER TAKES PRIORITY WHILE NOTE IS OPEN AND RETURNS POWER TO MAIN
   // BACKHANDLER WHEN DONE
   useEffect(() => {
-    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
-      closeNote();
-      return true;
-    });
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        closeNote();
+        return true;
+      },
+    );
 
     return () => subscription.remove();
   }, [closed, note]);
@@ -91,7 +106,7 @@ const NewNote = ({ folder, token, setAllData, note, setNote, db, autoSave, theme
       JSON.stringify({
         command,
         value,
-      })
+      }),
     );
   };
 
@@ -179,15 +194,24 @@ const NewNote = ({ folder, token, setAllData, note, setNote, db, autoSave, theme
   };
 
   const saveNote = async (content) => {
-    // TO STOP RACE CONDITIONS WITH AUTOSAVE AND BACKHANDLER LOGIC ETC, CHECK REF
-    if (currentlySaving.current === true) {
+    if (currentlySaving.current) {
+      return;
+    }
+
+    const activeNote = currentNote.current;
+
+    const htmlChanged = lastSavedHTML.current !== currentHTML.current;
+
+    const titleChanged = (activeNote?.title ?? "") !== currentTitle.current;
+
+    if (activeNote && !htmlChanged && !titleChanged) {
       return;
     }
 
     currentlySaving.current = true;
     setSaving(true);
 
-    const titleToSave = currentTitle.current ?? "Untitled Note";
+    const titleToSave = currentTitle.current?.trim() || "Untitled Note";
 
     /*
      * EXISTING NOTE
@@ -209,7 +233,9 @@ const NewNote = ({ folder, token, setAllData, note, setNote, db, autoSave, theme
 
       setAllData((prev) => ({
         ...prev,
-        notes: prev.notes.map((item) => (item.noteid === note.noteid ? optimisticNote : item)),
+        notes: prev.notes.map((item) =>
+          item.noteid === note.noteid ? optimisticNote : item,
+        ),
       }));
 
       try {
@@ -243,9 +269,13 @@ const NewNote = ({ folder, token, setAllData, note, setNote, db, autoSave, theme
           updated: resNote.updated,
         };
 
+        lastSavedHTML.current = savedNote.htmlText;
+
         setAllData((prev) => ({
           ...prev,
-          notes: prev.notes.map((item) => (item.noteid === savedNote.noteid ? savedNote : item)),
+          notes: prev.notes.map((item) =>
+            item.noteid === savedNote.noteid ? savedNote : item,
+          ),
         }));
 
         // -----------------------------------------
@@ -267,7 +297,7 @@ const NewNote = ({ folder, token, setAllData, note, setNote, db, autoSave, theme
             savedNote.folderId,
             savedNote.updated,
             savedNote.noteid,
-          ]
+          ],
         );
       } catch (err) {
         console.error("Failed to save note:", err);
@@ -279,7 +309,7 @@ const NewNote = ({ folder, token, setAllData, note, setNote, db, autoSave, theme
         setAllData((prev) => ({
           ...prev,
           notes: prev.notes.map((item) =>
-            item.noteid === previousNote.noteid ? previousNote : item
+            item.noteid === previousNote.noteid ? previousNote : item,
           ),
         }));
 
@@ -314,6 +344,8 @@ const NewNote = ({ folder, token, setAllData, note, setNote, db, autoSave, theme
         folderId: resNote.folderid,
         updated: resNote.updated,
       };
+
+      lastSavedHTML.current = savedNote.htmlText;
 
       // -----------------------------------------
       // UPDATE APP STATE
@@ -353,7 +385,7 @@ const NewNote = ({ folder, token, setAllData, note, setNote, db, autoSave, theme
           resNote.createdat,
           resNote.updated,
           resNote.trashed,
-        ]
+        ],
       );
     } catch (err) {
       console.error("Failed to create note:", err);
@@ -375,7 +407,10 @@ const NewNote = ({ folder, token, setAllData, note, setNote, db, autoSave, theme
       ]}
     >
       <KeyboardAvoidingView
-        style={[styles.keyboardContainer, { backgroundColor: darkMode ? "#000" : "#eee" }]}
+        style={[
+          styles.keyboardContainer,
+          { backgroundColor: darkMode ? "#000" : "#eee" },
+        ]}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={0}
       >
@@ -392,7 +427,11 @@ const NewNote = ({ folder, token, setAllData, note, setNote, db, autoSave, theme
               style={[
                 styles.save,
                 {
-                  backgroundColor: theme.on ? theme.color : darkMode ? "#171717" : "#EEEEE",
+                  backgroundColor: theme.on
+                    ? theme.color
+                    : darkMode
+                      ? "#171717"
+                      : "#EEEEE",
                 },
               ]}
               onPress={() => saveNote(currentHTML.current)}
@@ -400,12 +439,18 @@ const NewNote = ({ folder, token, setAllData, note, setNote, db, autoSave, theme
               {saving ? (
                 <FontAwesome5
                   name="cloud-upload-alt"
-                  style={[styles.saveText, { color: darkMode ? "#f5f5f5" : "#222222" }]}
+                  style={[
+                    styles.saveText,
+                    { color: darkMode ? "#f5f5f5" : "#222222" },
+                  ]}
                 />
               ) : (
                 <FontAwesome5
                   name="save"
-                  style={[styles.saveText, { color: darkMode ? "#f5f5f5" : "#222222" }]}
+                  style={[
+                    styles.saveText,
+                    { color: darkMode ? "#f5f5f5" : "#222222" },
+                  ]}
                 />
               )}
             </Pressable>
