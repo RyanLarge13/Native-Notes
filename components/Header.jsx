@@ -1,6 +1,14 @@
 import { useEffect, useState, useRef } from "react";
 
-import { View, Animated, Text, TextInput, StyleSheet, Pressable, Keyboard } from "react-native";
+import {
+  View,
+  Animated,
+  Text,
+  TextInput,
+  StyleSheet,
+  Pressable,
+  Keyboard,
+} from "react-native";
 
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 
@@ -10,7 +18,6 @@ const Header = ({
   folder,
   setFolder,
   goBack,
-  notes,
   setNotes,
   allNotes,
   setMenuOpen,
@@ -72,7 +79,9 @@ const Header = ({
       return;
     }
 
-    const folderNotes = allNotes.filter((note) => note.folderId === folder.folderid);
+    const folderNotes = allNotes.filter(
+      (note) => note.folderId === folder.folderid,
+    );
 
     if (!searchText.trim()) {
       setNotes(folderNotes);
@@ -122,7 +131,9 @@ const Header = ({
   const showSearchedNotes = (source) => {
     const query = searchText.trim().toLowerCase();
 
-    const searchedNotes = source.filter((note) => note.title?.toLowerCase().includes(query));
+    const searchedNotes = source.filter((note) =>
+      note.title?.toLowerCase().includes(query),
+    );
 
     setNotes(searchedNotes);
   };
@@ -173,12 +184,19 @@ const Header = ({
             <Feather name="arrow-left" size={19} color={colors.secondary} />
           </Pressable>
 
-          <Feather name="search" size={17} color={colors.muted} style={styles.searchBarIcon} />
+          <Feather
+            name="search"
+            size={17}
+            color={colors.muted}
+            style={styles.searchBarIcon}
+          />
 
           <TextInput
             ref={searchInputRef}
             underlineColorAndroid="transparent"
-            placeholder={folder ? `Search in ${folder.title}` : "Search all notes"}
+            placeholder={
+              folder ? `Search in ${folder.title}` : "Search all notes"
+            }
             placeholderTextColor={colors.muted}
             value={searchText}
             onChangeText={setSearchText}
@@ -234,7 +252,11 @@ const Header = ({
           <>
             <HeaderButton icon="arrow-left" onPress={goBack} colors={colors} />
 
-            <HeaderButton icon="home" onPress={() => setFolder(null)} colors={colors} />
+            <HeaderButton
+              icon="home"
+              onPress={() => setFolder(null)}
+              colors={colors}
+            />
           </>
         ) : null}
       </View>
@@ -278,7 +300,6 @@ const Header = ({
             colors={colors}
             onPress={() => {
               setLayoutOptions(false);
-
               setView((prev) => !prev);
             }}
           />
@@ -330,7 +351,11 @@ const HeaderButton = ({ icon, onPress, colors, accent, primary = false }) => {
         },
       ]}
     >
-      <Feather name={icon} size={19} color={primary ? accent : colors.secondary} />
+      <Feather
+        name={icon}
+        size={19}
+        color={primary ? accent : colors.secondary}
+      />
     </Pressable>
   );
 };
@@ -360,7 +385,11 @@ const MenuItem = ({ icon, title, colors, accent, onPress }) => {
           },
         ]}
       >
-        <Feather name={icon} size={16} color={accent ? accent : colors.secondary} />
+        <Feather
+          name={icon}
+          size={16}
+          color={accent ? accent : colors.secondary}
+        />
       </View>
 
       <Text
