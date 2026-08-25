@@ -12,7 +12,11 @@ export const loginUser = (username, email, password) => {
 };
 
 export const signupUser = (username, email, password) => {
-  const res = Axios.post(`${devUrl}/users/signup`, { username, email, password});
+  const res = Axios.post(`${devUrl}/users/signup`, {
+    username,
+    email,
+    password,
+  });
   return res;
 };
 
@@ -27,7 +31,7 @@ export const createNewFolder = (token, folder) => {
   const res = Axios.post(
     `${devUrl}/folders/create`,
     { ...folder },
-    { headers: { Authorization: `Bearer ${token}` } }
+    { headers: { Authorization: `Bearer ${token}` } },
   );
   return res;
 };
@@ -36,36 +40,7 @@ export const updateFolder = (token, folder) => {
   const res = Axios.patch(
     `${devUrl}/folders/update`,
     { ...folder },
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  return res;
-};
-
-export const updateFolderPosition = (token, folderId, newFolderId) => {
-  const res = Axios.post(
-    `${devUrl}/folders/update/position`,
-    { folderId, newFolderId },
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  return res;
-};
-
-export const createNewNote = (token, note) => {
-  const res = Axios.post(
-    `${devUrl}/notes/create`,
-    { ...note },
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  return res;
-};
-
-export const updateNote = (token, note) => {
-  const res = Axios.patch(
-    `${devUrl}/notes/update`,
-    { ...note },
-    {
-      headers: { Authorization: `Bearer ${token}` },
-    }
+    { headers: { Authorization: `Bearer ${token}` } },
   );
   return res;
 };
@@ -77,9 +52,65 @@ export const deleteAFolder = (token, folderId) => {
   return res;
 };
 
+export const updateFolderPosition = (token, folderId, newFolderId) => {
+  const res = Axios.post(
+    `${devUrl}/folders/update/position`,
+    { folderId, newFolderId },
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  return res;
+};
+
+// NOTES ---------------------------
+
+export const createNewNote = (token, note) => {
+  const res = Axios.post(
+    `${devUrl}/notes/create`,
+    { ...note },
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  return res;
+};
+
+export const updateNote = (token, note) => {
+  const res = Axios.patch(
+    `${devUrl}/notes/update`,
+    { ...note },
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+  return res;
+};
+
 export const deleteANote = (token, noteId) => {
   const res = Axios.delete(`${devUrl}/notes/delete/${noteId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
+  return res;
+};
+
+export const moveNoteToTrash = (token, noteId, trashedBool) => {
+  const res = Axios.patch(
+    `${devUrl}/notes/movetotrash`,
+    { noteId, trashedBool },
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  return res;
+};
+
+export const updateFavoriteOnNote = (token, noteId, favorite) => {
+  const res = Axios.patch(
+    `${devUrl}/notes/favorite`,
+    {
+      notesId: noteId,
+      favorite: favorite,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
   return res;
 };

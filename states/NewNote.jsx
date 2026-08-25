@@ -356,11 +356,6 @@ const NewNote = ({
         notes: [...prev.notes, savedNote],
       }));
 
-      // SET THE NOTE IN STATE SO WE KNOW NOT TO DUPLICATE
-      if (!closed) {
-        setNote(resNote);
-      }
-
       // -----------------------------------------
       // UPDATE LOCAL DATABASE
       // -----------------------------------------

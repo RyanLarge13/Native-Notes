@@ -12,7 +12,13 @@ import {
   Platform,
 } from "react-native";
 
-import { deleteAFolder, deleteANote, updateFolder, updateNote } from "../utils/api";
+import {
+  createNewNote,
+  deleteAFolder,
+  deleteANote,
+  updateFolder,
+  updateNote,
+} from "../utils/api";
 
 import { unFormatColor, formatColor } from "../utils/helpers/formatColor.js";
 
@@ -41,7 +47,9 @@ const Settings = ({
 
   const [newColor, setNewColor] = useState(formatColor(item.color));
 
-  const [isLocked, setIsLocked] = useState(item.locked === 1 || item.locked === true);
+  const [isLocked, setIsLocked] = useState(
+    item.locked === 1 || item.locked === true,
+  );
 
   /*
    * ANIMATION
@@ -49,18 +57,16 @@ const Settings = ({
 
   const animation = useRef(new Animated.Value(0)).current;
 
-  const pickerAnimation = useRef(
-  new Animated.Value(0)
-).current;
+  const pickerAnimation = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-  Animated.spring(pickerAnimation, {
-    toValue: pickFolder ? 1 : 0,
-    tension: 100,
-    friction: 12,
-    useNativeDriver: true,
-  }).start();
-}, [pickFolder]);
+    Animated.spring(pickerAnimation, {
+      toValue: pickFolder ? 1 : 0,
+      tension: 100,
+      friction: 12,
+      useNativeDriver: true,
+    }).start();
+  }, [pickFolder]);
 
   useEffect(() => {
     Animated.spring(animation, {
@@ -87,24 +93,21 @@ const Settings = ({
   });
 
   const pickerTranslateY = pickerAnimation.interpolate({
-  inputRange: [0, 1],
-  outputRange: [0, 500],
-});
+    inputRange: [0, 1],
+    outputRange: [0, 500],
+  });
 
-const pickerOpacity = pickerAnimation.interpolate({
-  inputRange: [0, 0.7, 1],
-  outputRange: [1, 0.5, 0],
-});
+  const pickerOpacity = pickerAnimation.interpolate({
+    inputRange: [0, 0.7, 1],
+    outputRange: [1, 0.5, 0],
+  });
 
-  const combinedTranslateY = Animated.add(
-  translateY,
-  pickerTranslateY
-);
+  const combinedTranslateY = Animated.add(translateY, pickerTranslateY);
 
   const combinedBackdropOpacity = Animated.multiply(
-  backdropOpacity,
-  pickerOpacity
-);
+    backdropOpacity,
+    pickerOpacity,
+  );
 
   /*
    * COLORS
@@ -170,7 +173,9 @@ const pickerOpacity = pickerAnimation.interpolate({
 
   const updateAFolder = async () => {
     const newFolder = {
-      parentFolderId: selectedFolder ? selectedFolder.folderid : item.parentFolderId,
+      parentFolderId: selectedFolder
+        ? selectedFolder.folderid
+        : item.parentFolderId,
 
       title: newTitle.trim() || item.title,
 
@@ -180,7 +185,9 @@ const pickerOpacity = pickerAnimation.interpolate({
     };
 
     setAllData((prevData) => {
-      const newFolders = prevData.folders.filter((fold) => fold.folderid !== newFolder.folderId);
+      const newFolders = prevData.folders.filter(
+        (fold) => fold.folderid !== newFolder.folderId,
+      );
 
       newFolders.push({
         ...newFolder,
@@ -202,7 +209,12 @@ const pickerOpacity = pickerAnimation.interpolate({
               parentFolderId = ?
           WHERE folderid = ?
         `,
-        [newFolder.title, newFolder.color, newFolder.parentFolderId, newFolder.folderId]
+        [
+          newFolder.title,
+          newFolder.color,
+          newFolder.parentFolderId,
+          newFolder.folderId,
+        ],
       );
     } catch (err) {
       console.log("Error updating local folder:", err);
@@ -266,7 +278,7 @@ const pickerOpacity = pickerAnimation.interpolate({
       `,
       {
         $deleteId: folderId,
-      }
+      },
     );
 
     closeModal();
@@ -331,7 +343,7 @@ const pickerOpacity = pickerAnimation.interpolate({
       `,
       {
         $deleteId: noteId,
-      }
+      },
     );
 
     closeModal();
@@ -381,7 +393,9 @@ const pickerOpacity = pickerAnimation.interpolate({
         };
 
         setAllData((prevUser) => {
-          const newNotes = prevUser.notes.filter((note) => note.noteid !== resNote.notesid);
+          const newNotes = prevUser.notes.filter(
+            (note) => note.noteid !== resNote.notesid,
+          );
 
           newNotes.push(noteToPush);
 
@@ -409,7 +423,7 @@ const pickerOpacity = pickerAnimation.interpolate({
               resNote.folderid,
               resNote.updated,
               resNote.notesid,
-            ]
+            ],
           );
         } catch (err) {
           console.log("Error updating local note:", err);
@@ -437,46 +451,42 @@ const pickerOpacity = pickerAnimation.interpolate({
   const Sheet = ({ children }) => (
     <>
       <Animated.View
-  pointerEvents={pickFolder ? "none" : "auto"}
-  style={[
-    styles.backdrop,
-    {
-      opacity: combinedBackdropOpacity,
-    },
-  ]}
->
+        pointerEvents={pickFolder ? "none" : "auto"}
+        style={[
+          styles.backdrop,
+          {
+            opacity: combinedBackdropOpacity,
+          },
+        ]}
+      >
         <Pressable style={StyleSheet.absoluteFill} onPress={closeModal} />
       </Animated.View>
 
       <KeyboardAvoidingView
-  pointerEvents={pickFolder ? "none" : "box-none"}
-  behavior={
-    Platform.OS === "ios"
-      ? "padding"
-      : undefined
-  }
-  style={styles.keyboardContainer}
->
-<Animated.View
-  style={[
-    styles.container,
-    {
-      backgroundColor: colors.background,
-      borderColor: colors.border,
+        pointerEvents={pickFolder ? "none" : "box-none"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.keyboardContainer}
+      >
+        <Animated.View
+          style={[
+            styles.container,
+            {
+              backgroundColor: colors.background,
+              borderColor: colors.border,
 
-      opacity: pickerOpacity,
+              opacity: pickerOpacity,
 
-      transform: [
-        {
-          translateY: combinedTranslateY,
-        },
-        {
-          scale: sheetScale,
-        },
-      ],
-    },
-  ]}
->
+              transform: [
+                {
+                  translateY: combinedTranslateY,
+                },
+                {
+                  scale: sheetScale,
+                },
+              ],
+            },
+          ]}
+        >
           <View
             style={[
               styles.handle,
@@ -674,7 +684,11 @@ const pickerOpacity = pickerAnimation.interpolate({
               },
             ]}
           >
-            <MaterialCommunityIcons name="folder-move-outline" size={20} color={accent} />
+            <MaterialCommunityIcons
+              name="folder-move-outline"
+              size={20}
+              color={accent}
+            />
           </View>
 
           <View style={styles.actionText}>
@@ -757,6 +771,45 @@ const pickerOpacity = pickerAnimation.interpolate({
       </Sheet>
     );
   }
+
+  // Copy note
+  const confirmCopy = () => {
+    const newNotificaiton = {};
+
+    setSystemNotifs((prev) => [...prev, newNotificaiton]);
+  };
+
+  const handleCopyNote = async () => {
+    const copiedNote = {
+      title: item.title || "",
+      htmlNotes: item.htmlText || "",
+      folderId: item?.parentFolderId || null,
+      locked: item.locked ?? false,
+    };
+
+    try {
+      const res = await createNewNote(token, copiedNote);
+      const resNote = res.data.data[0];
+
+      const savedNote = {
+        title: resNote.title,
+        createdAt: resNote.createdat,
+        noteid: resNote.notesid,
+        htmlText: resNote.htmlnotes,
+        locked: resNote.locked,
+        folderId: resNote.folderid,
+        updated: resNote.updated,
+      };
+
+      setAllData((prev) => ({
+        ...prev,
+        notes: [...prev.notes, savedNote],
+      }));
+    } catch (err) {
+      console.log("Error copying note from server inside handleCopyNote");
+      console.log(err);
+    }
+  };
 
   /*
    * NOTE UI
@@ -881,11 +934,17 @@ const pickerOpacity = pickerAnimation.interpolate({
             styles.actionIcon,
 
             {
-              backgroundColor: isLocked ? `${accent}14` : colors.surfaceSecondary,
+              backgroundColor: isLocked
+                ? `${accent}14`
+                : colors.surfaceSecondary,
             },
           ]}
         >
-          <Feather name="lock" size={17} color={isLocked ? accent : colors.secondary} />
+          <Feather
+            name="lock"
+            size={17}
+            color={isLocked ? accent : colors.secondary}
+          />
         </View>
 
         <View style={styles.actionText}>
@@ -925,6 +984,73 @@ const pickerOpacity = pickerAnimation.interpolate({
           ios_backgroundColor={colors.border}
         />
       </View>
+
+      {/* QUICK ACTIONS */}
+
+      <Text
+        style={[
+          styles.label,
+
+          {
+            color: colors.secondary,
+          },
+        ]}
+      >
+        Quick Actions
+      </Text>
+
+      <Pressable
+        onPress={handleCopyNote}
+        style={[
+          styles.lockContainer,
+
+          {
+            backgroundColor: colors.surface,
+
+            borderColor: colors.border,
+          },
+        ]}
+      >
+        <View
+          style={[
+            styles.actionIcon,
+
+            {
+              backgroundColor: isLocked
+                ? `${accent}14`
+                : colors.surfaceSecondary,
+            },
+          ]}
+        >
+          <Feather name="copy" size={17} color={colors.secondary} />
+        </View>
+
+        <View style={styles.actionText}>
+          <Text
+            style={[
+              styles.actionTitle,
+
+              {
+                color: colors.text,
+              },
+            ]}
+          >
+            Copy Note
+          </Text>
+
+          <Text
+            style={[
+              styles.actionDescription,
+
+              {
+                color: colors.secondary,
+              },
+            ]}
+          >
+            Create a duplicate of this note
+          </Text>
+        </View>
+      </Pressable>
 
       {/* METADATA */}
 
