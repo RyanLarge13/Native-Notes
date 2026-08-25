@@ -234,7 +234,7 @@ const NewNote = ({
       setAllData((prev) => ({
         ...prev,
         notes: prev.notes.map((item) =>
-          item.noteid === note.noteid ? optimisticNote : item,
+          item.noteid === activeNote.noteid ? optimisticNote : item,
         ),
       }));
 
@@ -244,10 +244,10 @@ const NewNote = ({
         // -----------------------------------------
 
         const updatedNote = {
-          notesId: note.noteid,
+          notesId: activeNote.noteid,
           title: titleToSave,
           htmlNotes: content,
-          locked: note.locked,
+          locked: activeNote.locked,
           folderId: folder?.folderid ?? null,
           update: new Date(),
         };
