@@ -774,9 +774,17 @@ const Settings = ({
 
   // Copy note
   const confirmCopy = () => {
-    const newNotificaiton = {};
+    const newNotification = [
+      {
+        id: uuidv4(),
+        color: "#fde047",
+        title: "Duplicate Note",
+        text: "Are you sure you want to duplicate this note and its contents?",
+        actions: [{ text: "close", func: () => handleCopyNote() }],
+      },
+    ];
 
-    setSystemNotifs((prev) => [...prev, newNotificaiton]);
+    setSystemNotifs((prev) => [...prev, newNotification]);
   };
 
   const handleCopyNote = async () => {
@@ -1000,7 +1008,7 @@ const Settings = ({
       </Text>
 
       <Pressable
-        onPress={handleCopyNote}
+        onPress={confirmCopy}
         style={[
           styles.lockContainer,
 
