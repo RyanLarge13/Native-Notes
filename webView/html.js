@@ -740,18 +740,48 @@ const editorHTML = `
       ========================================================= */
 
       function formatBlock(tag) {
-        if (!tag) {
-          tag = "p";
-        }
+  if (!tag) {
+    tag = "p";
+  }
 
-        tag = String(tag)
-          .toLowerCase();
+  tag = String(tag).toLowerCase();
 
-        return exec(
-          "formatBlock",
-          "<" + tag + ">"
-        );
-      }
+  exec(
+    "formatBlock",
+    "<" + tag + ">"
+  );
+
+  if (tag === "pre" || tag === "blockquote") {
+    const selection = window.getSelection();
+
+    if (!selection || selection.rangeCount === 0) {
+      return;
+    }
+
+    let node = selection.anchorNode;
+
+    // Text node -> parent element
+    if (node.nodeType === Node.TEXT_NODE) {
+      node = node.parentElement;
+    }
+
+    // Find the block we just formatted.
+    const block = node.closest(tag);
+
+    if (!block) {
+      return;
+    }
+
+    // Only create an exit paragraph if this block
+    // is currently the last block.
+    if (!block.nextElementSibling) {
+      const paragraph = document.createElement("p");
+      paragraph.innerHTML = "<br>";
+
+      block.after(paragraph);
+    }
+  }
+}
 
       function setParagraph() {
         return formatBlock("p");
