@@ -29,6 +29,7 @@ import {
 } from "./utils/sqLite";
 import { getToken, removeToken } from "./utils/asyncStorage";
 import { Feather } from "@expo/vector-icons";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 const customStyles = {
 	body: { color: "#fff", fontSize: 12 },
@@ -242,8 +243,6 @@ const App = () => {
 		setAllData(serverData);
 		setUser(serverData.user);
 
-		findLastFolderLocationAndRoute(preferences?.location, serverData);
-
 		setLoading(false);
 
 		// UPDATE CACHE WITH TRUE SERVER DATA FOR NEXT TIME
@@ -447,205 +446,207 @@ const App = () => {
 	};
 
 	return (
-		<NativeRouter>
-			<TRenderEngineProvider tagsStyles={customStyles}>
-				<RenderHTMLConfigProvider>
-					<View
-						style={[
-							styles.container,
-							{
-								backgroundColor: darkMode ? "#111113" : "#fafafa",
-							},
-						]}
-					>
-						<StatusBar style={darkMode ? "light" : "dark"} />
-						<Spinner visible={loading} />
-						<Routes>
-							<Route
-								path="/signup"
-								element={<Signup setSystemNotifs={setSystemNotifs} />}
-							/>
-							<Route
-								path="/"
-								element={
-									!user ? (
-										loading ? (
-											<Spinner visible={loading} />
+		<SafeAreaProvider>
+			<NativeRouter>
+				<TRenderEngineProvider tagsStyles={customStyles}>
+					<RenderHTMLConfigProvider>
+						<View
+							style={[
+								styles.container,
+								{
+									backgroundColor: darkMode ? "#111113" : "#fafafa",
+								},
+							]}
+						>
+							<StatusBar style={darkMode ? "light" : "dark"} />
+							<Spinner visible={loading} />
+							<Routes>
+								<Route
+									path="/signup"
+									element={<Signup setSystemNotifs={setSystemNotifs} />}
+								/>
+								<Route
+									path="/"
+									element={
+										!user ? (
+											loading ? (
+												<Spinner visible={loading} />
+											) : (
+												<Login
+													setToken={setToken}
+													setUser={setUser}
+													setSystemNotifs={setSystemNotifs}
+													findLastFolderLocationAndRoute={
+														findLastFolderLocationAndRoute
+													}
+													continueServerWork={continueServerWork}
+												/>
+											)
 										) : (
-											<Login
-												setToken={setToken}
-												setUser={setUser}
-												setSystemNotifs={setSystemNotifs}
-												findLastFolderLocationAndRoute={
-													findLastFolderLocationAndRoute
-												}
-												continueServerWork={continueServerWork}
+											<Account
+												mainTitle={mainTitle}
+												folders={folders}
+												notes={notes}
+												setNotes={setNotes}
+												folder={folder}
+												setFolder={setFolder}
+												goBack={goBack}
+												setOpen={setOpen}
+												pickFolder={pickFolder}
+												open={open}
+												menuOpen={menuOpen}
+												options={options}
+												setOptions={setOptions}
+												note={note}
+												setNote={setNote}
+												allNotes={allData.notes}
+												setMenuOpen={setMenuOpen}
+												systemFolder={systemFolder}
+												layoutOptions={layoutOptions}
+												setLayoutOptions={setLayoutOptions}
+												userSettingsOpen={userSettingsOpen}
+												view={view}
+												setView={setView}
+												order={order}
+												setOrder={setOrder}
+												sort={sort}
+												setSort={setSort}
+												saveLocation={saveLocation}
+												autoSave={autoSave}
+												darkMode={darkMode}
+												theme={theme}
+												appLock={appLock}
+												user={user}
+												db={db}
 											/>
 										)
-									) : (
-										<Account
-											mainTitle={mainTitle}
-											folders={folders}
-											notes={notes}
-											setNotes={setNotes}
-											folder={folder}
-											setFolder={setFolder}
-											goBack={goBack}
-											setOpen={setOpen}
-											pickFolder={pickFolder}
-											open={open}
-											menuOpen={menuOpen}
-											options={options}
-											setOptions={setOptions}
-											note={note}
-											setNote={setNote}
-											allNotes={allData.notes}
-											setMenuOpen={setMenuOpen}
-											systemFolder={systemFolder}
-											layoutOptions={layoutOptions}
-											setLayoutOptions={setLayoutOptions}
-											userSettingsOpen={userSettingsOpen}
-											view={view}
-											setView={setView}
-											order={order}
-											setOrder={setOrder}
-											sort={sort}
-											setSort={setSort}
-											saveLocation={saveLocation}
-											autoSave={autoSave}
-											darkMode={darkMode}
-											theme={theme}
-											appLock={appLock}
-											user={user}
-											db={db}
-										/>
-									)
-								}
-							>
-								<Route
-									path="newfolder"
-									element={
-										<NewFolder
-											setAllData={setAllData}
-											folder={folder}
-											token={token}
-											db={db}
-											darkMode={darkMode}
-											theme={theme}
-										/>
 									}
-								/>
-								<Route
-									path="newnote"
-									element={
-										<NewNote
-											folder={folder}
-											token={token}
-											setAllData={setAllData}
-											note={note}
-											setNote={setNote}
-											db={db}
-											autoSave={autoSave}
-											theme={theme}
-											darkMode={darkMode}
-										/>
-									}
-								/>
-							</Route>
-						</Routes>
-						<Options
-							isNoteClosed={note === null}
-							setOptions={setOptions}
-							options={options}
-							darkMode={darkMode}
-							theme={theme.color}
-						/>
-						{open.show ? (
-							<Settings
-								pickFolder={pickFolder}
-								item={open.item}
-								type={open.type}
-								setOpen={setOpen}
-								token={token}
-								setAllData={setAllData}
-								setPickFolder={setPickFolder}
-								selectedFolder={selectedFolder}
-								setSelectedFolder={setSelectedFolder}
-								db={db}
-								setSystemNotifs={setSystemNotifs}
+								>
+									<Route
+										path="newfolder"
+										element={
+											<NewFolder
+												setAllData={setAllData}
+												folder={folder}
+												token={token}
+												db={db}
+												darkMode={darkMode}
+												theme={theme}
+											/>
+										}
+									/>
+									<Route
+										path="newnote"
+										element={
+											<NewNote
+												folder={folder}
+												token={token}
+												setAllData={setAllData}
+												note={note}
+												setNote={setNote}
+												db={db}
+												autoSave={autoSave}
+												theme={theme}
+												darkMode={darkMode}
+											/>
+										}
+									/>
+								</Route>
+							</Routes>
+							<Options
+								isNoteClosed={note === null}
+								setOptions={setOptions}
+								options={options}
 								darkMode={darkMode}
-								theme={theme}
+								theme={theme.color}
 							/>
-						) : null}
-						{allData ? (
-							<>
-								<Menu
-									menuOpen={menuOpen}
-									setMenuOpen={setMenuOpen}
-									folders={folders}
-									setFolder={setFolder}
-									allData={allData}
-									systemFolder={systemFolder}
-									setSystemFolder={setSystemFolder}
-									setPickFolder={setPickFolder}
-									setUserSettingsOpen={setUserSettingsOpen}
-									darkMode={darkMode}
-									theme={theme}
-								/>
-								<UserSettings
-									open={userSettingsOpen}
-									setOpen={setUserSettingsOpen}
-									darkMode={darkMode}
-									setDarkMode={setDarkMode}
-									setSystemNotifs={setSystemNotifs}
-									setMenuOpen={setMenuOpen}
+							{open.show ? (
+								<Settings
+									pickFolder={pickFolder}
+									item={open.item}
+									type={open.type}
+									setOpen={setOpen}
+									token={token}
 									setAllData={setAllData}
-									setUser={setUser}
-									view={view}
-									setView={setView}
-									order={order}
-									setOrder={setOrder}
-									theme={theme}
-									setTheme={setTheme}
-									appLock={appLock}
-									setAppLock={setAppLock}
-									autoSave={autoSave}
-									setAutoSave={setAutoSave}
-									sort={sort}
-									setSort={setSort}
-									saveLocation={saveLocation}
-									setSaveLocation={setSaveLocation}
+									setPickFolder={setPickFolder}
+									selectedFolder={selectedFolder}
+									setSelectedFolder={setSelectedFolder}
 									db={db}
-									user={user}
+									setSystemNotifs={setSystemNotifs}
+									darkMode={darkMode}
+									theme={theme}
 								/>
-							</>
-						) : null}
-						{pickFolder ? (
-							<MoveFolderModal
-								open={open}
-								folders={allData.folders}
-								selectedFolder={selectedFolder}
-								setSelectedFolder={setSelectedFolder}
-								setPickFolder={setPickFolder}
-								setFolder={setFolder}
-								setMenuOpen={setMenuOpen}
-								darkMode={darkMode}
-								theme={theme}
-							/>
-						) : null}
-						{/* SYSTEM NOTIFICATIONS */}
-						{systemNotifs.map((notif, index) => (
-							<SystemNotif
-								key={notif.id}
-								notif={notif}
-								index={index}
-								darkMode={darkMode}
-							/>
-						))}
-					</View>
-				</RenderHTMLConfigProvider>
-			</TRenderEngineProvider>
-		</NativeRouter>
+							) : null}
+							{allData ? (
+								<>
+									<Menu
+										menuOpen={menuOpen}
+										setMenuOpen={setMenuOpen}
+										folders={folders}
+										setFolder={setFolder}
+										allData={allData}
+										systemFolder={systemFolder}
+										setSystemFolder={setSystemFolder}
+										setPickFolder={setPickFolder}
+										setUserSettingsOpen={setUserSettingsOpen}
+										darkMode={darkMode}
+										theme={theme}
+									/>
+									<UserSettings
+										open={userSettingsOpen}
+										setOpen={setUserSettingsOpen}
+										darkMode={darkMode}
+										setDarkMode={setDarkMode}
+										setSystemNotifs={setSystemNotifs}
+										setMenuOpen={setMenuOpen}
+										setAllData={setAllData}
+										setUser={setUser}
+										view={view}
+										setView={setView}
+										order={order}
+										setOrder={setOrder}
+										theme={theme}
+										setTheme={setTheme}
+										appLock={appLock}
+										setAppLock={setAppLock}
+										autoSave={autoSave}
+										setAutoSave={setAutoSave}
+										sort={sort}
+										setSort={setSort}
+										saveLocation={saveLocation}
+										setSaveLocation={setSaveLocation}
+										db={db}
+										user={user}
+									/>
+								</>
+							) : null}
+							{pickFolder ? (
+								<MoveFolderModal
+									open={open}
+									folders={allData.folders}
+									selectedFolder={selectedFolder}
+									setSelectedFolder={setSelectedFolder}
+									setPickFolder={setPickFolder}
+									setFolder={setFolder}
+									setMenuOpen={setMenuOpen}
+									darkMode={darkMode}
+									theme={theme}
+								/>
+							) : null}
+							{/* SYSTEM NOTIFICATIONS */}
+							{systemNotifs.map((notif, index) => (
+								<SystemNotif
+									key={notif.id}
+									notif={notif}
+									index={index}
+									darkMode={darkMode}
+								/>
+							))}
+						</View>
+					</RenderHTMLConfigProvider>
+				</TRenderEngineProvider>
+			</NativeRouter>
+		</SafeAreaProvider>
 	);
 };
 
