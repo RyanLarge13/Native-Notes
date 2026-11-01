@@ -8,6 +8,7 @@ import {
 import Spinner from "react-native-loading-spinner-overlay";
 import { NativeRouter, Routes, Route } from "react-router-native";
 import { getUserData } from "./utils/api";
+import { retryPendingNoteSaves } from "./utils/noteSaveQueue";
 import * as LocalAuthentication from "expo-local-authentication";
 import Login from "./states/Login";
 import Signup from "./states/Signup";
@@ -164,6 +165,7 @@ const App = () => {
 				setLoading(false);
 
 				// GRAB SERVER DATA --------
+				await retryPendingNoteSaves({ db, token, setAllData });
 				continueServerWork(token, cachedUser.preferences);
 			} catch (err) {
 				console.log("Fatal missed initialization error! Inside openDatabase: ");
@@ -239,14 +241,19 @@ const App = () => {
 			return;
 		}
 
-		// UPDATE STATE WITH FRESH DATA FROM SERVER --------------
-		setAllData(serverData);
-		setUser(serverData.user);
-
-		setLoading(false);
-
+		// Do not apply a server snapshot while unsynchronized local edits exist.
+		const pending = await db.getFirstAsync("SELECT COUNT(*) AS count FROM note_save_outbox");
+		if (pending?.count > 0) {
+			setLoading(false);
+			return;
+		}
 		// UPDATE CACHE WITH TRUE SERVER DATA FOR NEXT TIME
 		const dataWasStored = await replaceLocalCache(serverData, db, preferences);
+		if (dataWasStored) {
+			setAllData(serverData);
+			setUser(serverData.user);
+		}
+		setLoading(false);
 
 		if (!dataWasStored) {
 			setTimeout(() => {
