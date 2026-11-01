@@ -16,6 +16,7 @@ import { v4 as uuidv4 } from "uuid";
 
 import { unFormatColor } from "../utils/helpers/formatColor";
 import { createNewFolder } from "../utils/api";
+import { classifyCreateFailure, requireCreatedId } from "../utils/creationQueue";
 import Colors from "../components/Colors";
 
 const NewFolder = ({ setAllData, folder, token, db, darkMode, theme }) => {
@@ -105,89 +106,56 @@ const NewFolder = ({ setAllData, folder, token, db, darkMode, theme }) => {
 		});
 	};
 
-	const createFolder = () => {
-		const cleanTitle = title.trim();
-
-		if (!cleanTitle || creating) {
-			return;
-		}
-
-		setCreating(true);
-
-		try {
-			const tempId = uuidv4();
-
-			const parentFolderId = folder?.folderid ?? null;
-
-			const newFolder = {
-				folderid: tempId,
-				title: cleanTitle,
-				color: unFormatColor(color),
-				parentFolderId,
-			};
-
-			/*
-			 * Optimistically add the folder immediately.
-			 */
-			setAllData((prevData) => ({
-				...prevData,
-				folders: [...prevData.folders, newFolder],
-			}));
-
-			navigate("/");
-
-			/*
-			 * Synchronize with server.
-			 */
-			createNewFolder(token, newFolder)
-				.then(async (res) => {
-					const resFolder = res.data.data[0];
-
-					/*
-					 * Replace temporary UUID with server ID.
-					 */
-					setAllData((prevData) => ({
-						...prevData,
-						folders: prevData.folders.map((aFolder) =>
-							aFolder.folderid === tempId
-								? {
-										...aFolder,
-										folderid: resFolder.folderid,
-									}
-								: aFolder,
-						),
-					}));
-
-					/*
-					 * Store authoritative folder locally.
-					 */
-					await db.runAsync(
-						`
-              INSERT INTO folders (
-                folderid,
-                title,
-                color,
-                parentFolderId
-              )
-              VALUES (?, ?, ?, ?);
-            `,
-						resFolder.folderid,
-						cleanTitle,
-						unFormatColor(color),
-						parentFolderId,
-					);
-				})
-				.catch((err) => {
-					console.error("Failed to create folder:", err);
-				})
-				.finally(() => {
-					setCreating(false);
-				});
-		} catch (err) {
-			console.error("Failed to create folder:", err);
-			setCreating(false);
-		}
-	};
+  const createFolder = async () => {
+    const cleanTitle = title.trim();
+    if (!cleanTitle || creating) return;
+    setCreating(true);
+    const tempId = -Math.floor(Math.random() * 2000000000 + 1);
+    const parentFolderId = folder?.folderid ?? null;
+    const newFolder = { folderid: tempId, title: cleanTitle,
+      color: unFormatColor(color), parentFolderId };
+    try {
+      // Commit the folder and its durable creation intent together.
+      await db.withExclusiveTransactionAsync(async tx => {
+        await tx.runAsync(
+          "INSERT INTO folders (folderid, title, color, parentFolderId) VALUES (?, ?, ?, ?)",
+          [tempId, cleanTitle, newFolder.color, parentFolderId],
+        );
+        await tx.runAsync(
+          "INSERT INTO creation_outbox (kind, itemid, status) VALUES (?, ?, ?)",
+          ["folder", tempId, "pending"],
+        );
+      });
+      setAllData(prev => ({ ...prev, folders: [...prev.folders, newFolder] }));
+      navigate("/");
+      // Mark sent before dispatch, so an interrupted process cannot resend blindly.
+      await db.runAsync(
+        "UPDATE creation_outbox SET status = ? WHERE kind = ? AND itemid = ?",
+        ["sent", "folder", tempId],
+      );
+      const res = await createNewFolder(token, {
+        title: cleanTitle, color: newFolder.color, parentFolderId,
+      });
+      const serverId = requireCreatedId(res, "folder");
+      await db.withExclusiveTransactionAsync(async tx => {
+        await tx.runAsync("UPDATE folders SET folderid = ? WHERE folderid = ?", [serverId, tempId]);
+        await tx.runAsync("DELETE FROM creation_outbox WHERE kind = ? AND itemid = ?", ["folder", tempId]);
+      });
+      setAllData(prev => ({ ...prev,
+        folders: prev.folders.map(f => f.folderid === tempId ? { ...f, folderid: serverId } : f),
+      }));
+    } catch (error) {
+      const status = classifyCreateFailure(error);
+      // Preserve local folder; no automatic POST retry for uncertain outcomes.
+      await db.runAsync(
+        "UPDATE creation_outbox SET status = ? WHERE kind = ? AND itemid = ?",
+        [status, "folder", tempId],
+      ).catch(dbError => console.error("Could not record folder sync status:", dbError));
+      console.error("Folder creation pending reconciliation (" + status + "):", error);
+    } finally {
+      setCreating(false);
+    }
+  };
 
 	const canCreate = title.trim().length > 0 && !creating;
 
