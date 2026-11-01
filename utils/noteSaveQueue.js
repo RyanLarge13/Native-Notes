@@ -82,6 +82,7 @@ export const saveExistingNoteLocally = async ({ db, note, token, setAllData, onE
   // otherwise finish out of order when the user edits rapidly.
   if (deletingNotes.has(note.noteid)) return;
   const previous = localWrites.get(note.noteid) || Promise.resolve();
+  let saved = false;
   const write = previous.catch(() => {}).then(() =>
     db.withExclusiveTransactionAsync(async (tx) => {
       if (deletingNotes.has(note.noteid)) return;
@@ -97,6 +98,7 @@ export const saveExistingNoteLocally = async ({ db, note, token, setAllData, onE
          VALUES (?, ?) ON CONFLICT(noteid) DO UPDATE SET updated = excluded.updated`,
         [note.noteid, note.updated],
       );
+      saved = true;
     }),
   );
   localWrites.set(note.noteid, write);
@@ -105,7 +107,7 @@ export const saveExistingNoteLocally = async ({ db, note, token, setAllData, onE
   } finally {
     if (localWrites.get(note.noteid) === write) localWrites.delete(note.noteid);
   }
-  if (deletingNotes.has(note.noteid)) return;
+  if (!saved || deletingNotes.has(note.noteid)) return;
   setAllData(prev => ({
     ...prev,
     notes: prev.notes.map(item => item.noteid === note.noteid ? note : item),
