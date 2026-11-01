@@ -32,7 +32,7 @@ const dbFixture = () => {
   return {
     notes, outbox, creations,
     withExclusiveTransactionAsync: async fn => fn({ runAsync: run }),
-    getFirstAsync: async (sql, args) => sql.includes("creation_outbox") ? { status: creations.get(args[1]) } : notes.get(args[0]),
+    getFirstAsync: async (sql, args) => sql.includes("creation_outbox") ? (creations.has(args[1]) ? { status: creations.get(args[1]) } : null) : notes.get(args[0]),
     getAllAsync: async () => [...outbox.keys()].map(id => notes.get(id)),
     runAsync: async (sql, args) => {
       if (sql.includes("UPDATE creation_outbox")) creations.set(args[2], args[0]);
