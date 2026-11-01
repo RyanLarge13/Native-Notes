@@ -68,7 +68,7 @@ const NewNote = ({
 		if (!autoSave || !note) return;
 
 		const saveInterval = setInterval(() => {
-			saveNote(currentHTML.current);
+			void saveNote(currentHTML.current).catch(err => console.error("Autosave failed:", err));
 		}, 10000);
 
 		return () => clearInterval(saveInterval);
@@ -334,7 +334,7 @@ const NewNote = ({
 											: "#EEEEE",
 								},
 							]}
-							onPress={() => saveNote(currentHTML.current)}
+							onPress={() => void saveNote(currentHTML.current).catch(err => console.error("Save failed:", err))}
 						>
 							{saving ? (
 								<FontAwesome5
