@@ -13,12 +13,12 @@ import {
 	Platform,
 } from "react-native";
 import * as WebBrowser from "expo-web-browser";
-import { createNewNote, updateNote } from "../utils/api";
+
 import { FontAwesome5 } from "@expo/vector-icons";
 import WebView from "react-native-webview";
 import EditorHTML from "../webView/html.js";
 import Toolbar from "../components/Toolbar.jsx";
-import { saveExistingNoteLocally } from "../utils/noteSaveQueue";
+import { saveExistingNoteLocally, saveNewNoteLocally, makeTemporaryNoteId } from "../utils/noteSaveQueue";
 
 const NewNote = ({
 	folder,
@@ -45,6 +45,7 @@ const NewNote = ({
 	const lastSavedHTML = useRef(note?.htmlText ?? "");
 	const currentTitle = useRef(note?.title ?? "");
 	const currentNote = useRef(note ?? null);
+	const temporaryId = useRef(null);
 	const currentlySaving = useRef(false);
 
 	const opacityAni = useRef(new Animated.Value(0)).current;
@@ -201,6 +202,12 @@ const NewNote = ({
 		const activeNote = currentNote.current;
 		const titleToSave = currentTitle.current?.trim() || "Untitled Note";
 		if (activeNote?.noteid) {
+			if (activeNote.noteid < 0) {
+				const draft = { ...activeNote, title: titleToSave, htmlText: content, updated: new Date().toISOString() };
+				currentNote.current = draft;
+				await saveNewNoteLocally({ db, note: draft, token, setAllData });
+				return;
+			}
 			const changed = activeNote.title !== titleToSave || activeNote.htmlText !== content;
 			if (!changed) return;
 			const snapshot = {
@@ -223,75 +230,25 @@ const NewNote = ({
 			}
 			return;
 		}
-		/*
-		 * NEW NOTE
-		 */
+		// NEW NOTE: give it a local identity immediately. Subsequent edits
+		// use the same temporary ID until the create request is acknowledged.
+		if (temporaryId.current === null) temporaryId.current = makeTemporaryNoteId();
+		const now = new Date().toISOString();
+		const draft = {
+			noteid: temporaryId.current,
+			title: titleToSave,
+			htmlText: content,
+			folderId: folder?.folderid ?? null,
+			locked: false,
+			trashed: false,
+			createdAt: now,
+			updated: now,
+		};
+		currentNote.current = draft;
+		setSaving(true);
 		try {
-			const newNote = {
-				folderId: folder?.folderid ?? null,
-				title: titleToSave,
-				htmlNotes: content,
-			};
-
-			const res = await createNewNote(token, newNote);
-			const resNote = res.data.data[0];
-
-			const savedNote = {
-				title: resNote.title,
-				createdAt: resNote.createdat,
-				noteid: resNote.notesid,
-				htmlText: resNote.htmlnotes,
-				locked: resNote.locked,
-				folderId: resNote.folderid,
-				updated: resNote.updated,
-			};
-
-			// -----------------------------------------
-			// UPDATE APP STATE
-			// -----------------------------------------
-
-			currentNote.current = savedNote;
-			currentTitle.current = savedNote.title;
-			lastSavedHTML.current = savedNote.htmlText;
-
-			setNote(savedNote);
-
-			setAllData((prev) => ({
-				...prev,
-				notes: [...prev.notes, savedNote],
-			}));
-
-			// -----------------------------------------
-			// UPDATE LOCAL DATABASE
-			// -----------------------------------------
-
-			await db.runAsync(
-				`INSERT INTO notes (
-        noteid,
-        title,
-        locked,
-        htmlText,
-        folderId,
-        createdAt,
-        updated,
-        trashed
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-				[
-					resNote.notesid,
-					resNote.title,
-					resNote.locked,
-					resNote.htmlnotes,
-					resNote.folderid,
-					resNote.createdat,
-					resNote.updated,
-					resNote.trashed,
-				],
-			);
-		} catch (err) {
-			console.error("Failed to create note:", err);
-			throw err;
+			await saveNewNoteLocally({ db, note: draft, token, setAllData });
 		} finally {
-			currentlySaving.current = false;
 			setSaving(false);
 		}
 	};
