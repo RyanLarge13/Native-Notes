@@ -41,6 +41,8 @@ const drain = async (id, worker) => {
       worker.pending = null;
       try {
         if (deletingNotes.has(id)) break;
+        const deleted = await job.db.getFirstAsync?.("SELECT 1 AS present FROM deletion_outbox WHERE kind = ? AND itemid = ?", ["note", id]);
+        if (deleted) break;
         const request = updateNote(job.token, {
           notesId: id,
           title: job.note.title,
