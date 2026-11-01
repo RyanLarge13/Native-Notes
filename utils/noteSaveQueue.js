@@ -1,5 +1,4 @@
 import { createNewNote, updateNote } from "./api";
-import { v4 as uuidv4 } from "uuid";
 
 // One worker per note. The newest pending snapshot replaces older unsent snapshots.
 // The worker lives at module scope, not in the editor component.
@@ -94,7 +93,8 @@ export const retryPendingNoteSaves = async ({ db, token, setAllData, onError }) 
   const rows = await db.getAllAsync(
     `SELECT n.* FROM notes n INNER JOIN note_save_outbox q ON n.noteid = q.noteid`,
   );
-  rows.forEach(note => enqueueNoteSave({ note, token, db, setAllData, onError }));
+  // Temporary IDs need server-side idempotency/reconciliation before retry.
+  rows.filter(note => note.noteid > 0).forEach(note => enqueueNoteSave({ note, token, db, setAllData, onError }));
 };
 
 
