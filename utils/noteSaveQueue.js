@@ -1,4 +1,5 @@
 import { createNewNote, updateNote } from "./api";
+import { classifyCreateFailure, requireCreatedId } from "./creationQueue";
 
 // One worker per note. The newest pending snapshot replaces older unsent snapshots.
 // The worker lives at module scope, not in the editor component.
@@ -144,6 +145,7 @@ export const saveNewNoteLocally = async ({ db, note, token, setAllData, onError 
        ON CONFLICT(noteid) DO UPDATE SET updated=excluded.updated`,
       [id, note.updated],
     );
+    await tx.runAsync("INSERT OR IGNORE INTO creation_outbox (kind, itemid, status) VALUES (?, ?, 'pending')", ["note", id]);
   }));
   createWrites.set(id, write);
   try { await write; }
@@ -173,19 +175,20 @@ export const enqueueNewNoteCreate = ({ db, note, token, setAllData, onError }) =
       // Read latest locally committed snapshot just before sending create.
       const local = await db.getFirstAsync("SELECT * FROM notes WHERE noteid = ?", [id]);
       if (!local || deletingNotes.has(id)) return;
+      const queued = await db.getFirstAsync("SELECT status FROM creation_outbox WHERE kind = ? AND itemid = ?", ["note", id]);
+      if (queued?.status !== "pending") return;
+      await db.runAsync("UPDATE creation_outbox SET status = ? WHERE kind = ? AND itemid = ?", ["sent", "note", id]);
       const res = await createNewNote(token, {
         folderId: local.folderId, title: local.title, htmlNotes: local.htmlText,
       });
-      const server = res?.data?.data?.[0];
-      if (!Number.isInteger(Number(server?.notesid)) || Number(server.notesid) <= 0)
-        throw new Error("Invalid create response");
-      const serverId = Number(server.notesid);
+      const serverId = requireCreatedId(res, "note");
       // Wait for all already-scheduled local writes before swapping IDs.
       await createWrites.get(id)?.catch(() => {});
       // Atomically replace the local ID, preserving any edits made while
       // the create request was in flight.
       await db.withExclusiveTransactionAsync(async tx => {
         await tx.runAsync("UPDATE notes SET noteid = ? WHERE noteid = ?", [serverId, id]);
+        await tx.runAsync("DELETE FROM creation_outbox WHERE kind = ? AND itemid = ?", ["note", id]);
         await tx.runAsync("DELETE FROM note_save_outbox WHERE noteid = ?", [id]);
         await tx.runAsync(
           `INSERT INTO note_save_outbox (noteid, updated)
@@ -205,7 +208,9 @@ export const enqueueNewNoteCreate = ({ db, note, token, setAllData, onError }) =
       // the original POST body. The existing-note queue handles serialization.
       if (newest) enqueueNoteSave({ ...worker.latest, note: newest });
     } catch (error) {
-      console.error("New note creation pending reconciliation:", error);
+      const status = classifyCreateFailure(error);
+      await db.runAsync("UPDATE creation_outbox SET status = ? WHERE kind = ? AND itemid = ?", [status, "note", id]);
+      console.error("New note creation pending reconciliation (" + status + "):", error);
       first.onError?.(error);
       // Do not retry POST automatically: the server may have created the note
       // even when the client lost its response.
