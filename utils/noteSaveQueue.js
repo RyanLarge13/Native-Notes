@@ -3,6 +3,7 @@ import { updateNote } from "./api";
 // One worker per note. The newest pending snapshot replaces older unsent snapshots.
 // The worker lives at module scope, not in the editor component.
 const workers = new Map();
+const localWrites = new Map();
 
 export const enqueueNoteSave = ({ note, token, db, setAllData, onError }) => {
   if (!note?.noteid) throw new Error("Existing note ID required");
@@ -52,19 +53,29 @@ const drain = async (id, worker) => {
 };
 
 export const saveExistingNoteLocally = async ({ db, note, token, setAllData, onError }) => {
-  // Transactionally persist the note AND its retry record before returning.
-  await db.withExclusiveTransactionAsync(async (tx) => {
-    await tx.runAsync(
-      `UPDATE notes SET title = ?, htmlText = ?, locked = ?, folderId = ?, updated = ?
-       WHERE noteid = ?`,
-      [note.title, note.htmlText, note.locked, note.folderId, note.updated, note.noteid],
-    );
-    await tx.runAsync(
-      `INSERT INTO note_save_outbox (noteid, updated)
-       VALUES (?, ?) ON CONFLICT(noteid) DO UPDATE SET updated = excluded.updated`,
-      [note.noteid, note.updated],
-    );
-  });
+  // Serialize local writes for the same note, too: SQLite operations may
+  // otherwise finish out of order when the user edits rapidly.
+  const previous = localWrites.get(note.noteid) || Promise.resolve();
+  const write = previous.catch(() => {}).then(() =>
+    db.withExclusiveTransactionAsync(async (tx) => {
+      await tx.runAsync(
+        `UPDATE notes SET title = ?, htmlText = ?, locked = ?, folderId = ?, updated = ?
+         WHERE noteid = ?`,
+        [note.title, note.htmlText, note.locked, note.folderId, note.updated, note.noteid],
+      );
+      await tx.runAsync(
+        `INSERT INTO note_save_outbox (noteid, updated)
+         VALUES (?, ?) ON CONFLICT(noteid) DO UPDATE SET updated = excluded.updated`,
+        [note.noteid, note.updated],
+      );
+    }),
+  );
+  localWrites.set(note.noteid, write);
+  try {
+    await write;
+  } finally {
+    if (localWrites.get(note.noteid) === write) localWrites.delete(note.noteid);
+  }
   setAllData(prev => ({
     ...prev,
     notes: prev.notes.map(item => item.noteid === note.noteid ? note : item),
