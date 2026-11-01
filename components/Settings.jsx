@@ -27,6 +27,7 @@ import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import Colors from "./Colors";
 import { deleteFolderLocally, deleteNoteLocally } from "../utils/sqLite";
 import { retryPendingDeletions } from "../utils/deletionQueue";
+import { markNotesDeleting, unmarkNotesDeleting, waitForNoteWrites, waitForNoteRequests } from "../utils/noteSaveQueue";
 
 const Settings = ({
   pickFolder,
@@ -263,7 +264,23 @@ const Settings = ({
   };
 
   const deleteFolder = async () => {
+    const folders = await db.getAllAsync("SELECT folderid, parentFolderId FROM folders");
+    const ids = new Set([item.folderid]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const folder of folders) {
+        if (!ids.has(folder.folderid) && ids.has(folder.parentFolderId)) {
+          ids.add(folder.folderid);
+          changed = true;
+        }
+      }
+    }
+    const noteIds = (await db.getAllAsync("SELECT noteid, folderId FROM notes"))
+      .filter(note => ids.has(note.folderId)).map(note => note.noteid);
+    markNotesDeleting(noteIds);
     try {
+      await waitForNoteWrites(noteIds);
       const removed = await deleteFolderLocally(db, item.folderid);
       const folderIds = new Set(removed.folderIds);
       const noteIds = new Set(removed.noteIds);
@@ -273,6 +290,7 @@ const Settings = ({
         notes: prev.notes.filter(note => !noteIds.has(note.noteid)),
       }));
       closeModal();
+      await waitForNoteRequests(noteIds);
       void retryPendingDeletions({ db, token, onError: error =>
         console.warn("Folder deletion queued for retry:", error) });
     } catch (error) {
@@ -280,6 +298,8 @@ const Settings = ({
       setSystemNotifs([{ id: uuidv4(), color: "#f33", title: "Deletion failed",
         text: "Folder was not deleted. Please try again.",
         actions: [{ text: "close", func: () => setSystemNotifs([]) }] }]);
+    } finally {
+      unmarkNotesDeleting(noteIds);
     }
   };
 
@@ -319,13 +339,16 @@ const Settings = ({
   };
 
   const deleteNote = async () => {
+    markNotesDeleting([item.noteid]);
     try {
+      await waitForNoteWrites([item.noteid]);
       await deleteNoteLocally(db, item.noteid);
       setAllData(prev => ({
         ...prev,
         notes: prev.notes.filter(note => note.noteid !== item.noteid),
       }));
       closeModal();
+      await waitForNoteRequests([item.noteid]);
       void retryPendingDeletions({ db, token, onError: error =>
         console.warn("Note deletion queued for retry:", error) });
     } catch (error) {
@@ -333,6 +356,8 @@ const Settings = ({
       setSystemNotifs([{ id: uuidv4(), color: "#f33", title: "Deletion failed",
         text: "Note was not deleted. Please try again.",
         actions: [{ text: "close", func: () => setSystemNotifs([]) }] }]);
+    } finally {
+      unmarkNotesDeleting([item.noteid]);
     }
   };
 
