@@ -42,8 +42,9 @@ const drain = async (id, worker) => {
       } catch (error) {
         console.error("Note sync failed; retained locally for retry:", error);
         job.onError?.(error);
-        // The durable outbox remains intact for the next retry.
-        break;
+        // A newer snapshot may already be waiting; attempt that one once.
+        // Otherwise leave the durable outbox for a later retry.
+        if (!worker.pending) break;
       }
     }
   } finally {
