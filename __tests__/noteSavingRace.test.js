@@ -16,12 +16,15 @@ const note = (htmlText, updated) => ({
 const makeDb = () => {
   const rows = new Map();
   const outbox = new Map();
-  const tx = { runAsync: jest.fn(async (sql, args) => {
+  const deletions = new Set();
+  const getFirstAsync = jest.fn(async (_sql, args) =>
+    deletions.has(`${args[0]}:${args[1]}`) ? { present: 1 } : null);
+  const tx = { getFirstAsync, runAsync: jest.fn(async (sql, args) => {
     if (sql.includes("UPDATE notes")) rows.set(args[5], { ...rows.get(args[5]), title: args[0], htmlText: args[1], updated: args[4], noteid: args[5] });
     if (sql.includes("INSERT INTO note_save_outbox")) outbox.set(args[0], args[1]);
   }) };
   return {
-    rows, outbox,
+    rows, outbox, deletions, getFirstAsync,
     withExclusiveTransactionAsync: jest.fn(async cb => cb(tx)),
     runAsync: jest.fn(async (_sql, args) => {
       if (outbox.get(args[0]) === args[1]) outbox.delete(args[0]);
@@ -79,4 +82,22 @@ test("local persistence completes without waiting for a slow server", async () =
   expect(db.outbox.size).toBe(1);
   pending.resolve(response("ready locally"));
   await tick();
+});
+
+test("pending deletion tombstone prevents local save and outgoing update", async () => {
+  const db = makeDb();
+  const ui = state();
+  db.deletions.add("note:7");
+  await saveExistingNoteLocally({
+    db, note: note("should not save", "2026-01-06"),
+    token: "test", setAllData: ui.setAllData,
+  });
+  await tick();
+  expect(db.getFirstAsync).toHaveBeenCalledWith(
+    expect.stringContaining("deletion_outbox"), ["note", 7],
+  );
+  expect(db.rows.size).toBe(0);
+  expect(db.outbox.size).toBe(0);
+  expect(updateNote).not.toHaveBeenCalled();
+  expect(ui.get().notes[0].htmlText).toBe("original");
 });
