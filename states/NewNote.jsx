@@ -18,6 +18,7 @@ import { FontAwesome5 } from "@expo/vector-icons";
 import WebView from "react-native-webview";
 import EditorHTML from "../webView/html.js";
 import Toolbar from "../components/Toolbar.jsx";
+import { shouldSkipNoteSave } from "../utils/noteSaveGuard";
 
 const NewNote = ({
 	folder,
@@ -198,15 +199,16 @@ const NewNote = ({
 	};
 
 	const saveNote = async (content) => {
-		if (currentlySaving.current) {
-			return;
-		}
-
 		const activeNote = currentNote.current;
 		const htmlChanged = lastSavedHTML.current !== currentHTML.current;
 		const titleChanged = (activeNote?.title ?? "") !== currentTitle.current;
 
-		if (activeNote && !htmlChanged && !titleChanged) {
+		if (shouldSkipNoteSave({
+			saving: currentlySaving.current,
+			hasExistingNote: Boolean(activeNote),
+			htmlChanged,
+			titleChanged,
+		})) {
 			return;
 		}
 
