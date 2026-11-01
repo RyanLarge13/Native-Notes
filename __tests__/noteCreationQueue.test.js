@@ -17,7 +17,7 @@ const dbFixture = () => {
   const outbox = new Map();
   const creations = new Map();
   const run = async (sql, args) => {
-    if (sql.includes("INSERT INTO creation_outbox")) creations.set(args[1], "pending");
+    if (sql.includes("INTO creation_outbox")) creations.set(args[1], "pending");
     else if (sql.includes("DELETE FROM creation_outbox")) creations.delete(args[1]);
     else if (sql.includes("INSERT INTO notes")) {
       const existing = notes.get(args[0]);
