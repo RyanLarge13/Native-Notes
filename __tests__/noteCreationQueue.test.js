@@ -67,6 +67,7 @@ test("edits during pending creation use one POST and latest content", async () =
   updateNote.mockResolvedValue({ data: { data: [{ notesid: 43 }] } });
   await saveNewNoteLocally({ db, note: draft("A"), token: "test", setAllData: state.setAllData });
   await saveNewNoteLocally({ db, note: draft("B", "2026-11-01T12:00:01Z"), token: "test", setAllData: state.setAllData });
+  await tick();
   expect(createNewNote).toHaveBeenCalledTimes(1);
   pending.resolve({ data: { data: [{ notesid: 43 }] } });
   await tick(); await tick();
