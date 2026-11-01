@@ -15,8 +15,11 @@ const draft = (htmlText, updated = "2026-11-01T12:00:00Z") => ({
 const dbFixture = () => {
   const notes = new Map();
   const outbox = new Map();
+  const creations = new Map();
   const run = async (sql, args) => {
-    if (sql.includes("INSERT INTO notes")) {
+    if (sql.includes("INSERT INTO creation_outbox")) creations.set(args[1], "pending");
+    else if (sql.includes("DELETE FROM creation_outbox")) creations.delete(args[1]);
+    else if (sql.includes("INSERT INTO notes")) {
       const existing = notes.get(args[0]);
       notes.set(args[0], existing ? { ...existing, title: args[1], htmlText: args[3], updated: args[6] } :
         { noteid: args[0], title: args[1], locked: args[2], htmlText: args[3], folderId: args[4], createdAt: args[5], updated: args[6], trashed: args[7] });
@@ -27,11 +30,12 @@ const dbFixture = () => {
     else if (sql.includes("INSERT INTO note_save_outbox") && sql.includes("SELECT")) outbox.set(args[0], notes.get(args[0]).updated);
   };
   return {
-    notes, outbox,
+    notes, outbox, creations,
     withExclusiveTransactionAsync: async fn => fn({ runAsync: run }),
-    getFirstAsync: async (_sql, args) => notes.get(args[0]),
+    getFirstAsync: async (sql, args) => sql.includes("creation_outbox") ? { status: creations.get(args[1]) } : notes.get(args[0]),
     getAllAsync: async () => [...outbox.keys()].map(id => notes.get(id)),
     runAsync: async (sql, args) => {
+      if (sql.includes("UPDATE creation_outbox")) creations.set(args[2], args[0]);
       if (sql.includes("DELETE FROM note_save_outbox") && outbox.get(args[0]) === args[1]) outbox.delete(args[0]);
     },
   };
@@ -79,4 +83,23 @@ test("startup does not blindly POST unacknowledged temporary IDs", async () => {
   await retryPendingNoteSaves({ db, token: "test", setAllData: state.setAllData });
   expect(createNewNote).not.toHaveBeenCalled();
   expect(db.notes.get(-123).htmlText).toBe("offline");
+});
+
+test.each([
+  ["dropped response", { request: {}, code: "ERR_NETWORK" }, "no_response"],
+  ["server HTTP 500", { response: { status: 500 } }, "http_500"],
+  ["malformed success", null, "malformed_response"],
+])("%s retains draft without duplicate POST", async (_name, failure, expectedStatus) => {
+  const db = dbFixture(), state = ui();
+  if (failure) createNewNote.mockRejectedValueOnce(failure);
+  else createNewNote.mockResolvedValueOnce({ data: { data: [{}] } });
+  const spy = jest.spyOn(console, "error").mockImplementation(() => {});
+  try {
+    await saveNewNoteLocally({ db, note: draft("keep me"), token: "test", setAllData: state.setAllData });
+    await tick(); await tick();
+    expect(db.notes.get(-123).htmlText).toBe("keep me");
+    expect(db.creations.get(-123)).toBe(expectedStatus);
+    await retryPendingNoteSaves({ db, token: "test", setAllData: state.setAllData });
+    expect(createNewNote).toHaveBeenCalledTimes(1);
+  } finally { spy.mockRestore(); }
 });
