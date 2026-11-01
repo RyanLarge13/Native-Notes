@@ -9,6 +9,7 @@ import Spinner from "react-native-loading-spinner-overlay";
 import { NativeRouter, Routes, Route } from "react-router-native";
 import { getUserData } from "./utils/api";
 import { retryPendingNoteSaves } from "./utils/noteSaveQueue";
+import { retryPendingDeletions } from "./utils/deletionQueue";
 import { authenticateDevice } from "./utils/authGuards";
 import Login from "./states/Login";
 import Signup from "./states/Signup";
@@ -167,6 +168,7 @@ const App = () => {
 
 				// GRAB SERVER DATA --------
 				await retryPendingNoteSaves({ db, token, setAllData });
+				await retryPendingDeletions({ db, token, onError: error => console.warn("Deletion pending retry:", error) });
 				continueServerWork(token, cachedUser.preferences);
 			} catch (err) {
 				console.log("Fatal missed initialization error! Inside openDatabase: ");
@@ -222,7 +224,7 @@ const App = () => {
 			}
 
 			setAppLock(preferences.appLock ?? false);
-			if (!preferences.appLock) setAccessGranted(true;
+			if (!preferences.appLock) setAccessGranted(true);
 
 			return preferences;
 		} catch (err) {
@@ -232,6 +234,7 @@ const App = () => {
 	};
 
 	const continueServerWork = async (token, preferences = null) => {
+		await retryPendingDeletions({ db, token, onError: error => console.warn("Deletion pending retry:", error) });
 		const serverData = await getFreshServerData(token);
 
 		if (!serverData) {
