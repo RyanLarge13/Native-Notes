@@ -152,6 +152,8 @@ export const enqueueNewNoteCreate = ({ db, note, token, setAllData, onError }) =
       if (!Number.isInteger(Number(server?.notesid)) || Number(server.notesid) <= 0)
         throw new Error("Invalid create response");
       const serverId = Number(server.notesid);
+      // Wait for all already-scheduled local writes before swapping IDs.
+      await createWrites.get(id)?.catch(() => {});
       // Atomically replace the local ID, preserving any edits made while
       // the create request was in flight.
       await db.withExclusiveTransactionAsync(async tx => {
@@ -165,7 +167,10 @@ export const enqueueNewNoteCreate = ({ db, note, token, setAllData, onError }) =
       });
       setAllData(prev => ({
         ...prev,
-        notes: prev.notes.map(n => n.noteid === id ? { ...n, noteid: serverId } : n),
+        notes: Array.from(new Map(prev.notes.map(n => {
+          const mapped = n.noteid === id ? { ...n, noteid: serverId } : n;
+          return [mapped.noteid, mapped];
+        })).values()),
       }));
       const newest = await db.getFirstAsync("SELECT * FROM notes WHERE noteid = ?", [serverId]);
       // Always update with the latest local snapshot: it may differ from
