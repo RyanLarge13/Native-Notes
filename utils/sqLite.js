@@ -47,6 +47,7 @@ export const initializeSQLiteTables = async (db) => {
           color TEXT NOT NULL, 
           parentFolderId INTEGER
           );
+        CREATE TABLE IF NOT EXISTS deletion_outbox (kind TEXT NOT NULL, itemid INTEGER NOT NULL, PRIMARY KEY(kind, itemid));
         CREATE TABLE IF NOT EXISTS note_save_outbox (noteid INTEGER PRIMARY KEY NOT NULL, updated TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS notes (
           title TEXT NOT NULL, 
@@ -117,7 +118,8 @@ export const replaceLocalCache = async (
     // Do not swallow insertion errors: a failure must roll back everything.
     await db.withExclusiveTransactionAsync(async (tx) => {
       const pending = await tx.getFirstAsync("SELECT COUNT(*) AS count FROM note_save_outbox");
-      if (pending?.count > 0) throw new Error("Pending local note changes");
+      const deleted = await tx.getFirstAsync("SELECT COUNT(*) AS count FROM deletion_outbox");
+      if (pending?.count > 0 || deleted?.count > 0) throw new Error("Pending local changes");
       await tx.runAsync("DELETE FROM notes");
       await tx.runAsync("DELETE FROM folders");
       await tx.runAsync("DELETE FROM user");
@@ -148,34 +150,56 @@ export const replaceLocalCache = async (
   }
 };
 
+// The caller updates React only after these exclusive transactions commit.
+// Descendant rows are deleted explicitly because existing tables do not declare
+// foreign keys; the backend's ON DELETE CASCADE does not affect local SQLite.
+export const deleteFolderLocally = async (db, folderId) => {
+  let removed;
+  await db.withExclusiveTransactionAsync(async tx => {
+    const folders = await tx.getAllAsync("SELECT folderid, parentFolderId FROM folders");
+    const descendants = new Set([folderId]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const folder of folders) {
+        if (!descendants.has(folder.folderid) && descendants.has(folder.parentFolderId)) {
+          descendants.add(folder.folderid);
+          changed = true;
+        }
+      }
+    }
+    const ids = [...descendants];
+    const notes = await tx.getAllAsync("SELECT noteid, folderId FROM notes");
+    const noteIds = notes.filter(note => descendants.has(note.folderId)).map(note => note.noteid);
+    for (const id of noteIds) {
+      await tx.runAsync("DELETE FROM note_save_outbox WHERE noteid = ?", [id]);
+      await tx.runAsync("DELETE FROM notes WHERE noteid = ?", [id]);
+    }
+    for (const id of [...ids].reverse()) {
+      await tx.runAsync("DELETE FROM folders WHERE folderid = ?", [id]);
+    }
+    await tx.runAsync("INSERT OR IGNORE INTO deletion_outbox (kind, itemid) VALUES (?, ?)", ["folder", folderId]);
+    removed = { folderIds: ids, noteIds };
+  });
+  return removed;
+};
+
+export const deleteNoteLocally = async (db, noteId) => {
+  await db.withExclusiveTransactionAsync(async tx => {
+    await tx.runAsync("DELETE FROM note_save_outbox WHERE noteid = ?", [noteId]);
+    await tx.runAsync("DELETE FROM notes WHERE noteid = ?", [noteId]);
+    if (noteId > 0) {
+      await tx.runAsync("INSERT OR IGNORE INTO deletion_outbox (kind, itemid) VALUES (?, ?)", ["note", noteId]);
+    }
+  });
+};
+
 export const removeFoldersFromDb = async (db, foldersToRemove) => {
-  try {
-    foldersToRemove.forEach(async (fold) => {
-      await db.runAsync(
-        `
-            DELETE FROM folders WHERE folderid = $deleteid
-          `,
-        { $deleteId: fold.folderid },
-      );
-    });
-  } catch (err) {
-    console.log(`Error removing folder from local DB. Error: ${err}`);
-  }
+  for (const folder of foldersToRemove) await deleteFolderLocally(db, folder.folderid);
 };
 
 export const removeNotesFromDb = async (db, notesToRemove) => {
-  try {
-    notesToRemove.forEach(async (note) => {
-      await db.runAsync(
-        `
-            DELETE FROM notes WHERE noteid = $deleteid
-          `,
-        { $deleteId: note.noteid },
-      );
-    });
-  } catch (err) {
-    console.log(`Errors removing notes from localDB. Error: ${err}`);
-  }
+  for (const note of notesToRemove) await deleteNoteLocally(db, note.noteid);
 };
 
 export const deleteDatabase = async (db) => {
