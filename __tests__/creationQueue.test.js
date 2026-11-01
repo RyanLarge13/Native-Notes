@@ -21,10 +21,13 @@ test("validates created folder and note identifiers", () => {
 test("folder creation with HTTP 500 is retained and cannot POST again", async () => {
   const state = new Map([[-10, "pending"]]);
   const db = {
-    runAsync: jest.fn(async (_sql, args) => {
-      if (args[0] !== "sent" && args[0] !== "http_500") return { changes: 0 };
-      if (args[0] === "sent" && state.get(args[2]) !== "pending") return { changes: 0 };
-      state.set(args[2], args[0]);
+    runAsync: jest.fn(async (sql, args) => {
+      if (sql.includes("status = 'sent'")) {
+        if (state.get(args[1]) !== "pending") return { changes: 0 };
+        state.set(args[1], "sent");
+      } else if (sql.includes("SET status = ?")) {
+        state.set(args[2], args[0]);
+      } else return { changes: 0 };
       return { changes: 1 };
     }),
   };
