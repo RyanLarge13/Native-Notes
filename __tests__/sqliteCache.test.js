@@ -98,3 +98,34 @@ describe("SQLite cache storage and retrieval", () => {
     expect(db.state.notes[0].title).toBe("Original");
   });
 });
+
+describe("server refresh duplicate and pending-edit safeguards", () => {
+  let log;
+  beforeEach(() => { log = jest.spyOn(console, "log").mockImplementation(() => {}); });
+  afterEach(() => log.mockRestore());
+
+  test("repeated server IDs are stored once per snapshot", async () => {
+    const db = fakeDb();
+    const incoming = snapshot("Latest");
+    incoming.notes.push({ ...incoming.notes[0], title: "Latest duplicate" });
+    incoming.folders.push({ ...incoming.folders[0], title: "Latest folder duplicate" });
+    expect(await replaceLocalCache(incoming, db)).toBe(true);
+    expect(db.state.notes).toHaveLength(1);
+    expect(db.state.notes[0].title).toBe("Latest duplicate");
+    expect(db.state.folders).toHaveLength(1);
+    expect(db.state.folders[0].title).toBe("Latest folder duplicate");
+    expect(await replaceLocalCache(incoming, db)).toBe(true);
+    expect(db.state.notes).toHaveLength(1);
+    expect(db.state.folders).toHaveLength(1);
+  });
+
+  test("edit queued after server response but before exclusive replacement is protected", async () => {
+    const db = fakeDb();
+    await replaceLocalCache(snapshot("Original"), db);
+    // A queued local write is visible when the exclusive transaction begins.
+    db.setPending(1);
+    expect(await replaceLocalCache(snapshot("Stale server"), db)).toBe(false);
+    const cached = await grabFromDatabase(db);
+    expect(cached.cachedNotes[0].title).toBe("Original");
+  });
+});
