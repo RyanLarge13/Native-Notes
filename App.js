@@ -241,17 +241,25 @@ const App = () => {
 			return;
 		}
 
-		// Do not apply a server snapshot while unsynchronized local edits exist.
-		const pending = await db.getFirstAsync("SELECT COUNT(*) AS count FROM note_save_outbox");
-		if (pending?.count > 0) {
-			setLoading(false);
-			return;
-		}
-		// UPDATE CACHE WITH TRUE SERVER DATA FOR NEXT TIME
+		// The pending-edit check and replacement are atomic inside SQLite.
+		// Never publish the raw server payload: it may contain duplicate IDs.
 		const dataWasStored = await replaceLocalCache(serverData, db, preferences);
 		if (dataWasStored) {
-			setAllData(serverData);
-			setUser(serverData.user);
+			const { cachedUser, cachedFolders, cachedNotes } = await grabFromDatabase(db);
+			// A save can begin while this read is in progress. Keep the current
+			// React snapshot for any locally newer note rather than regressing it.
+			setAllData(prev => ({
+				user: cachedUser,
+				folders: cachedFolders,
+				notes: cachedNotes.map(serverNote => {
+					const local = prev.notes.find(n => n.noteid === serverNote.noteid);
+					return local && Date.parse(local.updated) > Date.parse(serverNote.updated)
+						? local : serverNote;
+				}).concat(prev.notes.filter(n =>
+					n.noteid < 0 && !cachedNotes.some(c => c.noteid === n.noteid)
+				)),
+			}));
+			setUser(cachedUser);
 		}
 		setLoading(false);
 
