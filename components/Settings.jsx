@@ -14,8 +14,6 @@ import {
 
 import {
   createNewNote,
-  deleteAFolder,
-  deleteANote,
   updateFolder,
   updateNote,
 } from "../utils/api";
@@ -27,6 +25,8 @@ import { v4 as uuidv4 } from "uuid";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 
 import Colors from "./Colors";
+import { deleteFolderLocally, deleteNoteLocally } from "../utils/sqLite";
+import { retryPendingDeletions } from "../utils/deletionQueue";
 
 const Settings = ({
   pickFolder,
@@ -263,33 +263,24 @@ const Settings = ({
   };
 
   const deleteFolder = async () => {
-    const folderId = item.folderid;
-
-    setAllData((prevData) => ({
-      ...prevData,
-
-      folders: prevData.folders.filter((fold) => fold.folderid !== folderId),
-    }));
-
-    await db.runAsync(
-      `
-        DELETE FROM folders
-        WHERE folderid = $deleteId
-      `,
-      {
-        $deleteId: folderId,
-      },
-    );
-
-    closeModal();
-
-    deleteAFolder(token, folderId)
-      .then(() => {
-        console.log("Folder delete request complete");
-      })
-      .catch((err) => {
-        console.log(err);
-      });
+    try {
+      const removed = await deleteFolderLocally(db, item.folderid);
+      const folderIds = new Set(removed.folderIds);
+      const noteIds = new Set(removed.noteIds);
+      setAllData(prev => ({
+        ...prev,
+        folders: prev.folders.filter(folder => !folderIds.has(folder.folderid)),
+        notes: prev.notes.filter(note => !noteIds.has(note.noteid)),
+      }));
+      closeModal();
+      void retryPendingDeletions({ db, token, onError: error =>
+        console.warn("Folder deletion queued for retry:", error) });
+    } catch (error) {
+      console.error("Local folder deletion failed:", error);
+      setSystemNotifs([{ id: uuidv4(), color: "#f33", title: "Deletion failed",
+        text: "Folder was not deleted. Please try again.",
+        actions: [{ text: "close", func: () => setSystemNotifs([]) }] }]);
+    }
   };
 
   /*
@@ -328,33 +319,21 @@ const Settings = ({
   };
 
   const deleteNote = async () => {
-    const noteId = item.noteid;
-
-    setAllData((prevData) => ({
-      ...prevData,
-
-      notes: prevData.notes.filter((note) => note.noteid !== noteId),
-    }));
-
-    await db.runAsync(
-      `
-        DELETE FROM notes
-        WHERE noteid = $deleteId
-      `,
-      {
-        $deleteId: noteId,
-      },
-    );
-
-    closeModal();
-
-    deleteANote(token, noteId)
-      .then(() => {
-        console.log("Note delete request complete");
-      })
-      .catch((err) => {
-        console.log(err);
-      });
+    try {
+      await deleteNoteLocally(db, item.noteid);
+      setAllData(prev => ({
+        ...prev,
+        notes: prev.notes.filter(note => note.noteid !== item.noteid),
+      }));
+      closeModal();
+      void retryPendingDeletions({ db, token, onError: error =>
+        console.warn("Note deletion queued for retry:", error) });
+    } catch (error) {
+      console.error("Local note deletion failed:", error);
+      setSystemNotifs([{ id: uuidv4(), color: "#f33", title: "Deletion failed",
+        text: "Note was not deleted. Please try again.",
+        actions: [{ text: "close", func: () => setSystemNotifs([]) }] }]);
+    }
   };
 
   const updateNoteTitleOrLocked = async () => {
