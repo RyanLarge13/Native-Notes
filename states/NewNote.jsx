@@ -18,7 +18,7 @@ import { FontAwesome5 } from "@expo/vector-icons";
 import WebView from "react-native-webview";
 import EditorHTML from "../webView/html.js";
 import Toolbar from "../components/Toolbar.jsx";
-import { shouldSkipNoteSave } from "../utils/noteSaveGuard";
+import { saveExistingNoteLocally } from "../utils/noteSaveQueue";
 
 const NewNote = ({
 	folder,
@@ -153,10 +153,9 @@ const NewNote = ({
 				useNativeDriver: true,
 			}),
 		]).start(async () => {
+			void saveNote(htmlToSave).catch(err => console.error("Unable to save on close:", err));
 			navigate("/");
 			setNote(null);
-
-			saveNote(htmlToSave);
 		});
 	};
 
@@ -200,136 +199,30 @@ const NewNote = ({
 
 	const saveNote = async (content) => {
 		const activeNote = currentNote.current;
-		const htmlChanged = lastSavedHTML.current !== currentHTML.current;
-		const titleChanged = (activeNote?.title ?? "") !== currentTitle.current;
-
-		if (shouldSkipNoteSave({
-			saving: currentlySaving.current,
-			hasExistingNote: Boolean(activeNote),
-			htmlChanged,
-			titleChanged,
-		})) {
-			return;
-		}
-
-		currentlySaving.current = true;
-		setSaving(true);
-
 		const titleToSave = currentTitle.current?.trim() || "Untitled Note";
-
-		/*
-		 * EXISTING NOTE
-		 */
 		if (activeNote?.noteid) {
-			const previousNote = { ...activeNote };
-
-			const optimisticNote = {
-				...activeNote,
-				title: titleToSave,
-				htmlText: content,
-				folderId: folder?.folderid ?? null,
+			const changed = activeNote.title !== titleToSave || activeNote.htmlText !== content;
+			if (!changed) return;
+			const snapshot = {
+				...activeNote, title: titleToSave, htmlText: content,
+				folderId: activeNote.folderId,
 				updated: new Date().toISOString(),
 			};
-
-			// -----------------------------------------
-			// 1. OPTIMISTICALLY UPDATE UI IMMEDIATELY
-			// -----------------------------------------
-
-			setAllData((prev) => ({
-				...prev,
-				notes: prev.notes.map((item) =>
-					item.noteid === activeNote.noteid ? optimisticNote : item,
-				),
-			}));
-
+			// Advance the snapshot before awaiting SQLite, so a later edit cannot
+			// be overwritten by an earlier asynchronous completion.
+			currentNote.current = snapshot;
+			lastSavedHTML.current = content;
+			setSaving(true);
 			try {
-				// -----------------------------------------
-				// 2. UPDATE SERVER
-				// -----------------------------------------
-
-				const updatedNote = {
-					notesId: activeNote.noteid,
-					title: titleToSave,
-					htmlNotes: content,
-					locked: activeNote.locked,
-					folderId: folder?.folderid ?? null,
-					update: new Date(),
-				};
-
-				const res = await updateNote(token, updatedNote);
-				const resNote = res.data.data[0];
-
-				// -----------------------------------------
-				// 3. SERVER IS SOURCE OF TRUTH
-				// -----------------------------------------
-
-				const savedNote = {
-					title: resNote.title,
-					createdAt: resNote.createdat,
-					noteid: resNote.notesid,
-					htmlText: resNote.htmlnotes,
-					locked: resNote.locked,
-					folderId: resNote.folderid,
-					updated: resNote.updated,
-				};
-
-				currentNote.current = savedNote;
-				currentTitle.current = savedNote.title;
-				lastSavedHTML.current = savedNote.htmlText;
-
-				setNote(savedNote);
-
-				setAllData((prev) => ({
-					...prev,
-					notes: prev.notes.map((item) =>
-						item.noteid === savedNote.noteid ? savedNote : item,
-					),
-				}));
-
-				// -----------------------------------------
-				// 4. UPDATE LOCAL DATABASE
-				// -----------------------------------------
-
-				await db.runAsync(
-					`UPDATE notes
-         SET title = ?,
-             htmlText = ?,
-             locked = ?,
-             folderId = ?,
-             \`updated\` = ?
-         WHERE noteid = ?`,
-					[
-						savedNote.title,
-						savedNote.htmlText,
-						savedNote.locked,
-						savedNote.folderId,
-						savedNote.updated,
-						savedNote.noteid,
-					],
-				);
+				await saveExistingNoteLocally({ db, note: snapshot, token, setAllData });
 			} catch (err) {
-				console.error("Failed to save note:", err);
-
-				// -----------------------------------------
-				// SERVER FAILED — REVERT OPTIMISTIC UPDATE
-				// -----------------------------------------
-
-				setAllData((prev) => ({
-					...prev,
-					notes: prev.notes.map((item) =>
-						item.noteid === previousNote.noteid ? previousNote : item,
-					),
-				}));
-
+				console.error("Local note save failed:", err);
 				throw err;
 			} finally {
-				currentlySaving.current = false;
 				setSaving(false);
 			}
-
 			return;
 		}
-
 		/*
 		 * NEW NOTE
 		 */
