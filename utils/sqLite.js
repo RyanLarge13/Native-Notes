@@ -47,6 +47,7 @@ export const initializeSQLiteTables = async (db) => {
           color TEXT NOT NULL, 
           parentFolderId INTEGER
           );
+        CREATE TABLE IF NOT EXISTS creation_outbox (kind TEXT NOT NULL, itemid INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pending', PRIMARY KEY(kind, itemid));
         CREATE TABLE IF NOT EXISTS deletion_outbox (kind TEXT NOT NULL, itemid INTEGER NOT NULL, PRIMARY KEY(kind, itemid));
         CREATE TABLE IF NOT EXISTS note_save_outbox (noteid INTEGER PRIMARY KEY NOT NULL, updated TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS notes (
@@ -119,7 +120,8 @@ export const replaceLocalCache = async (
     await db.withExclusiveTransactionAsync(async (tx) => {
       const pending = await tx.getFirstAsync("SELECT COUNT(*) AS count FROM note_save_outbox");
       const deleted = await tx.getFirstAsync("SELECT COUNT(*) AS count FROM deletion_outbox");
-      if (pending?.count > 0 || deleted?.count > 0) throw new Error("Pending local changes");
+      const creations = await tx.getFirstAsync("SELECT COUNT(*) AS count FROM creation_outbox");
+      if (pending?.count > 0 || deleted?.count > 0 || creations?.count > 0) throw new Error("Pending local changes");
       await tx.runAsync("DELETE FROM notes");
       await tx.runAsync("DELETE FROM folders");
       await tx.runAsync("DELETE FROM user");
