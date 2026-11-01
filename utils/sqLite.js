@@ -47,6 +47,7 @@ export const initializeSQLiteTables = async (db) => {
           color TEXT NOT NULL, 
           parentFolderId INTEGER
           );
+        CREATE TABLE IF NOT EXISTS note_save_outbox (noteid INTEGER PRIMARY KEY NOT NULL, updated TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS notes (
           title TEXT NOT NULL, 
           noteid INTEGER PRIMARY KEY NOT NULL, 
@@ -108,6 +109,8 @@ export const replaceLocalCache = async (
   const { user, folders = [], notes = [] } = data;
 
   try {
+    const pending = await db.getFirstAsync("SELECT COUNT(*) AS count FROM note_save_outbox");
+    if (pending?.count > 0) return false; // Never overwrite unsynced edits.
     await db.withTransactionAsync(async () => {
       // Remove old cached snapshot
       await db.runAsync("DELETE FROM notes");
