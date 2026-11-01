@@ -107,87 +107,43 @@ export const replaceLocalCache = async (
   }
 
   const { user, folders = [], notes = [] } = data;
+  if (!Array.isArray(folders) || !Array.isArray(notes) ||
+      !user.userId || !user.username || !user.email || !user.createdAt) {
+    return false;
+  }
 
   try {
-    const pending = await db.getFirstAsync("SELECT COUNT(*) AS count FROM note_save_outbox");
-    if (pending?.count > 0) return false; // Never overwrite unsynced edits.
-    await db.withTransactionAsync(async () => {
-      // Remove old cached snapshot
-      await db.runAsync("DELETE FROM notes");
-      await db.runAsync("DELETE FROM folders");
-      await db.runAsync("DELETE FROM user");
-
-      // Store fresh server snapshot
-      await storeUserInDb(db, user, cachedPreferences);
-      await storeFoldersInDb(db, folders);
-      await storeNotesInDb(db, notes);
+    // Exclusive transaction ensures that deletes and inserts are atomic.
+    // Do not swallow insertion errors: a failure must roll back everything.
+    await db.withExclusiveTransactionAsync(async (tx) => {
+      const pending = await tx.getFirstAsync("SELECT COUNT(*) AS count FROM note_save_outbox");
+      if (pending?.count > 0) throw new Error("Pending local note changes");
+      await tx.runAsync("DELETE FROM notes");
+      await tx.runAsync("DELETE FROM folders");
+      await tx.runAsync("DELETE FROM user");
+      await tx.runAsync(
+        "INSERT INTO user (userId, username, email, createdAt, preferences) VALUES (?, ?, ?, ?, ?)",
+        [user.userId, user.username, user.email, user.createdAt, JSON.stringify(cachedPreferences)],
+      );
+      for (const folder of folders) {
+        await tx.runAsync(
+          "INSERT INTO folders (folderid, title, color, parentFolderId) VALUES (?, ?, ?, ?)",
+          [folder.folderid, folder.title, folder.color, folder.parentFolderId ?? null],
+        );
+      }
+      for (const note of notes) {
+        await tx.runAsync(
+          `INSERT INTO notes (noteid, title, locked, htmlText, folderId, createdAt, updated, trashed)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [note.noteid, note.title, Boolean(note.locked), note.htmlText ?? "",
+            note.folderId ?? null, note.createdAt, note.updated, Boolean(note.trashed)],
+        );
+      }
     });
-
     return true;
   } catch (err) {
     console.log("Error replacing local SQLite cache:", err);
     return false;
-  }
-};
-
-const storeUserInDb = async (db, user, cachedPreferences) => {
-  try {
-    await db.runAsync(
-      `
-    INSERT INTO user (userId, username, email, createdAt, preferences)
-    VALUES (?, ?, ?, ?, ?);
-   `,
-      user.userId,
-      user.username,
-      user.email,
-      user.createdAt,
-      JSON.stringify(cachedPreferences),
-    );
-  } catch (err) {
-    console.log("inserting user", err);
-  }
-};
-
-const storeFoldersInDb = async (db, folders) => {
-  try {
-    for (const folder of folders) {
-      await db.runAsync(
-        `
-    INSERT INTO folders (folderid, title, color, parentFolderId)
-    VALUES (?, ?, ?, ?);
-   `,
-        folder.folderid,
-        folder.title,
-        folder.color,
-        folder.parentFolderId,
-      );
-    }
-  } catch (err) {
-    console.log("inserting folders", err);
-  }
-};
-
-const storeNotesInDb = async (db, notes) => {
-  try {
-    for (const note of notes) {
-      await db.runAsync(
-        `
-    INSERT INTO notes (noteid, title, locked, htmlText, folderId, createdAt,
-    updated, trashed)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-   `,
-        note.noteid,
-        note.title,
-        note.locked || note.locked === 1 ? true : false,
-        note.htmlText,
-        note.folderId,
-        note.createdAt,
-        note.updated,
-        note.trashed,
-      );
-    }
-  } catch (err) {
-    console.log("inserting notes", err);
   }
 };
 
