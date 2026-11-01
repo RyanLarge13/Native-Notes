@@ -7,7 +7,7 @@ import RenderHTML from "react-native-render-html";
 
 import { useNavigate } from "react-router-native";
 
-import * as LocalAuthentication from "expo-local-authentication";
+import { authorizeNoteOpen } from "../utils/authGuards";
 
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
@@ -147,23 +147,8 @@ const Note = React.memo(({ note, setOpen, setNote, view, index, width, darkMode,
   );
 
   const openNote = useCallback(async () => {
-    if (note.locked) {
-      try {
-        const result = await LocalAuthentication.authenticateAsync({
-          promptMessage: "Unlock note",
-          cancelLabel: "Cancel",
-        });
-
-        if (!result.success) {
-          return;
-        }
-      } catch (error) {
-        console.log("Authentication error:", error);
-
-        return;
-      }
-    }
-
+    // Only an explicit success permits navigation to a locked note.
+    if (!(await authorizeNoteOpen(note))) return;
     setNote(note);
     navigate("/newnote");
   }, [note, navigate, setNote]);
