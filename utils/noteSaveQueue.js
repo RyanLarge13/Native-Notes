@@ -6,6 +6,16 @@ const workers = new Map();
 const localWrites = new Map();
 const createWorkers = new Map();
 const createWrites = new Map();
+const deletingNotes = new Set();
+const activeRequests = new Map();
+export const markNotesDeleting = ids => ids.forEach(id => deletingNotes.add(id));
+export const unmarkNotesDeleting = ids => ids.forEach(id => deletingNotes.delete(id));
+export const waitForNoteWrites = async ids => Promise.all(ids.map(async id => {
+  await localWrites.get(id)?.catch(() => {});
+  await createWrites.get(id)?.catch(() => {});
+}));
+export const waitForNoteRequests = async ids => Promise.all(ids.map(id => activeRequests.get(id)?.catch(() => {})));
+
 
 // SQLite noteid is INTEGER. Negative IDs are reserved for unsynced local notes.
 export const makeTemporaryNoteId = () => -Math.floor(Math.random() * 2000000000 + 1);
@@ -13,6 +23,7 @@ export const makeTemporaryNoteId = () => -Math.floor(Math.random() * 2000000000 
 export const enqueueNoteSave = ({ note, token, db, setAllData, onError }) => {
   if (!note?.noteid) throw new Error("Existing note ID required");
   const id = note.noteid;
+  if (deletingNotes.has(id)) return;
   let worker = workers.get(id);
   if (!worker) {
     worker = { pending: null, running: false };
@@ -25,11 +36,12 @@ export const enqueueNoteSave = ({ note, token, db, setAllData, onError }) => {
 const drain = async (id, worker) => {
   worker.running = true;
   try {
-    while (worker.pending) {
+    while (worker.pending && !deletingNotes.has(id)) {
       const job = worker.pending;
       worker.pending = null;
       try {
-        const response = await updateNote(job.token, {
+        if (deletingNotes.has(id)) break;
+        const request = updateNote(job.token, {
           notesId: id,
           title: job.note.title,
           htmlNotes: job.note.htmlText,
@@ -37,6 +49,8 @@ const drain = async (id, worker) => {
           folderId: job.note.folderId,
           update: new Date(job.note.updated),
         });
+        activeRequests.set(id, request);
+        const response = await request;
         if (!response?.data?.data?.[0]) throw new Error("Invalid save response");
         // Do not replace the local snapshot with an older server response.
         // Clear only the outbox revision that was actually acknowledged.
@@ -45,11 +59,14 @@ const drain = async (id, worker) => {
           [id, job.note.updated],
         );
       } catch (error) {
+        if (deletingNotes.has(id)) break;
         console.error("Note sync failed; retained locally for retry:", error);
         job.onError?.(error);
         // A newer snapshot may already be waiting; attempt that one once.
         // Otherwise leave the durable outbox for a later retry.
         if (!worker.pending) break;
+      } finally {
+        activeRequests.delete(id);
       }
     }
   } finally {
@@ -61,9 +78,13 @@ const drain = async (id, worker) => {
 export const saveExistingNoteLocally = async ({ db, note, token, setAllData, onError }) => {
   // Serialize local writes for the same note, too: SQLite operations may
   // otherwise finish out of order when the user edits rapidly.
+  if (deletingNotes.has(note.noteid)) return;
   const previous = localWrites.get(note.noteid) || Promise.resolve();
   const write = previous.catch(() => {}).then(() =>
     db.withExclusiveTransactionAsync(async (tx) => {
+      if (deletingNotes.has(note.noteid)) return;
+      const tombstone = await tx.getFirstAsync("SELECT 1 AS present FROM deletion_outbox WHERE kind = ? AND itemid = ?", ["note", note.noteid]);
+      if (tombstone) return;
       await tx.runAsync(
         `UPDATE notes SET title = ?, htmlText = ?, locked = ?, folderId = ?, updated = ?
          WHERE noteid = ?`,
@@ -82,6 +103,7 @@ export const saveExistingNoteLocally = async ({ db, note, token, setAllData, onE
   } finally {
     if (localWrites.get(note.noteid) === write) localWrites.delete(note.noteid);
   }
+  if (deletingNotes.has(note.noteid)) return;
   setAllData(prev => ({
     ...prev,
     notes: prev.notes.map(item => item.noteid === note.noteid ? note : item),
@@ -94,7 +116,7 @@ export const retryPendingNoteSaves = async ({ db, token, setAllData, onError }) 
     `SELECT n.* FROM notes n INNER JOIN note_save_outbox q ON n.noteid = q.noteid`,
   );
   // Temporary IDs need server-side idempotency/reconciliation before retry.
-  rows.filter(note => note.noteid > 0).forEach(note => enqueueNoteSave({ note, token, db, setAllData, onError }));
+  rows.filter(note => note.noteid > 0 && !deletingNotes.has(note.noteid)).forEach(note => enqueueNoteSave({ note, token, db, setAllData, onError }));
 };
 
 
@@ -103,6 +125,7 @@ export const retryPendingNoteSaves = async ({ db, token, setAllData, onError }) 
 // explicit reconciliation before retry to avoid duplicate server notes.
 export const saveNewNoteLocally = async ({ db, note, token, setAllData, onError }) => {
   const id = note.noteid;
+  if (deletingNotes.has(id)) return;
   if (!Number.isInteger(id) || id >= 0) throw new Error("Temporary negative note ID required");
   const previous = createWrites.get(id) || Promise.resolve();
   const write = previous.catch(() => {}).then(() => db.withExclusiveTransactionAsync(async tx => {
@@ -142,9 +165,10 @@ export const enqueueNewNoteCreate = ({ db, note, token, setAllData, onError }) =
   void (async () => {
     const first = worker.latest;
     try {
+      if (deletingNotes.has(id)) return;
       // Read latest locally committed snapshot just before sending create.
       const local = await db.getFirstAsync("SELECT * FROM notes WHERE noteid = ?", [id]);
-      if (!local) return;
+      if (!local || deletingNotes.has(id)) return;
       const res = await createNewNote(token, {
         folderId: local.folderId, title: local.title, htmlNotes: local.htmlText,
       });
