@@ -125,13 +125,14 @@ export const replaceLocalCache = async (
         "INSERT INTO user (userId, username, email, createdAt, preferences) VALUES (?, ?, ?, ?, ?)",
         [user.userId, user.username, user.email, user.createdAt, JSON.stringify(cachedPreferences)],
       );
-      for (const folder of folders) {
+      // Repeated server records with the same identity must not be inserted twice.
+      for (const folder of new Map(folders.map(item => [item.folderid, item])).values()) {
         await tx.runAsync(
           "INSERT INTO folders (folderid, title, color, parentFolderId) VALUES (?, ?, ?, ?)",
           [folder.folderid, folder.title, folder.color, folder.parentFolderId ?? null],
         );
       }
-      for (const note of notes) {
+      for (const note of new Map(notes.map(item => [item.noteid, item])).values()) {
         await tx.runAsync(
           `INSERT INTO notes (noteid, title, locked, htmlText, folderId, createdAt, updated, trashed)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
