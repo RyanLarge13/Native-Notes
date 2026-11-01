@@ -9,7 +9,7 @@ import Spinner from "react-native-loading-spinner-overlay";
 import { NativeRouter, Routes, Route } from "react-router-native";
 import { getUserData } from "./utils/api";
 import { retryPendingNoteSaves } from "./utils/noteSaveQueue";
-import * as LocalAuthentication from "expo-local-authentication";
+import { authenticateDevice } from "./utils/authGuards";
 import Login from "./states/Login";
 import Signup from "./states/Signup";
 import Account from "./states/Account";
@@ -65,6 +65,7 @@ const App = () => {
 	const [theme, setTheme] = useState({ on: false, color: "bg-amber-300" });
 	const [autoSave, setAutoSave] = useState(false);
 	const [appLock, setAppLock] = useState(false);
+	const [accessGranted, setAccessGranted] = useState(false);
 	const [sort, setSort] = useState("Title");
 	const [saveLocation, setSaveLocation] = useState(true);
 	const [location, setLocation] = useState(null);
@@ -215,11 +216,13 @@ const App = () => {
 				const authenticated = await authenticateUser();
 
 				if (!authenticated) {
+					setAppLock(true);
 					return null;
 				}
 			}
 
 			setAppLock(preferences.appLock ?? false);
+			if (!preferences.appLock) setAccessGranted(true;
 
 			return preferences;
 		} catch (err) {
@@ -341,36 +344,9 @@ const App = () => {
 	};
 
 	const authenticateUser = async () => {
-		return LocalAuthentication.authenticateAsync({})
-			.then(async (res) => {
-				if (!res.success) {
-					if (tries > 2) {
-						const newNotifs = [
-							{
-								id: uuidv4(),
-								color: "#fde047",
-								title: "Last Attempt",
-								text: "You have attempted to unlock your notes 3 times. One more failed attempt and the app will close and you will be logged out for your security",
-								actions: [{ text: "close", func: () => setSystemNotifs([]) }],
-							},
-						];
-						setSystemNotifs(newNotifs);
-					}
-					if (tries > 3) {
-						console.log("Lockout app");
-					}
-					await authenticateUser();
-					setTries((prev) => prev + 1);
-				}
-				if (res.success) {
-					return true;
-				}
-				return false;
-			})
-			.catch((err) => {
-				console.log(err);
-				return false;
-			});
+		const allowed = await authenticateDevice({ promptMessage: "Unlock Native Notes", cancelLabel: "Cancel" });
+		setAccessGranted(allowed);
+		return allowed;
 	};
 
 	const setNewLocation = (id) => {
@@ -475,6 +451,15 @@ const App = () => {
 						>
 							<StatusBar style={darkMode ? "light" : "dark"} />
 							<Spinner visible={loading} />
+							{user && appLock && !accessGranted ? (
+								<View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
+									<Text style={{ color: darkMode ? "#fff" : "#111", marginBottom: 18 }}>Native Notes is locked</Text>
+									<Pressable accessibilityRole="button" onPress={() => void authenticateUser()}
+										style={{ padding: 16, backgroundColor: "#f59e0b", borderRadius: 12 }}>
+										<Text style={{ color: "#111" }}>Unlock</Text>
+									</Pressable>
+								</View>
+							) : (
 							<Routes>
 								<Route
 									path="/signup"
@@ -567,7 +552,10 @@ const App = () => {
 										}
 									/>
 								</Route>
-							</Routes>
+							</
+							)}Routes>
+							{!(user && appLock && !accessGranted) && (
+								<>
 							<Options
 								isNoteClosed={note === null}
 								setOptions={setOptions}
@@ -657,6 +645,8 @@ const App = () => {
 									darkMode={darkMode}
 								/>
 							))}
+								</>
+							)}
 						</View>
 					</RenderHTMLConfigProvider>
 				</TRenderEngineProvider>
